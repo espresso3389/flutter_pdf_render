@@ -24,8 +24,9 @@ class _MyAppState extends State<MyApp> {
     // Loading PDF file
     //
     var doc = await PdfDocument.openAsset('assets/hello.pdf');
-    var page = await doc.getPage(1);
+    var page = await doc.getPage(1); // The first page is 1
     var pageImage = await page.render(dpi: 100.0);
+    // PDFDocument must be disposed as soon as possible.
     doc.dispose();
     if (!mounted) return;
     setState(() {
@@ -38,7 +39,7 @@ class _MyAppState extends State<MyApp> {
     return new MaterialApp(
       home: new Scaffold(
         appBar: new AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text('Pdf_render example app'),
         ),
         body: new Center(
           child: Container(
