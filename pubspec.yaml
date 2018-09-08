@@ -2,7 +2,7 @@ name: pdf_render
 description: A PDF Rendering plugin
 version: 0.0.1
 author: Takashi Kawasaki <espresso3389@gmail.com>
-homepage:
+homepage: https://github.com/espresso3389/flutter_pdf_render
 
 environment:
   sdk: ">=2.0.0 <3.0.0"
