@@ -23,7 +23,7 @@ int pageCount = doc.pageCount;
 PdfPage page = await doc.getPage(1);
 
 // For the render function's return, see explanation below.
-PdfPageImage pageImage = await page.render(dpi: 100.0);
+PdfPageImage pageImage = await page.render();
 
 // PDFDocument must be disposed as soon as possible.
 doc.dispose();
@@ -73,7 +73,7 @@ class PdfDocument {
   final bool allowsPrinting; // Whether the file allows you to print the document
 
   // Get a page by page number (page number starts at 1)
-  Future<PdfPage> getPage(int pageNumber) async;
+  Future<PdfPage> getPage(int pageNumber);
 
   // Dispose the instance.
   void dispose();
@@ -92,19 +92,27 @@ class PdfPage {
 
   // render sub-region of the PDF page.
   Future<PdfPageImage> render({
-    int x = 0, int y = 0, int width = 0, int height = 0,
-    int fullWidth = 0, int fullHeight = 0,
-    double dpi = 0.0,
-    bool boxFit = false }) async;
+    int x = 0, int y = 0,
+    int width = 0, int height = 0,
+    double fullWidth = 0.0, double fullHeight = 0.0 });
 ```
 
-For `render` function, `(x, y, width, height)` defines sub-region of the scaled PDF page image.
+For `render` function extract a sub-region `(x,y)` - `(x + width, y + height)` of scaled (`fullWidth` x `fullHeight`) PDF page image. All the coordinates are in pixels.
 
-The scale of the PDF page image is specified by either of the following three ways:
+The following fragment renders the page at 300 dpi:
 
-1. `fullWidth` and `fullHeight` in pixels
-2. Dot-per-inch by `dpi`
-3. `boxFit=true` to make the size fit into a box sized by `fullWidth` and `fullHeight` in pixels
+```dart
+const scale = 300.0 / 72.0;
+const fullWidth = page.width * scale;
+const fullHeight = page.height * scale;
+var rendered = page.render(
+  x: 0,
+  y: 0,
+  width: fullWidth.toInt(),
+  height: fullHeight.toInt(),
+  fullWidth: fullWidth,
+  fullHeight: fullHeight);
+```
 
 ## PdfPageImage members
 

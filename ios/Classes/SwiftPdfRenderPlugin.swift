@@ -84,7 +84,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         result(SwiftPdfRenderPlugin.invalid)
         return
       }
-      renderPdf(args: args, result: result)
+      render(args: args, result: result)
     } else {
       result(FlutterMethodNotImplemented)
     }
@@ -165,7 +165,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     docMap[id] = nil
   }
 
-  func renderPdf(args: NSDictionary, result: @escaping FlutterResult) {
+  func render(args: NSDictionary, result: @escaping FlutterResult) {
     let docId = args["docId"] as! Int
     guard let doc = docMap[docId] else {
       result(SwiftPdfRenderPlugin.invalid)
@@ -184,14 +184,12 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let y = args["y"] as! Int
     let w = args["width"] as! Int
     let h = args["height"] as! Int
-    let fw = args["fullWidth"] as! Int? ?? 0
-    let fh = args["fullHeight"] as! Int? ?? 0
-    let dpi = args["dpi"] as! Double? ?? 0
-    let boxFit = args["boxFit"] as! Bool? ?? false
+    let fw = args["fullWidth"] as? Double ?? 0.0
+    let fh = args["fullHeight"] as? Double ?? 0.0
 
     dispQueue.async {
       var dict: [String: Any]? = nil
-      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh, dpi: dpi, boxFit: boxFit) {
+      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh) {
         dict = [
           "docId": Int32(docId),
           "pageNumber": Int32(pageNumber),
@@ -199,8 +197,8 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
           "y": Int32(data.y),
           "width": Int32(data.width),
           "height": Int32(data.height),
-          "fullWidth": Int32(data.fullWidth),
-          "fullHeight": Int32(data.fullHeight),
+          "fullWidth": NSNumber(value: data.fullWidth),
+          "fullHeight": NSNumber(value: data.fullHeight),
           "pageWidth": NSNumber(value: data.pageWidth),
           "pageHeight": NSNumber(value: data.pageHeight),
           "data": FlutterStandardTypedData(bytes: data.data)
@@ -219,12 +217,12 @@ class PageData {
   let y: Int
   let width: Int
   let height: Int
-  let fullWidth: Int
-  let fullHeight: Int
+  let fullWidth: Double
+  let fullHeight: Double
   let pageWidth: Double
   let pageHeight: Double
   let data: Data
-  init(x: Int, y: Int, width: Int, height: Int, fullWidth: Int, fullHeight: Int, pageWidth: Double, pageHeight: Double, data: Data) {
+  init(x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, pageWidth: Double, pageHeight: Double, data: Data) {
     self.x = x
     self.y = y
     self.width = width
@@ -237,39 +235,17 @@ class PageData {
   }
 }
 
-func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Int = 0, fullHeight: Int = 0, dpi: Double = 0.0, boxFit: Bool = false) -> PageData? {
-  var fw = fullWidth <= 0 ? width : fullWidth
-  var fh = fullHeight <= 0 ? height : fullHeight
-  // If almost all parameters are 0, render the page at 72 dpi
-  var dpiRender = dpi
-  if !boxFit && dpi == 0.0 && fw == 0 && fh == 0 {
-    dpiRender = 72.0
-  }
-  
+func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double = 0.0, fullHeight: Double = 0.0) -> PageData? {
+
   let pdfBBox = page.getBoxRect(.mediaBox)
-  var sx: CGFloat
-  var sy: CGFloat
-  if dpiRender != 0.0 {
-    // size by dpi
-    sx = CGFloat(dpiRender / 72.0)
-    sy = CGFloat(dpiRender / 72.0)
-    fw = Int(sx * pdfBBox.width)
-    fh = Int(sy * pdfBBox.height)
-  } else {
-    // size by fullWidth/fullHeight
-    sx = CGFloat(fw) / pdfBBox.width
-    sy = CGFloat(fh) / pdfBBox.height
-    if boxFit {
-      sx = min(sx, sy)
-      sy = sx
-      fw = Int(sx * pdfBBox.width)
-      fh = Int(sy * pdfBBox.height)
-      print("PDF boxFit: \(fw)x\(fh)")
-    }
-  }
   
-  let w = width <= 0 ? fw : width
-  let h = height <= 0 ? fh : height
+  let w = width > 0 ? width : Int(pdfBBox.width)
+  let h = height > 0 ? height : Int(pdfBBox.height)
+
+  var fw = fullWidth > 0.0 ? fullWidth : width > 0 ? Double(width) : Double(pdfBBox.width)
+  var fh = fullHeight > 0.0 ? fullHeight : height > 0 ? Double(height) : Double(pdfBBox.height)
+  var sx = CGFloat(fw) / pdfBBox.width
+  var sy = CGFloat(fh) / pdfBBox.height
 
   let stride = w * 4
   var data = Data(repeating: 0xff, count: stride * h)
@@ -285,9 +261,12 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
     }
   }
   return success ? PageData(
-    x: x, y: y,
-    width: w, height: h,
-    fullWidth: fw, fullHeight: fh,
+    x: x,
+    y: y,
+    width: w,
+    height: h,
+    fullWidth: fw,
+    fullHeight: fh,
     pageWidth: Double(pdfBBox.width),
     pageHeight: Double(pdfBBox.height),
     data: data) : nil

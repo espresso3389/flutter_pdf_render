@@ -118,15 +118,13 @@ class PdfPage {
   /// If [dpi] is set, [fullWidth] and [fullHeight] are ignored and the page is rendered in the specified dpi.
   /// If [boxFit] is set, the page image is rendered in a size, that fits into the box specified by [fullWidth], [fullHeight].
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
-  Future<PdfPageImage> render({int x = 0, int y = 0, int width = 0, int height = 0, int fullWidth = 0, int fullHeight = 0, double dpi = 0.0, bool boxFit = false }) async {
+  Future<PdfPageImage> render({int x = 0, int y = 0, int width = 0, int height = 0, double fullWidth = 0.0, double fullHeight}) async {
     return PdfPageImage._render(
       document, pageNumber,
       x: x, y: y,
       width: width,
       height: height,
-      fullWidth: fullWidth, fullHeight: fullHeight,
-      dpi: dpi,
-      boxFit: boxFit
+      fullWidth: fullWidth, fullHeight: fullHeight
     );
   }
 
@@ -156,9 +154,9 @@ class PdfPageImage {
   /// Height of the rendered area in pixels.
   final int height;
   /// Full width of the rendered page image in pixels.
-  final int fullWidth;
+  final double fullWidth;
   /// Full height of the rendered page image in pixels.
-  final int fullHeight;
+  final double fullHeight;
   /// PDF page width in points (width in pixels at 72 dpi).
   final double pageWidth;
   /// PDF page height in points (height in pixels at 72 dpi).
@@ -175,16 +173,14 @@ class PdfPageImage {
   static Future<PdfPageImage> _render(
     PdfDocument document, int pageNumber,
     { int x = 0, int y = 0, int width = 0, int height = 0,
-      int fullWidth = 0, int fullHeight = 0,
-      double dpi = 0.0, bool boxFit = false }) async {
+      double fullWidth = 0.0, double fullHeight = 0.0
+    }) async {
     var obj = await _channel.invokeMethod(
       'render',
       {
         'docId': document.docId, 'pageNumber': pageNumber,
         'x': x, 'y': y, 'width': width, 'height': height,
-        'fullWidth': fullWidth, 'fullHeight': fullHeight,
-        'dpi':dpi,
-        'boxFit': boxFit
+        'fullWidth': fullWidth, 'fullHeight': fullHeight
       });
 
     var dict = obj as Map<dynamic, dynamic>;
@@ -201,8 +197,8 @@ class PdfPageImage {
       y: dict['y'] as int,
       width: retWidth,
       height: retHeight,
-      fullWidth: dict['fullWidth'] as int,
-      fullHeight: dict['fullHeight'] as int,
+      fullWidth: dict['fullWidth'] as double,
+      fullHeight: dict['fullHeight'] as double,
       pageWidth: dict['pageWidth'] as double,
       pageHeight: dict['pageHeight'] as double,
       image: image
@@ -211,8 +207,7 @@ class PdfPageImage {
 
   static Future<PdfPageImage> render(String filePath, int pageNumber,
     { int x = 0, int y = 0, int width = 0, int height = 0,
-      int fullWidth = 0, int fullHeight = 0,
-      double dpi = 0.0, bool boxFit = false }) async {
+      double fullWidth = 0.0, double fullHeight = 0.0}) async {
     final doc = await PdfDocument.openFile(filePath);
     if (doc == null) return null;
     final page = await doc.getPage(pageNumber);
@@ -220,9 +215,7 @@ class PdfPageImage {
       x: x, y: y,
       width: width,
       height: height,
-      fullWidth: fullWidth, fullHeight: fullHeight,
-      dpi: dpi,
-      boxFit: boxFit);
+      fullWidth: fullWidth, fullHeight: fullHeight);
     doc.dispose();
     return image;
   }

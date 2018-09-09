@@ -25,7 +25,11 @@ class _MyAppState extends State<MyApp> {
     //
     var doc = await PdfDocument.openAsset('assets/hello.pdf');
     var page = await doc.getPage(1); // The first page is 1
-    var pageImage = await page.render(dpi: 100.0);
+    // render at 100 dpi
+    const scale = 100.0 / 72.0;
+    var w = (page.width * scale).toInt();
+    var h = (page.height * scale).toInt();
+    var pageImage = await page.render(width: w, height: h);
     // PDFDocument must be disposed as soon as possible.
     doc.dispose();
     if (!mounted) return;
@@ -47,11 +51,10 @@ class _MyAppState extends State<MyApp> {
             color: Colors.grey,
             child: Center(
               child:
-                _pageImage != null ?
+                _pageImage?.image != null ?
                 // _pageImage.image is dart:ui.Image and you should wrap it with RawImage
                 // to embed it on widget tree.
-                RawImage(image: _pageImage.image, fit: BoxFit.contain) :
-                null
+                RawImage(image: _pageImage.image, fit: BoxFit.contain) : Container()
               )
           )
         ),
