@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 class PdfDocument {
   static const MethodChannel _channel = const MethodChannel('pdf_render');
 
+  final String sourceName;
   final int docId;
   final int pageCount;
   final int verMajor;
@@ -19,6 +20,7 @@ class PdfDocument {
   final List<PdfPage> _pages;
 
   PdfDocument({
+    this.sourceName,
     this.docId,
     this.pageCount,
     this.verMajor, this.verMinor,
@@ -34,12 +36,13 @@ class PdfDocument {
     _channel.invokeMethod('close', docId);
   }
 
-  static PdfDocument _open(Object obj) {
+  static PdfDocument _open(Object obj, String sourceName) {
     var dict = obj as Map<dynamic, dynamic>;
     if (dict == null)
       return null;
     final pageCount = dict['pageCount'] as int;
     return PdfDocument(
+      sourceName: sourceName,
       docId: dict['docId'] as int,
       pageCount: pageCount,
       verMajor: dict['verMajor'] as int,
@@ -52,15 +55,15 @@ class PdfDocument {
   }
 
   static Future<PdfDocument> openFile(String filePath) async {
-    return _open(await _channel.invokeMethod('file', filePath));
+    return _open(await _channel.invokeMethod('file', filePath), filePath);
   }
 
   static Future<PdfDocument> openAsset(String name) async {
-    return _open(await _channel.invokeMethod('asset', name));
+    return _open(await _channel.invokeMethod('asset', name), 'asset:' + name);
   }
 
   static Future<PdfDocument> openData(Uint8List data) async {
-    return _open(await _channel.invokeMethod('data', data));
+    return _open(await _channel.invokeMethod('data', data), 'memory:$data');
   }
 
   /// Get page object. The first page is 1.
@@ -77,7 +80,7 @@ class PdfDocument {
       if (dict == null)
         return null;
       page = _pages[pageNumber - 1] = PdfPage(
-        docId: docId,
+        document: this,
         pageNumber: pageNumber,
         rotationAngle: dict['rotationAngle'] as int,
         width: dict['width'] as double,
@@ -86,16 +89,26 @@ class PdfDocument {
     }
     return page;
   }
+
+  @override
+  bool operator ==(dynamic other) => other is PdfDocument &&
+    other.docId == docId;
+  
+  @override
+  int get hashCode => docId;
+
+  @override
+  String toString() => sourceName;
 }
 
 class PdfPage {
-  final int docId;
+  final PdfDocument document;
   final int pageNumber;
   final int rotationAngle;
   final double width;
   final double height;
 
-  PdfPage({this.docId, this.pageNumber, this.rotationAngle, this.width, this.height});
+  PdfPage({this.document, this.pageNumber, this.rotationAngle, this.width, this.height});
 
   /// Render a sub-area or full image of specified PDF file.
   /// [pdfFilePath] specifies PDF file to open.
@@ -107,7 +120,7 @@ class PdfPage {
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
   Future<PdfPageImage> render({int x = 0, int y = 0, int width = 0, int height = 0, int fullWidth = 0, int fullHeight = 0, double dpi = 0.0, bool boxFit = false }) async {
     return PdfPageImage._render(
-      docId, pageNumber,
+      document, pageNumber,
       x: x, y: y,
       width: width,
       height: height,
@@ -116,6 +129,17 @@ class PdfPage {
       boxFit: boxFit
     );
   }
+
+  @override
+  bool operator ==(dynamic other) => other is PdfPage &&
+    other.document == document &&
+    other.pageNumber == pageNumber;
+  
+  @override
+  int get hashCode => document.hashCode ^ pageNumber;
+
+  @override
+  String toString() => '$document:page=$pageNumber';
 }
 
 class PdfPageImage {
@@ -149,14 +173,14 @@ class PdfPageImage {
   }
 
   static Future<PdfPageImage> _render(
-    int docId, int pageNumber,
+    PdfDocument document, int pageNumber,
     { int x = 0, int y = 0, int width = 0, int height = 0,
       int fullWidth = 0, int fullHeight = 0,
       double dpi = 0.0, bool boxFit = false }) async {
     var obj = await _channel.invokeMethod(
       'render',
       {
-        'docId': docId, 'pageNumber': pageNumber,
+        'docId': document.docId, 'pageNumber': pageNumber,
         'x': x, 'y': y, 'width': width, 'height': height,
         'fullWidth': fullWidth, 'fullHeight': fullHeight,
         'dpi':dpi,
