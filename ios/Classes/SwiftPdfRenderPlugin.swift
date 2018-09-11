@@ -242,10 +242,10 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
   let w = width > 0 ? width : Int(pdfBBox.width)
   let h = height > 0 ? height : Int(pdfBBox.height)
 
-  var fw = fullWidth > 0.0 ? fullWidth : width > 0 ? Double(width) : Double(pdfBBox.width)
-  var fh = fullHeight > 0.0 ? fullHeight : height > 0 ? Double(height) : Double(pdfBBox.height)
-  var sx = CGFloat(fw) / pdfBBox.width
-  var sy = CGFloat(fh) / pdfBBox.height
+  let fw = fullWidth > 0.0 ? fullWidth : width > 0 ? Double(width) : Double(pdfBBox.width)
+  let fh = fullHeight > 0.0 ? fullHeight : height > 0 ? Double(height) : Double(pdfBBox.height)
+  let sx = CGFloat(fw) / pdfBBox.width
+  let sy = CGFloat(fh) / pdfBBox.height
 
   let stride = w * 4
   var data = Data(repeating: 0xff, count: stride * h)
