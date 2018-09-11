@@ -15,6 +15,7 @@ class Doc {
 public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   static let invalid = NSNumber(value: -1)
   let dispQueue = DispatchQueue(label: "pdf_render")
+  static var newId = 0;
   var docMap: [Int: Doc] = [:]
 
   public static func register(with registrar: FlutterPluginRegistrar) {
@@ -31,7 +32,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         result(nil)
         return
       }
-      result(register(openFileDoc(pdfFilePath: pdfFilePath)))
+      result(registerNewDoc(openFileDoc(pdfFilePath: pdfFilePath)))
     }
     else if call.method == "asset"
     {
@@ -39,14 +40,14 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         result(nil)
         return
       }
-      result(register(openAssetDoc(name: name)))
+      result(registerNewDoc(openAssetDoc(name: name)))
     }
     else if call.method == "data" {
       guard let data = call.arguments as! FlutterStandardTypedData? else {
         result(nil)
         return
       }
-      result(register(openDataDoc(data: data.data)))
+      result(registerNewDoc(openDataDoc(data: data.data)))
     }
     else if call.method == "close"
     {
@@ -90,9 +91,11 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  func register(_ doc: CGPDFDocument?) -> NSDictionary? {
+  func registerNewDoc(_ doc: CGPDFDocument?) -> NSDictionary? {
     guard doc != nil else { return nil }
-    let id = docMap.count
+    let id = SwiftPdfRenderPlugin.newId
+    SwiftPdfRenderPlugin.newId = SwiftPdfRenderPlugin.newId + 1
+    if SwiftPdfRenderPlugin.newId == SwiftPdfRenderPlugin.invalid.intValue { SwiftPdfRenderPlugin.newId = 0 }
     docMap[id] = Doc(doc: doc!)
     return getInfo(docId: id)
   }
