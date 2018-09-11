@@ -1,6 +1,6 @@
 ## Introduction
 
-pdf_render is a PDF renderer implementation. Currently for iOS only.
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation. Currently for iOS only.
 
 The implementation is based on iOS's Core Graphics but I also consider adoption of pdfium at least for supporting Android.
 

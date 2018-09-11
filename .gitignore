@@ -6,5 +6,6 @@
 pubspec.lock
 
 build/
+.vscode/
 
 *.bak
