@@ -37,21 +37,23 @@ class PdfDocument {
   }
 
   static PdfDocument _open(Object obj, String sourceName) {
-    var dict = obj as Map<dynamic, dynamic>;
-    if (dict == null)
+    if (obj is Map<dynamic, dynamic>) {
+      final pageCount = obj['pageCount'] as int;
+      return PdfDocument(
+        sourceName: sourceName,
+        docId: obj['docId'] as int,
+        pageCount: pageCount,
+        verMajor: obj['verMajor'] as int,
+        verMinor: obj['verMinor'] as int,
+        isEncrypted: obj['isEncrypted'] as bool,
+        allowsCopying: obj['allowsCopying'] as bool,
+        allowsPrinting: obj['allowsPrinting'] as bool,
+        //isUnlocked: obj['isUnlocked'] as bool
+      );
+    } else {
       return null;
-    final pageCount = dict['pageCount'] as int;
-    return PdfDocument(
-      sourceName: sourceName,
-      docId: dict['docId'] as int,
-      pageCount: pageCount,
-      verMajor: dict['verMajor'] as int,
-      verMinor: dict['verMinor'] as int,
-      isEncrypted: dict['isEncrypted'] as bool,
-      allowsCopying: dict['allowsCopying'] as bool,
-      allowsPrinting: dict['allowsPrinting'] as bool,
-      //isUnlocked: dict['isUnlocked'] as bool
-    );
+    }
+
   }
 
   static Future<PdfDocument> openFile(String filePath) async {
@@ -76,16 +78,15 @@ class PdfDocument {
         "docId": docId,
         "pageNumber": pageNumber
       });
-      var dict = obj as Map<dynamic, dynamic>;
-      if (dict == null)
-        return null;
-      page = _pages[pageNumber - 1] = PdfPage(
-        document: this,
-        pageNumber: pageNumber,
-        rotationAngle: dict['rotationAngle'] as int,
-        width: dict['width'] as double,
-        height: dict['height'] as double,
-      );
+      if (obj is Map<dynamic, dynamic>) {
+        page = _pages[pageNumber - 1] = PdfPage(
+          document: this,
+          pageNumber: pageNumber,
+          rotationAngle: obj['rotationAngle'] as int,
+          width: obj['width'] as double,
+          height: obj['height'] as double,
+        );
+      }
     }
     return page;
   }
@@ -183,26 +184,26 @@ class PdfPageImage {
         'fullWidth': fullWidth, 'fullHeight': fullHeight
       });
 
-    var dict = obj as Map<dynamic, dynamic>;
-    if (dict == null)
-      return null;
-    final retWidth = dict['width'] as int;
-    final retHeight = dict['height'] as int;
-    final pixels = dict['data'] as Uint8List;
-    var image = await _decodeRgba(retWidth, retHeight, pixels);
+    if (obj is Map<dynamic, dynamic>) {
+      final retWidth = obj['width'] as int;
+      final retHeight = obj['height'] as int;
+      final pixels = obj['data'] as Uint8List;
+      var image = await _decodeRgba(retWidth, retHeight, pixels);
 
-    return PdfPageImage(
-      pageNumber: dict['pageNumber'] as int,
-      x: dict['x'] as int,
-      y: dict['y'] as int,
-      width: retWidth,
-      height: retHeight,
-      fullWidth: dict['fullWidth'] as double,
-      fullHeight: dict['fullHeight'] as double,
-      pageWidth: dict['pageWidth'] as double,
-      pageHeight: dict['pageHeight'] as double,
-      image: image
-    );
+      return PdfPageImage(
+        pageNumber: obj['pageNumber'] as int,
+        x: obj['x'] as int,
+        y: obj['y'] as int,
+        width: retWidth,
+        height: retHeight,
+        fullWidth: obj['fullWidth'] as double,
+        fullHeight: obj['fullHeight'] as double,
+        pageWidth: obj['pageWidth'] as double,
+        pageHeight: obj['pageHeight'] as double,
+        image: image
+      );
+    }
+    return null;
   }
 
   static Future<PdfPageImage> render(String filePath, int pageNumber,
