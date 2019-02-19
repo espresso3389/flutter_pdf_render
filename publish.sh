@@ -4,8 +4,8 @@ if [ "${build}" = "" ]; then
   build=0
 fi
 
-rev=`git log --oneline | wc -l | awk '{print $1}'`
-commit=`git log --oneline -1 | awk '{print $1}'`
+rev=$(git log --oneline | wc -l | awk '{print $1}')
+commit=$(git log --oneline -1 | awk '{print $1}')
 ver=0.${rev}.${build}
 echo "Version: ${ver} (Rev=${rev}, Build=${build}, Commit=${commit})"
 
