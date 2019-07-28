@@ -1,4 +1,4 @@
-package jp.espresso3389.pdfrender
+package jp.espresso3389.pdf_render
 
 import android.graphics.Bitmap
 import android.graphics.Matrix
