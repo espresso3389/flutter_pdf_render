@@ -84,7 +84,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
             result.success(-1)
             return
           }
-          result.success(render(args, result))
+          render(args, result)
         }
         else -> result.notImplemented()
       }
