@@ -15,13 +15,18 @@ class Doc {
 public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   static let invalid = NSNumber(value: -1)
   let dispQueue = DispatchQueue(label: "pdf_render")
+  let registrar: FlutterPluginRegistrar
   static var newId = 0;
   var docMap: [Int: Doc] = [:]
+  
+  init(registrar: FlutterPluginRegistrar) {
+    self.registrar = registrar
+  }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
       name: "pdf_render", binaryMessenger: registrar.messenger())
-    let instance = SwiftPdfRenderPlugin()
+    let instance = SwiftPdfRenderPlugin(registrar: registrar)
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
 
@@ -124,7 +129,8 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   }
 
   func openAssetDoc(name: String) -> CGPDFDocument? {
-    guard let path = Bundle.main.path(forResource: "flutter_assets/" + name, ofType: "") else {
+    let key = registrar.lookupKey(forAsset: name)
+    guard let path = Bundle.main.path(forResource: key, ofType: "") else {
       return nil
     }
     return openFileDoc(pdfFilePath: path)
