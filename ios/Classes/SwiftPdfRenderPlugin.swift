@@ -72,13 +72,6 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       }
       result(openPage(args: args))
     }
-    else if call.method == "closePage"
-    {
-      if  let id = call.arguments as! NSNumber? {
-        result(closePage(id: id.intValue))
-      }
-      result(NSNumber(value: 0))
-    }
     else if call.method == "render"
     {
       guard let args = call.arguments as! NSDictionary? else {
