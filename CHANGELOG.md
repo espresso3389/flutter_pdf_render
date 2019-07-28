@@ -1,3 +1,7 @@
-## 0.0.1
+## 0.23.0
 
-* TODO: Describe initial release.
+First version that supports Android.
+
+## 0.1.0
+
+First release.

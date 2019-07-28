@@ -1,8 +1,6 @@
 ## Introduction
 
-[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation. Currently for iOS only.
-
-The implementation is based on iOS's Core Graphics but I also consider adoption of pdfium at least for supporting Android.
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation.
 
 ## Usage
 
@@ -51,10 +49,10 @@ On `PdfDocument` class, there're three functions for opening PDF from a real fil
 
 ```dart
 // from an asset file
-PdfDocument docFromFile = PdfDocument.openFile('assets/hello.pdf');
+PdfDocument docFromFile = PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
-PdfDocument docFromAsset = PdfDocument.openAsset('/somewhere/in/real/file/system/file.pdf');
+PdfDocument docFromAsset = PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List
 PdfDocument docFromData = PdfDocument.openData(data);

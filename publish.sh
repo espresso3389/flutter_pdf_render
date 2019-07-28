@@ -22,5 +22,3 @@ else
 fi
 
 flutter packages pub publish $pubopts
-
-
