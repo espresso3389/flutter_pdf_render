@@ -4,7 +4,7 @@
 
 ## Usage
 
-The following fragment illustrate overall usage:
+The following fragment illustrates overall usage:
 
 ```dart
 import 'package:pdf_render/pdf_render.dart';
@@ -27,7 +27,7 @@ PdfPageImage pageImage = await page.render();
 doc.dispose();
 ```
 
-And, then, you can use `PdfPageImage` to get the actual RGBA image in `dart.ui.Image`.
+And then, you can use `PdfPageImage` to get the actual RGBA image in `dart.ui.Image`.
 
 To embed the image in the widget tree, you can use [RawImage](https://docs.flutter.io/flutter/widgets/RawImage-class.html):
 
@@ -45,7 +45,7 @@ Center(
 
 ## PdfDocument.openXXX
 
-On `PdfDocument` class, there're three functions for opening PDF from a real file, or a asset file, or memory data.
+On `PdfDocument` class, there're three functions to open PDF from a real file, an asset file, or a memory data.
 
 ```dart
 // from an asset file
