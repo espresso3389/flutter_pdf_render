@@ -256,6 +256,7 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
     let rgb = CGColorSpaceCreateDeviceRGB()
     let context = CGContext(data: ptr, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
     if context != nil {
+      context!.clear(CGRect(x: 0, y: 0, width: w, height: h))
       context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
       context!.scaleBy(x: sx, y: sy)
       context!.drawPDFPage(page)
