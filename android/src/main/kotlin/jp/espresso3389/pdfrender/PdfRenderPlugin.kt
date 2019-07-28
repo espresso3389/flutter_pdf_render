@@ -6,7 +6,6 @@ import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
-import android.os.SharedMemory
 import android.util.SparseArray
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -14,7 +13,7 @@ import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import java.io.File
-import java.io.InputStream
+import java.io.OutputStream
 import java.nio.ByteBuffer
 
 class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
@@ -131,14 +130,11 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     return PdfRenderer(fd)
   }
 
-  /**
-   * Copy input stream to temporary file to enable pure file access.
-   */
-  private fun copyToTempFileAndOpenDoc(input: InputStream): PdfRenderer {
+  private fun copyToTempFileAndOpenDoc(writeData: (OutputStream) -> Unit): PdfRenderer {
     val file = File.createTempFile("pdfr", null, null)
     try {
-      file.outputStream().use { output ->
-        input.copyTo(output)
+      file.outputStream().use {
+        writeData(it)
       }
       file.inputStream().use {
         return PdfRenderer(ParcelFileDescriptor.dup(it.fd))
@@ -153,13 +149,12 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     // NOTE: the input stream obtained from asset may not be
     // a file stream and we should convert it to file
     registrar.context().assets.open(key).use { input ->
-      return copyToTempFileAndOpenDoc(input)
+      return copyToTempFileAndOpenDoc { input.copyTo(it) }
     }
   }
 
   private fun openDataDoc(data: ByteArray): PdfRenderer {
-    //return PdfRenderer(ParcelFileDescriptor.fromData(data, null))
-    throw NotImplementedError()
+    return copyToTempFileAndOpenDoc { it.write(data) }
   }
 
   private fun openPage(args: HashMap<String, Any>): HashMap<String, Any>? {
