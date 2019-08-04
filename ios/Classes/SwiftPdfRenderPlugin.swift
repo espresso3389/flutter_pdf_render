@@ -18,7 +18,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   let registrar: FlutterPluginRegistrar
   static var newId = 0;
   var docMap: [Int: Doc] = [:]
-  
+
   init(registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
   }
@@ -188,10 +188,11 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let h = args["height"] as! Int
     let fw = args["fullWidth"] as? Double ?? 0.0
     let fh = args["fullHeight"] as? Double ?? 0.0
+    let backgroundFill = args["backgroundFill"] as? Bool ?? false
 
     dispQueue.async {
       var dict: [String: Any]? = nil
-      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh) {
+      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill) {
         dict = [
           "docId": Int32(docId),
           "pageNumber": Int32(pageNumber),
@@ -237,10 +238,10 @@ class PageData {
   }
 }
 
-func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double = 0.0, fullHeight: Double = 0.0) -> PageData? {
+func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double = 0.0, fullHeight: Double = 0.0, backgroundFill: Bool = false) -> PageData? {
 
   let pdfBBox = page.getBoxRect(.mediaBox)
-  
+
   let w = width > 0 ? width : Int(pdfBBox.width)
   let h = height > 0 ? height : Int(pdfBBox.height)
 
@@ -250,13 +251,12 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
   let sy = CGFloat(fh) / pdfBBox.height
 
   let stride = w * 4
-  var data = Data(repeating: 0xff, count: stride * h)
+  var data = Data(repeating: backgroundFill ? 0xff : 0, count: stride * h)
   var success = false
   data.withUnsafeMutableBytes { (ptr: UnsafeMutablePointer<UInt8>) in
     let rgb = CGColorSpaceCreateDeviceRGB()
     let context = CGContext(data: ptr, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
     if context != nil {
-      context!.clear(CGRect(x: 0, y: 0, width: w, height: h))
       context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
       context!.scaleBy(x: sx, y: sy)
       context!.drawPDFPage(page)
