@@ -94,7 +94,7 @@ class PdfDocument {
   @override
   bool operator ==(dynamic other) => other is PdfDocument &&
     other.docId == docId;
-  
+
   @override
   int get hashCode => docId;
 
@@ -119,13 +119,17 @@ class PdfPage {
   /// If [dpi] is set, [fullWidth] and [fullHeight] are ignored and the page is rendered in the specified dpi.
   /// If [boxFit] is set, the page image is rendered in a size, that fits into the box specified by [fullWidth], [fullHeight].
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
-  Future<PdfPageImage> render({int x = 0, int y = 0, int width = 0, int height = 0, double fullWidth = 0.0, double fullHeight}) async {
+  /// By default, [backgroundFill] is true and the page background is once filled with white before rendering page image but you can turn it off if needed.
+  Future<PdfPageImage> render({int x = 0, int y = 0, int width = 0, int height = 0, double fullWidth = 0.0, double fullHeight = 0.0, bool backgroundFill = true}) async {
     return PdfPageImage._render(
       document, pageNumber,
-      x: x, y: y,
+      x: x,
+      y: y,
       width: width,
       height: height,
-      fullWidth: fullWidth, fullHeight: fullHeight
+      fullWidth: fullWidth,
+      fullHeight: fullHeight,
+      backgroundFill: backgroundFill
     );
   }
 
@@ -133,7 +137,7 @@ class PdfPage {
   bool operator ==(dynamic other) => other is PdfPage &&
     other.document == document &&
     other.pageNumber == pageNumber;
-  
+
   @override
   int get hashCode => document.hashCode ^ pageNumber;
 
@@ -174,14 +178,16 @@ class PdfPageImage {
   static Future<PdfPageImage> _render(
     PdfDocument document, int pageNumber,
     { int x = 0, int y = 0, int width = 0, int height = 0,
-      double fullWidth = 0.0, double fullHeight = 0.0
+      double fullWidth = 0.0, double fullHeight = 0.0,
+      bool backgroundFill = true,
     }) async {
     var obj = await _channel.invokeMethod(
       'render',
       {
         'docId': document.docId, 'pageNumber': pageNumber,
         'x': x, 'y': y, 'width': width, 'height': height,
-        'fullWidth': fullWidth, 'fullHeight': fullHeight
+        'fullWidth': fullWidth, 'fullHeight': fullHeight,
+        'backgroundFill': backgroundFill
       });
 
     if (obj is Map<dynamic, dynamic>) {

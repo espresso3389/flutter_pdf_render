@@ -1,6 +1,7 @@
 package jp.espresso3389.pdf_render
 
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
@@ -189,7 +190,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     val _fh = args["fullHeight"]
     val fw = if (_fw is Int && _fw != 0) _fw.toFloat() else w.toFloat()
     val fh = if (_fh is Int && _fh != 0) _fh.toFloat() else h.toFloat()
-
+    val backgroundFill = args["backgroundFill"] as? Boolean ?: false
 
     val buf = ByteBuffer.allocate(w * h * 4)
     renderer.openPage(pageNumber - 1).use {
@@ -197,6 +198,11 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       mat.setValues(floatArrayOf(fw / it.width, 0f, -x.toFloat(), 0f, fh / it.height, -y.toFloat(), 0f, 0f, 1f))
 
       val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+
+      if (backgroundFill) {
+        bmp.eraseColor(Color.WHITE)
+      }
+
       it.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
 
       bmp.copyPixelsToBuffer(buf)
