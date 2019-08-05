@@ -1,3 +1,7 @@
+## 0.29.0
+
+Minor build configuration changes.
+
 ## 0.27.0
 
 Add backgroundFill option to render method.
