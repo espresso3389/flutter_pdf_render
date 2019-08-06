@@ -122,7 +122,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     val renderer = documents[id]
     if (renderer != null) {
       renderer.close()
-      documents.removeAt(id)
+      documents.remove(id)
     }
   }
 
