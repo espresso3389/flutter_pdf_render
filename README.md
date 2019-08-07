@@ -33,29 +33,31 @@ To embed the image in the widget tree, you can use [RawImage](https://docs.flutt
 
 ```dart
 @override
-Center(
-  child: Container(
-    padding: EdgeInsets.all(10.0),
-    color: Colors.grey,
-    child: Center(
-      child: RawImage(image: pageImage.image, fit: BoxFit.contain))
-  )
-)
+Widget build(BuildContext context) {
+  return Center(
+    child: Container(
+      padding: EdgeInsets.all(10.0),
+      color: Colors.grey,
+      child: Center(
+        child: RawImage(image: pageImage.image, fit: BoxFit.contain))
+    )
+  );
+}
 ```
 
 ## PdfDocument.openXXX
 
-On `PdfDocument` class, there're three functions to open PDF from a real file, an asset file, or a memory data.
+On `PdfDocument` class, there are three functions to open PDF from a real file, an asset file, or a memory data.
 
 ```dart
 // from an asset file
-PdfDocument docFromFile = PdfDocument.openAsset('assets/hello.pdf');
+PdfDocument docFromFile = await PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
-PdfDocument docFromAsset = PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
+PdfDocument docFromAsset = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List
-PdfDocument docFromData = PdfDocument.openData(data);
+PdfDocument docFromData = await PdfDocument.openData(data);
 ```
 
 ## PdfDocument members
@@ -95,7 +97,7 @@ class PdfPage {
     double fullWidth = 0.0, double fullHeight = 0.0 });
 ```
 
-For `render` function extract a sub-region `(x,y)` - `(x + width, y + height)` of scaled (`fullWidth` x `fullHeight`) PDF page image. All the coordinates are in pixels.
+`render` function extracts a sub-region `(x,y)` - `(x + width, y + height)` from scaled `fullWidth` x `fullHeight` PDF page image. All the coordinates are in pixels.
 
 The following fragment renders the page at 300 dpi:
 
@@ -135,4 +137,65 @@ final double pageWidth;
 final double pageHeight;
 /// Rendered image in dart:ui.Image
 final Image image;
+```
+
+## Future plans
+
+- Supporting password protected PDF files (#1)
+  - iOS version is already on [a branch](https://github.com/espresso3389/flutter_pdf_render/tree/support_passwords)
+  - Android version is also planned and it will use [espresso3389/android-support-pdfium](https://github.com/espresso3389/android-support-pdfium)
+- Adding easy wrapper Widgets
+
+```dart
+//
+// FOR CONCEPT ILLUSTRATION PURPOSE ONLY: NOT A WORKING CODE
+//
+typedef Size PdfPageCalculateSize(double pageWidth, double pageHeight, double aspectRatio);
+typedef Widget PdfDocumentBuilder(BuildContext context, PdfDocument pdfDocument, int pageCount);
+
+class PdfDocumentLoader : StatefulWidget {
+  // only one of [filePath], [assetName], or [data] have to be specified.
+  final String filePath;
+  final String assetName;
+  final Uint8List data;
+  final String password;
+  final PdfDocumentBuilder documentBuilder; // for multiple pages
+  final int pageNumber; // for single page use.
+  final PdfPageCalculateSize calculateSize; // for single page use.
+
+  // for multiple pages, use [documentBuilder] with [PdfPageView].
+  // for single page use, you must specify [pageNumber] and, optionally [calculateSize].
+  PdfDocumentLoader({
+    this.filePath, this.assetName, this.data,
+    this.documentBuilder, this.pageNumber, this.calculateSize});
+
+  ...
+}
+
+class PdfPageView : StatefulWidget {
+  final PdfDocument pdfDocument;
+  final int pageNumber;
+  final PdfPageCalculateSize calculateSize;
+
+  PdfPageView({@required this.pdfDocument, @required this.pageNumber, this.calculateSize});
+}
+
+// sample usage
+@override
+Widget build(BuildContext context) {
+  return PdfDocumentLoader(
+    filePath: '<somewhere>/hello.pdf',
+    // if PDF is not ready, pdfDocument==null and pageCount=0
+    documentBuilder: (context, pdfDocument, pageCount) => LayoutBuilder(
+      builder: (context, constraints) => ListView.builder(
+        itemCount: pageCount,
+        itemBuilder: (context, index) => PdfPageView(
+          pdfDocument: pdfDocument,
+          pageNumber: index + 1,
+          calculateSize: (pageWidth, pageHeight, aspectRatio) => Size(constraints.maxWidth - 16, (constraints.maxWidth - 16) * aspectRatio)
+        )
+      )
+    )
+  );
+}
 ```
