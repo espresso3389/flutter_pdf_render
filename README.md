@@ -153,7 +153,7 @@ final Image image;
 typedef Size PdfPageCalculateSize(double pageWidth, double pageHeight, double aspectRatio);
 typedef Widget PdfDocumentBuilder(BuildContext context, PdfDocument pdfDocument, int pageCount);
 
-class PdfDocumentLoader : StatefulWidget {
+class PdfDocumentLoader extends StatefulWidget {
   // only one of [filePath], [assetName], or [data] have to be specified.
   final String filePath;
   final String assetName;
@@ -172,12 +172,13 @@ class PdfDocumentLoader : StatefulWidget {
   ...
 }
 
-class PdfPageView : StatefulWidget {
+class PdfPageView extends StatefulWidget {
   final PdfDocument pdfDocument;
   final int pageNumber;
   final PdfPageCalculateSize calculateSize;
 
   PdfPageView({@required this.pdfDocument, @required this.pageNumber, this.calculateSize});
+  ...
 }
 
 // sample usage
