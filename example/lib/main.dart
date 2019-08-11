@@ -1,42 +1,15 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'package:pdf_render/pdf_render.dart';
+import 'package:pdf_render/pdf_render_widgets.dart';
 
 void main() => runApp(new MyApp());
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => new _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  PdfPageImage _pageImage;
-
-  @override
-  void initState() {
-    super.initState();
-    initPlatformState();
-  }
-
-  Future<void> initPlatformState() async {
-    //
-    // Loading PDF file
-    //
-    var doc = await PdfDocument.openAsset('assets/hello.pdf');
-    var page = await doc.getPage(1); // The first page is 1
-    // render at 100 dpi
-    const scale = 100.0 / 72.0;
-    var w = (page.width * scale).toInt();
-    var h = (page.height * scale).toInt();
-    var pageImage = await page.render(width: w, height: h);
-    // PDFDocument must be disposed as soon as possible.
-    doc.dispose();
-    if (!mounted) return;
-    setState(() {
-      _pageImage = pageImage;
-    });
-  }
+class MyApp extends StatelessWidget {
+  /// render at 100 dpi
+  static const scale = 100.0 / 72.0;
+  static const margin = 4.0;
+  static const padding = 1.0;
+  static const wmargin = (margin + padding) * 2;
+  static final controller = ScrollController();
 
   @override
   Widget build(BuildContext context) {
@@ -45,19 +18,34 @@ class _MyAppState extends State<MyApp> {
         appBar: new AppBar(
           title: const Text('Pdf_render example app'),
         ),
-        body: new Center(
-          child: Container(
-            padding: EdgeInsets.all(10.0),
-            color: Colors.grey,
-            child: Center(
-              child:
-                _pageImage?.image != null ?
-                // _pageImage.image is dart:ui.Image and you should wrap it with RawImage
-                // to embed it on widget tree.
-                RawImage(image: _pageImage.image, fit: BoxFit.contain) : Container()
+        backgroundColor: Colors.grey,
+        body: Center(
+          child: PdfDocumentLoader(
+            assetName: 'assets/hello.pdf',
+            documentBuilder: (context, pdfDocument, pageCount) => LayoutBuilder(
+              builder: (context, constraints) => ListView.builder(
+                controller: controller,
+                itemCount: pageCount,
+                itemBuilder: (context, index) => Container(
+                  margin: EdgeInsets.all(margin),
+                  padding: EdgeInsets.all(padding),
+                  color: Colors.black12,
+                  child: PdfPageView(
+                    pageNumber: index + 1,
+                    calculateSize: (pageWidth, pageHeight, aspectRatio) => Size(constraints.maxWidth - wmargin, (constraints.maxWidth - wmargin) / aspectRatio),
+
+                    customizer: (context, page, size) => Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: <Widget>[
+                        if (page != null) page,
+                        Text('${index + 1}', style: TextStyle(fontSize: 50)) // adding page number on the bottom of rendered page
+                      ],)
+                  )
+                )
               )
+            ),
           )
-        ),
+        )
       ),
     );
   }

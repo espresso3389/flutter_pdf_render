@@ -2,9 +2,89 @@
 
 [pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0) and Android (>= API Level 21).
 
-## Usage
+## Widgets
 
-The following fragment illustrates overall usage:
+### Single page view
+
+The following fragment illustrates the easiest way to render only one page of a PDF document using `PdfDocumentLoader`. It is suitable for showing PDF thumbnail.
+
+```dart
+  /// render at 100 dpi
+  static const scale = 100.0 / 72.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: const Text('Pdf_render example app'),
+        ),
+        backgroundColor: Colors.grey,
+        body: Center(
+          child: PdfDocumentLoader(
+            assetName: 'assets/hello.pdf',
+            pageNumber: 1,
+            calculateSize: (pageWidth, pageHeight, aspectRatio) => Size(pageWidth * scale, pageHeight * scale)
+          )
+        )
+      ),
+    );
+  }
+```
+
+Of course, `PdfDocumentLoader` accepts one of `filePath`, `assetName`, or `data` to load PDF document from a file, or other sources.
+
+### Multipage view using ListView.builder
+
+Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multiple pages of a PDF document. In the following fragment, `ListView.builder` is utilized to realize scrollable PDF document viewer.
+
+```dart
+  /// render at 100 dpi
+  static const scale = 100.0 / 72.0;
+  static const margin = 4.0;
+  static const padding = 1.0;
+  static const wmargin = (margin + padding) * 2;
+
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: const Text('Pdf_render example app'),
+        ),
+        backgroundColor: Colors.grey,
+        body: Center(
+          child: PdfDocumentLoader(
+            assetName: 'assets/hello.pdf',
+            documentBuilder: (context, pdfDocument, pageCount) => LayoutBuilder(
+              builder: (context, constraints) => ListView.builder(
+                itemCount: pageCount,
+                itemBuilder: (context, index) => Container(
+                  margin: EdgeInsets.all(margin),
+                  padding: EdgeInsets.all(padding),
+                  color: Colors.black12,
+                  child: PdfPageView(
+                    pdfDocument: pdfDocument,
+                    pageNumber: index + 1,
+                    // calculateSize is used to calculate the rendering page size
+                    calculateSize: (pageWidth, pageHeight, aspectRatio) =>
+                      Size(
+                        constraints.maxWidth - wmargin,
+                        (constraints.maxWidth - wmargin) / aspectRatio)
+                  )
+                )
+              )
+            ),
+          )
+        )
+      ),
+    );
+  }
+```
+
+## Pdf rendering APIs
+
+The following fragment illustrates overall usage of `PdfDocument`:
 
 ```dart
 import 'package:pdf_render/pdf_render.dart';
@@ -144,59 +224,3 @@ final Image image;
 - Supporting password protected PDF files (#1)
   - iOS version is already on [a branch](https://github.com/espresso3389/flutter_pdf_render/tree/support_passwords)
   - Android version is also planned and it will use [espresso3389/android-support-pdfium](https://github.com/espresso3389/android-support-pdfium)
-- Adding easy wrapper Widgets
-
-```dart
-//
-// FOR CONCEPT ILLUSTRATION PURPOSE ONLY: NOT A WORKING CODE
-//
-typedef Size PdfPageCalculateSize(double pageWidth, double pageHeight, double aspectRatio);
-typedef Widget PdfDocumentBuilder(BuildContext context, PdfDocument pdfDocument, int pageCount);
-
-class PdfDocumentLoader extends StatefulWidget {
-  // only one of [filePath], [assetName], or [data] have to be specified.
-  final String filePath;
-  final String assetName;
-  final Uint8List data;
-  final String password;
-  final PdfDocumentBuilder documentBuilder; // for multiple pages
-  final int pageNumber; // for single page use.
-  final PdfPageCalculateSize calculateSize; // for single page use.
-
-  // for multiple pages, use [documentBuilder] with [PdfPageView].
-  // for single page use, you must specify [pageNumber] and, optionally [calculateSize].
-  PdfDocumentLoader({
-    this.filePath, this.assetName, this.data,
-    this.documentBuilder, this.pageNumber, this.calculateSize});
-
-  ...
-}
-
-class PdfPageView extends StatefulWidget {
-  final PdfDocument pdfDocument;
-  final int pageNumber;
-  final PdfPageCalculateSize calculateSize;
-
-  PdfPageView({@required this.pdfDocument, @required this.pageNumber, this.calculateSize});
-  ...
-}
-
-// sample usage
-@override
-Widget build(BuildContext context) {
-  return PdfDocumentLoader(
-    filePath: '<somewhere>/hello.pdf',
-    // if PDF is not ready, pdfDocument==null and pageCount=0
-    documentBuilder: (context, pdfDocument, pageCount) => LayoutBuilder(
-      builder: (context, constraints) => ListView.builder(
-        itemCount: pageCount,
-        itemBuilder: (context, index) => PdfPageView(
-          pdfDocument: pdfDocument,
-          pageNumber: index + 1,
-          calculateSize: (pageWidth, pageHeight, aspectRatio) => Size(constraints.maxWidth - 16, (constraints.maxWidth - 16) * aspectRatio)
-        )
-      )
-    )
-  );
-}
-```
