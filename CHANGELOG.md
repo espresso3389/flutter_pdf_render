@@ -1,3 +1,7 @@
+## 0.37.0
+
+* Introducing `PdfDocumentLoader` and `PdfPageView` that eases PDF view.
+
 ## 0.33.0
 
 * FIXED: disposing PdfDocument may cause ArrayIndexOutOfBoundsException. (Android)
