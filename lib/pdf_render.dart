@@ -4,9 +4,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
-class PdfDocument {
-  static const MethodChannel _channel = const MethodChannel('pdf_render');
+const MethodChannel _channel = const MethodChannel('pdf_render');
 
+class PdfDocument {
   final String sourceName;
   final int docId;
   final int pageCount;
@@ -146,8 +146,6 @@ class PdfPage {
 }
 
 class PdfPageImage {
-  static const MethodChannel _channel = const MethodChannel('pdf_render');
-
   /// Page number. The first page is 1.
   final int pageNumber;
   /// Left X coordinate of the rendered area in pixels.

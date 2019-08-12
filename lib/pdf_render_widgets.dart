@@ -11,7 +11,9 @@ import 'pdf_render.dart';
 typedef Size PdfPageCalculateSize(double pageWidth, double pageHeight, double aspectRatio);
 
 /// Function definition to build widget tree for a PDF document.
-/// [pdfDocument] to identify the PDF document and [pageCount] indicates the number of pages in it.
+/// [pdfDocument] is the PDF document and it is valid until the corresponding
+/// [PdfDocumentLoader] is in the widget tree.
+/// [pageCount] indicates the number of pages in it.
 typedef Widget PdfDocumentBuilder(BuildContext context, PdfDocument pdfDocument, int pageCount);
 
 /// Function to customize PDF page widget.
@@ -86,7 +88,6 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
       size = _cachedPageSizes[pageNumber - 1];
     }
     size ??= _lastPageSize;
-    print('Page $pageNumber: $size');
     return size;
   }
 
@@ -244,6 +245,7 @@ class _PdfPageViewState extends State<PdfPageView> {
       return Container(width: _size?.width, height: _size?.height);
     }
 
-    return Container(width: _size.width, height: _size.height, child: RawImage(image: _image.image));
+    //return Container(width: _size.width, height: _size.height, child: RawImage(image: _image.image));
+    return RawImage(image: _image.image);
   }
 }
