@@ -289,11 +289,14 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       val fullHeight = args["fullHeight"] as? Double ?: page.height.toDouble()
       val destX = args["destX"] as? Int ?: 0
       val destY = args["destY"] as? Int ?: 0
-      val width = args["width"] as? Int ?: fullWidth.toInt()
-      val height = args["height"] as? Int ?: fullHeight.toInt()
+      val width = args["width"] as? Int ?: 0
+      val height = args["height"] as? Int ?: 0
       val srcX = args["srcX"] as? Int ?: 0
       val srcY = args["srcY"] as? Int ?: 0
       val backgroundFill = args["backgroundFill"] as? Boolean ?: false
+
+      if (width <= 0 || height <= 0)
+        return -7
 
       val mat = Matrix()
       mat.setValues(floatArrayOf((fullWidth / page.width).toFloat(), 0f, -srcX.toFloat(), 0f, (fullHeight / page.height).toFloat(), -srcY.toFloat(), 0f, 0f, 1f))
