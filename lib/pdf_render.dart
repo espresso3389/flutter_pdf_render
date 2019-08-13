@@ -239,6 +239,11 @@ class PdfPageImageTexture {
   final PdfDocument pdfDocument;
   final int pageNumber;
   final int texId;
+  int _texWidth;
+  int _texHeight;
+
+  int get texWidth => _texWidth;
+  int get texHeight => _texHeight;
 
   PdfPageImageTexture._({this.pdfDocument, this.pageNumber, this.texId});
 
@@ -256,6 +261,8 @@ class PdfPageImageTexture {
   /// Resize the texture.
   Future<void> resize(int width, int height) async {
     await _channel.invokeMethod('resizeTex', {'texId': texId, 'width': width, 'height': height});
+    _texWidth = width;
+    _texHeight = height;
   }
 
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
@@ -268,8 +275,8 @@ class PdfPageImageTexture {
       'texId': texId,
       'destX': destX,
       'destY': destY,
-      'width': width,
-      'height': height,
+      'width': width ?? texWidth ?? _texWidth,
+      'height': height ?? texHeight ?? _texHeight,
       'srcX': srcX,
       'srcY': srcY,
       'texWidth': texWidth,
