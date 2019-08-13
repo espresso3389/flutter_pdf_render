@@ -18,6 +18,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   let registrar: FlutterPluginRegistrar
   static var newId = 0;
   var docMap: [Int: Doc] = [:]
+  var textures: [Int64: PdfPageTexture] = [:]
 
   init(registrar: FlutterPluginRegistrar) {
     self.registrar = registrar
@@ -84,7 +85,36 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         return
       }
       render(args: args, result: result)
-    } else {
+    }
+    else if call.method == "allocTex"
+    {
+      result(allocTex())
+    }
+    else if call.method == "releaseTex"
+    {
+      guard let texId = call.arguments as! NSNumber? else {
+        result(SwiftPdfRenderPlugin.invalid)
+        return
+      }
+      releaseTex(texId: texId.int64Value, result: result)
+    }
+    else if call.method == "resizeTex"
+    {
+      guard let args = call.arguments as! NSDictionary? else {
+        result(SwiftPdfRenderPlugin.invalid)
+        return
+      }
+      resizeTex(args: args, result: result)
+    }
+    else if call.method == "updateTex"
+    {
+      guard let args = call.arguments as! NSDictionary? else {
+        result(SwiftPdfRenderPlugin.invalid)
+        return
+      }
+      updateTex(args: args, result: result)
+    }
+    else {
       result(FlutterMethodNotImplemented)
     }
   }
@@ -182,6 +212,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       result(SwiftPdfRenderPlugin.invalid)
       return
     }
+    
     let x = args["x"] as! Int
     let y = args["y"] as! Int
     let w = args["width"] as! Int
@@ -212,6 +243,72 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         result(dict != nil ? (dict! as NSDictionary) : nil)
       }
     }
+  }
+    
+  func allocTex() -> Int64 {
+    let pageTex = PdfPageTexture(registrar: registrar)
+    let texId = registrar.textures().register(pageTex)
+    textures[texId] = pageTex
+    pageTex.texId = texId
+    return texId
+  }
+  
+  func releaseTex(texId: Int64, result: @escaping FlutterResult) {
+    textures[texId] = nil
+    registrar.textures().unregisterTexture(texId)
+    result(nil)
+  }
+  
+  func resizeTex(args: NSDictionary, result: @escaping FlutterResult) {
+    let texId = args["texId"] as! Int64
+    guard let pageTex = textures[texId] else {
+      result(SwiftPdfRenderPlugin.invalid)
+      return
+    }
+    let w = args["width"] as! Int
+    let h = args["height"] as! Int
+    pageTex.resize(width: w, height: h)
+  }
+  
+  func updateTex(args: NSDictionary, result: @escaping FlutterResult) {
+    let texId = args["texId"] as! Int64
+    guard let pageTex = textures[texId] else {
+      result(SwiftPdfRenderPlugin.invalid)
+      return
+    }
+    let docId = args["docId"] as! Int
+    guard let doc = docMap[docId] else {
+      result(SwiftPdfRenderPlugin.invalid)
+      return
+    }
+    let pageNumber = args["pageNumber"] as! Int
+    guard pageNumber >= 1 && pageNumber <= doc.pages.count else {
+      result(SwiftPdfRenderPlugin.invalid)
+      return
+    }
+    guard let page = doc.pages[pageNumber - 1] else {
+      result(SwiftPdfRenderPlugin.invalid)
+      return
+    }
+
+    let destX = args["destX"] as? Int ?? 0
+    let destY = args["destY"] as? Int ?? 0
+    let width = args["width"] as? Int
+    let height = args["height"] as? Int
+    let srcX = args["srcX"] as? Int ?? 0
+    let srcY = args["srcY"] as? Int ?? 0
+    let fw = args["fullWidth"] as? Double
+    let fh = args["fullHeight"] as? Double
+    let backgroundFill = args["backgroundFill"] as? Bool ?? false
+    
+    let tw = args["texWidth"] as? Int
+    let th = args["texHeight"] as? Int
+    if tw != nil && th != nil {
+      pageTex.resize(width: tw!, height: th!)
+    }
+    
+    pageTex.updateTex(page: page, destX: destX, destY: destY, width: width, height: height, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill)
+    result(nil)
   }
 }
 
@@ -273,4 +370,77 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
     pageWidth: Double(pdfBBox.width),
     pageHeight: Double(pdfBBox.height),
     data: data) : nil
+}
+
+class PdfPageTexture : NSObject {
+  var registrar: FlutterPluginRegistrar
+  var texId: Int64 = 0
+  var pixBuf: CVPixelBuffer?
+  var texWidth: Int = 0
+  var texHeight: Int = 0
+  
+  init(registrar: FlutterPluginRegistrar) {
+    self.registrar = registrar
+  }
+  
+  func resize(width: Int, height: Int) {
+    self.texWidth = width
+    self.texHeight = height
+    pixBuf = nil
+  }
+  
+  func updateTex(page: CGPDFPage, destX: Int, destY: Int, width: Int?, height: Int?, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false) {
+
+    guard let w = width else { return }
+    guard let h = height else { return }
+    
+    let pdfBBox = page.getBoxRect(.mediaBox)
+    let fw = fullWidth ?? Double(pdfBBox.width)
+    let fh = fullHeight ?? Double(pdfBBox.height)
+    let sx = CGFloat(fw) / pdfBBox.width
+    let sy = CGFloat(fh) / pdfBBox.height
+    
+    if pixBuf == nil {
+      let options = [
+        kCVPixelBufferCGImageCompatibilityKey as String: true,
+        kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
+        kCVPixelBufferIOSurfacePropertiesKey as String: [:]
+        ] as [String : Any]
+      CVPixelBufferCreate(kCFAllocatorDefault, texWidth, texHeight, kCVPixelFormatType_32BGRA, options as CFDictionary?, &pixBuf)
+      
+    }
+
+    let lockFlags = CVPixelBufferLockFlags(rawValue: 0)
+    let _ = CVPixelBufferLockBaseAddress(pixBuf!, lockFlags)
+    let bufferAddress = CVPixelBufferGetBaseAddress(pixBuf!)
+    
+    let rgbColorSpace = CGColorSpaceCreateDeviceRGB();
+    let bytesPerRow = CVPixelBufferGetBytesPerRow(pixBuf!)
+    let context = CGContext(data: bufferAddress?.advanced(by: destX * 4 + destY * bytesPerRow),
+                            width: w,
+                            height: h,
+                            bitsPerComponent: 8,
+                            bytesPerRow: bytesPerRow,
+                            space: rgbColorSpace,
+                            bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+    
+    if backgroundFill {
+      context?.setFillColor(UIColor.white.cgColor)
+      context?.fill(CGRect(x: 0, y: 0, width: w, height: h))
+    }
+    
+    context?.translateBy(x: CGFloat(-srcX), y: CGFloat(-srcY))
+    context?.scaleBy(x: sx, y: sy)
+    context?.drawPDFPage(page)
+    context?.flush()
+    
+    CVPixelBufferUnlockBaseAddress(pixBuf!, lockFlags)
+    registrar.textures().textureFrameAvailable(texId)
+  }
+}
+
+extension PdfPageTexture : FlutterTexture {
+  func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
+    return pixBuf != nil ? Unmanaged<CVPixelBuffer>.passRetained(pixBuf!) : nil
+  }
 }
