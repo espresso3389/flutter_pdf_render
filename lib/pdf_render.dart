@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 const MethodChannel _channel = const MethodChannel('pdf_render');
@@ -28,12 +29,8 @@ class PdfDocument {
     //this.isUnlocked,
   }) : _pages = List<PdfPage>(pageCount);
 
-  void dispose() {
-    _close();
-  }
-
-  void _close() {
-    _channel.invokeMethod('close', docId);
+  Future<void> dispose() async {
+    await _channel.invokeMethod('close', docId);
   }
 
   static PdfDocument _open(Object obj, String sourceName) {
@@ -232,5 +229,43 @@ class PdfPageImage {
     decodeImageFromPixels(pixels, width, height, PixelFormat.rgba8888,
       (image) => comp.complete(image));
     return comp.future;
+  }
+}
+
+class PdfPageImageTexture {
+  final PdfDocument pdfDocument;
+  final int pageNumber;
+  final int texId;
+
+  PdfPageImageTexture._({this.pdfDocument, this.pageNumber, this.texId});
+
+  static Future<PdfPageImageTexture> create({@required PdfDocument pdfDocument, @required int pageNumber}) async {
+    final texId = await _channel.invokeMethod<int>('allocTex');
+    return PdfPageImageTexture._(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
+  }
+
+  Future<void> dispose() async {
+    await _channel.invokeMethod('releaseTex', texId);
+  }
+
+  Future<void> resize(int width, int height) async {
+    await _channel.invokeMethod('resizeTex', {'texId': texId, 'width': width, 'height': height});
+  }
+
+  Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true}) async {
+    await _channel.invokeMethod('updateTex', {
+      'docId': pdfDocument.docId,
+      'pageNumber': pageNumber,
+      'texId': texId,
+      'destX': destX,
+      'destY': destY,
+      'width': width,
+      'height': height,
+      'srcX': srcX,
+      'srcY': srcY,
+      'fullWidth': fullWidth,
+      'fullHeight': fullHeight,
+      'backgroundFill': backgroundFill
+    });
   }
 }

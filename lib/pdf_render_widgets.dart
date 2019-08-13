@@ -1,5 +1,6 @@
 
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -163,6 +164,8 @@ class _PdfPageViewState extends State<PdfPageView> {
   PdfPage _page;
   Size _size;
   PdfPageImage _image;
+  PdfPageImageTexture _texture;
+  final bool _useTexture = Platform.isAndroid;
 
   @override
   void initState() {
@@ -213,7 +216,20 @@ class _PdfPageViewState extends State<PdfPageView> {
       }
       // NOTE: rendering size is different from widget size because of the pixel density
       final size = _size * (widget.renderingPixelRatio ?? await _pixelRatioCompleter.future);
-      _image = await _page.render(width: size.width.toInt(), height: size.height.toInt(), backgroundFill: widget.backgroundFill);
+
+      if (_useTexture) {
+        _texture = await PdfPageImageTexture.create(pdfDocument: _doc, pageNumber: widget.pageNumber);
+        await _texture.updateRect(
+          width: size.width.toInt(),
+          height: size.height.toInt(),
+          texWidth: size.width.toInt(),
+          texHeight: size.height.toInt(),
+          fullWidth: size.width,
+          fullHeight: size.height,
+          backgroundFill: widget.backgroundFill);
+      } else {
+        _image = await _page.render(width: size.width.toInt(), height: size.height.toInt(), backgroundFill: widget.backgroundFill);
+      }
     }
     if (mounted) {
       setState(() { });
@@ -228,6 +244,8 @@ class _PdfPageViewState extends State<PdfPageView> {
     _size = null;
     _image?.dispose();
     _image = null;
+    _texture?.dispose();
+    _texture = null;
   }
 
   @override
@@ -241,11 +259,14 @@ class _PdfPageViewState extends State<PdfPageView> {
       _pixelRatioCompleter.complete(MediaQuery.of(context).devicePixelRatio);
     }
 
-    if (_doc == null || widget.pageNumber == null || widget.pageNumber < 1 || widget.pageNumber > _doc.pageCount || _page == null || _image?.image == null) {
+    if (_doc == null || widget.pageNumber == null || widget.pageNumber < 1 || widget.pageNumber > _doc.pageCount || _page == null || (_image?.image == null && _texture == null)) {
       return Container(width: _size?.width, height: _size?.height);
     }
 
-    //return Container(width: _size.width, height: _size.height, child: RawImage(image: _image.image));
-    return RawImage(image: _image.image);
+    if (_useTexture) {
+      return Container(width: _size.width, height: _size.height, child: Texture(textureId: _texture.texId));
+    } else {
+      return RawImage(image: _image.image);
+    }
   }
 }

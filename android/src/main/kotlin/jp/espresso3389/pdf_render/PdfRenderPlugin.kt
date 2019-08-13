@@ -1,18 +1,18 @@
 package jp.espresso3389.pdf_render
 
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.Matrix
+import android.graphics.*
 import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import android.util.SparseArray
+import android.view.Surface
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.PluginRegistry.Registrar
+import io.flutter.view.TextureRegistry
 import java.io.File
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -28,7 +28,8 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
 
   private val registrar: Registrar = registrar
   private val documents: SparseArray<PdfRenderer> = SparseArray()
-  private var lastId: Int = 0
+  private var lastDocId: Int = 0
+  private val textures: SparseArray<TextureRegistry.SurfaceTextureEntry> = SparseArray()
 
   override fun onMethodCall(call: MethodCall, result: Result): Unit {
     try {
@@ -87,6 +88,31 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
           }
           render(args, result)
         }
+        call.method == "allocTex" -> {
+          result.success(allocTex())
+        }
+        call.method == "releaseTex" -> {
+          val id = call.arguments as? Int
+          if (id != null)
+            releaseTex(id)
+          result.success(0)
+        }
+        call.method == "resizeTex" -> {
+          val args = call.arguments as? HashMap<String, Any>
+          if (args == null) {
+            result.success(-1)
+            return
+          }
+          result.success(resizeTex(args))
+        }
+        call.method == "updateTex" -> {
+          val args = call.arguments as? HashMap<String, Any>
+          if (args == null) {
+            result.success(-1)
+            return
+          }
+          result.success(updateTex(args))
+        }
         else -> result.notImplemented()
       }
     } catch (e: Exception) {
@@ -95,7 +121,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   }
 
   private fun registerNewDoc(pdfRenderer: PdfRenderer): HashMap<String, Any> {
-    val id = ++lastId
+    val id = ++lastDocId
     documents.put(id, pdfRenderer)
     return getInfo(pdfRenderer, id)
   }
@@ -109,13 +135,13 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
 
   private fun getInfo(pdfRenderer: PdfRenderer, id: Int): HashMap<String, Any> {
     return hashMapOf(
-            "docId" to id,
-            "pageCount" to pdfRenderer.pageCount,
-            "verMajor" to 1,
-            "verMinor" to 7,
-            "isEncrypted" to false,
-            "allowsCopying" to false,
-            "allowPrinting" to false)
+      "docId" to id,
+      "pageCount" to pdfRenderer.pageCount,
+      "verMajor" to 1,
+      "verMinor" to 7,
+      "isEncrypted" to false,
+      "allowsCopying" to false,
+      "allowPrinting" to false)
   }
 
   private fun close(id: Int) {
@@ -165,11 +191,11 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     if (pageNumber < 1 || pageNumber > renderer.pageCount) return null
     renderer.openPage(pageNumber - 1).use {
       return hashMapOf(
-              "docId" to docId,
-              "pageNumber" to pageNumber,
-              "rotationAngle" to 0, // FIXME: no rotation angle can be obtained
-              "width" to it.width.toDouble(),
-              "height" to it.height.toDouble()
+        "docId" to docId,
+        "pageNumber" to pageNumber,
+        "rotationAngle" to 0, // FIXME: no rotation angle can be obtained
+        "width" to it.width.toDouble(),
+        "height" to it.height.toDouble()
       )
     }
   }
@@ -206,20 +232,101 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       it.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
 
       bmp.copyPixelsToBuffer(buf)
+      bmp.recycle()
 
       result.success(hashMapOf(
-              "docId" to docId,
-              "pageNumber" to pageNumber,
-              "x" to x,
-              "y" to y,
-              "width" to w,
-              "height" to h,
-              "fullWidth" to fw.toDouble(),
-              "fullHeight" to fh.toDouble(),
-              "pageWidth" to it.width.toDouble(),
-              "pageHeight" to it.height.toDouble(),
-              "data" to buf.array()
+        "docId" to docId,
+        "pageNumber" to pageNumber,
+        "x" to x,
+        "y" to y,
+        "width" to w,
+        "height" to h,
+        "fullWidth" to fw.toDouble(),
+        "fullHeight" to fh.toDouble(),
+        "pageWidth" to it.width.toDouble(),
+        "pageHeight" to it.height.toDouble(),
+        "data" to buf.array()
       ))
     }
+  }
+
+  private fun allocTex(): Int {
+    val surfaceTexture = registrar.textures().createSurfaceTexture()
+    val id = surfaceTexture.id().toInt()
+    textures.put(id, surfaceTexture)
+    return id
+  }
+
+  private fun releaseTex(texId: Int) {
+    val tex = textures[texId]
+    tex?.release()
+    textures.remove(texId)
+  }
+
+  private fun resizeTex(args: HashMap<String, Any>): Int {
+    val texId = args["texId"] as? Int
+    val width = args["width"] as? Int
+    val height = args["height"] as? Int
+    if (texId == null || width == null || height == null) {
+      return -1
+    }
+    val tex = textures[texId]
+    tex?.surfaceTexture()?.setDefaultBufferSize(width, height)
+    return 0
+  }
+
+  private fun updateTex(args: HashMap<String, Any>): Int {
+    val texId = args["texId"] as? Int ?: return -1
+    val tex = textures[texId] ?: return -2
+    val docId = args["docId"] as? Int ?: return -3
+    val renderer = documents[docId] ?: return -4
+    val pageNumber = args["pageNumber"] as? Int ?: return -5
+    if (pageNumber < 1 || pageNumber > renderer.pageCount)
+      return -6
+
+    renderer.openPage(pageNumber - 1). use {page ->
+      val fullWidth = args["fullWidth"] as? Double ?: page.width.toDouble()
+      val fullHeight = args["fullHeight"] as? Double ?: page.height.toDouble()
+      val destX = args["destX"] as? Int ?: 0
+      val destY = args["destY"] as? Int ?: 0
+      val width = args["width"] as? Int ?: fullWidth.toInt()
+      val height = args["height"] as? Int ?: fullHeight.toInt()
+      val srcX = args["srcX"] as? Int ?: 0
+      val srcY = args["srcY"] as? Int ?: 0
+      val backgroundFill = args["backgroundFill"] as? Boolean ?: false
+
+      val mat = Matrix()
+      mat.setValues(floatArrayOf((fullWidth / page.width).toFloat(), 0f, -srcX.toFloat(), 0f, (fullHeight / page.height).toFloat(), -srcY.toFloat(), 0f, 0f, 1f))
+
+      val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+      if (backgroundFill) {
+        bmp.eraseColor(Color.WHITE)
+      }
+      page.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
+
+      val texWidth = args["width"] as? Int
+      val texHeight = args["height"] as? Int
+      if (texWidth != null && texHeight != null)
+        tex.surfaceTexture()?.setDefaultBufferSize(texWidth, texHeight)
+
+      Surface(tex.surfaceTexture()).use {
+        val canvas = it.lockCanvas(Rect(destX, destY, width, height))
+
+        canvas.drawBitmap(bmp, destX.toFloat(), destY.toFloat(), null)
+        bmp.recycle()
+
+        it.unlockCanvasAndPost(canvas)
+      }
+    }
+    return 0
+  }
+}
+
+fun <R> Surface.use(block: (Surface) -> R): R {
+  try {
+    return block(this)
+  }
+  finally {
+    this.release()
   }
 }
