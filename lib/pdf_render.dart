@@ -272,6 +272,8 @@ class PdfPageImageTexture {
       'height': height,
       'srcX': srcX,
       'srcY': srcY,
+      'texWidth': texWidth,
+      'texHeight': texHeight,
       'fullWidth': fullWidth,
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill

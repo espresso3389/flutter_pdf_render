@@ -304,8 +304,8 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       }
       page.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
 
-      val texWidth = args["width"] as? Int
-      val texHeight = args["height"] as? Int
+      val texWidth = args["texWidth"] as? Int
+      val texHeight = args["texHeight"] as? Int
       if (texWidth != null && texHeight != null)
         tex.surfaceTexture()?.setDefaultBufferSize(texWidth, texHeight)
 
