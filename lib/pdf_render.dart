@@ -232,6 +232,9 @@ class PdfPageImage {
   }
 }
 
+/// Very limited support for Flutter's [Texture] based drawing.
+/// Because it does not transfer the rendered image via platform channel, it could be faster than
+/// the [PdfPageImage] based rendrering process.
 class PdfPageImageTexture {
   final PdfDocument pdfDocument;
   final int pageNumber;
@@ -239,19 +242,25 @@ class PdfPageImageTexture {
 
   PdfPageImageTexture._({this.pdfDocument, this.pageNumber, this.texId});
 
+  /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
   static Future<PdfPageImageTexture> create({@required PdfDocument pdfDocument, @required int pageNumber}) async {
     final texId = await _channel.invokeMethod<int>('allocTex');
     return PdfPageImageTexture._(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
   }
 
+  /// Release the object.
   Future<void> dispose() async {
     await _channel.invokeMethod('releaseTex', texId);
   }
 
+  /// Resize the texture.
   Future<void> resize(int width, int height) async {
     await _channel.invokeMethod('resizeTex', {'texId': texId, 'width': width, 'height': height});
   }
 
+  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
+  /// The method can also resize the texture if you specify [texWidth] and [texHeight]; the behavior is identical to [resize] function.
   Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true}) async {
     await _channel.invokeMethod('updateTex', {
       'docId': pdfDocument.docId,
