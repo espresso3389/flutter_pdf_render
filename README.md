@@ -107,7 +107,7 @@ PdfPageImage pageImage = await page.render();
 doc.dispose();
 ```
 
-And then, you can use `PdfPageImage` to get the actual RGBA image in `dart.ui.Image`.
+And then, you can use `PdfPageImage` to get the actual RGBA image in [dart.ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html).
 
 To embed the image in the widget tree, you can use [RawImage](https://docs.flutter.io/flutter/widgets/RawImage-class.html):
 
