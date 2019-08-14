@@ -1,3 +1,7 @@
+## 0.46.0
+
+* `PdfPageView` uses Texture rather than RawImage.
+
 ## 0.37.0
 
 * Introducing `PdfDocumentLoader` and `PdfPageView` that eases PDF view.

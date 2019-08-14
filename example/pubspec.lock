@@ -73,7 +73,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.37.0"
+    version: "0.46.0"
   pedantic:
     dependency: transitive
     description:
