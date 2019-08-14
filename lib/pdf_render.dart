@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 const MethodChannel _channel = const MethodChannel('pdf_render');
@@ -239,11 +240,14 @@ class PdfPageImageTexture {
   final PdfDocument pdfDocument;
   final int pageNumber;
   final int texId;
-  int _texWidth;
-  int _texHeight;
 
-  int get texWidth => _texWidth;
-  int get texHeight => _texHeight;
+  bool operator ==(Object other) {
+    return other is PdfPageImageTexture &&
+      other.pdfDocument == pdfDocument &&
+      other.pageNumber == pageNumber;
+  }
+
+  int get hashCode => pdfDocument.docId ^ pageNumber;
 
   PdfPageImageTexture._({this.pdfDocument, this.pageNumber, this.texId});
 
@@ -258,16 +262,9 @@ class PdfPageImageTexture {
     await _channel.invokeMethod('releaseTex', texId);
   }
 
-  /// Resize the texture.
-  Future<void> resize(int width, int height) async {
-    await _channel.invokeMethod('resizeTex', {'texId': texId, 'width': width, 'height': height});
-    _texWidth = width;
-    _texHeight = height;
-  }
-
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
-  /// The method can also resize the texture if you specify [texWidth] and [texHeight]; the behavior is identical to [resize] function.
+  /// The method can also resize the texture if you specify [texWidth] and [texHeight].
   Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true}) async {
     await _channel.invokeMethod('updateTex', {
       'docId': pdfDocument.docId,
@@ -275,8 +272,8 @@ class PdfPageImageTexture {
       'texId': texId,
       'destX': destX,
       'destY': destY,
-      'width': width ?? texWidth ?? _texWidth,
-      'height': height ?? texHeight ?? _texHeight,
+      'width': width,
+      'height': height,
       'srcX': srcX,
       'srcY': srcY,
       'texWidth': texWidth,
