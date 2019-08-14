@@ -1,3 +1,7 @@
+## 0.49.0
+
+* Just update documents. Also introduces `PdfPageImageTexture` class that is used internally to interact with Flutter's Texture class.
+
 ## 0.46.0
 
 * `PdfPageView` uses Texture rather than RawImage.

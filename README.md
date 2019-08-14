@@ -1,6 +1,6 @@
 ## Introduction
 
-[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0) and Android (>= API Level 21).
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0) and Android (>= API Level 21). It provides you with intermediate PDF rendering APIs and also easy-to-use Flutter Widgets.
 
 ## Widgets
 
