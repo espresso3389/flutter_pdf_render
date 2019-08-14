@@ -82,7 +82,7 @@ Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multip
   }
 ```
 
-## Pdf rendering APIs
+## PDF rendering APIs
 
 The following fragment illustrates overall usage of `PdfDocument`:
 
@@ -217,6 +217,34 @@ final double pageWidth;
 final double pageHeight;
 /// Rendered image in dart:ui.Image
 final Image image;
+```
+
+## PdfPageImageTexture members
+
+**The class is very experimental and subject to change**
+
+The class is used to interact with Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) class to realize faster rendering comparing to PdfPageImage/RawImage combination.
+
+```dart
+class PdfPageImageTexture {
+  final PdfDocument pdfDocument;
+  final int pageNumber;
+  final int texId;
+
+  bool operator ==(Object other);
+  int get hashCode;
+
+  /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
+  static Future<PdfPageImageTexture> create({@required PdfDocument pdfDocument, @required int pageNumber});
+
+  /// Release the object.
+  Future<void> dispose();
+
+  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
+  /// The method can also resize the texture if you specify [texWidth] and [texHeight].
+  Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true});
+}
 ```
 
 ## Future plans
