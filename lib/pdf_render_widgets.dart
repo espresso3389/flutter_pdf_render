@@ -1,5 +1,6 @@
 
 import 'dart:async';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -155,9 +156,9 @@ class PdfPageFit {
     switch (fit)
     {
       case BoxFit.contain:
-        return aspectRatio >= 1.0 ? Size(width, width / aspectRatio) : Size(height * aspectRatio, height);
+        return _sizeByRatio(pageWidth, pageHeight, min(width / pageWidth, height / pageHeight));
       case BoxFit.cover:
-        return aspectRatio >= 1.0 ? Size(height * aspectRatio, height) : Size(width, width / aspectRatio);
+        return _sizeByRatio(pageWidth, pageHeight, max(width / pageWidth, height / pageHeight));
       case BoxFit.fill:
         return Size(width, height);
       case BoxFit.fitWidth:
@@ -167,10 +168,14 @@ class PdfPageFit {
       case BoxFit.none:
         return Size(pageWidth, pageHeight);
       case BoxFit.scaleDown:
-        return (pageWidth < width && pageHeight < height) ? Size(pageWidth, pageHeight) : aspectRatio >= 1.0 ? Size(width, width / aspectRatio) : Size(height * aspectRatio, height);
+        return (pageWidth < width && pageHeight < height) ? Size(pageWidth, pageHeight) : _sizeByRatio(pageWidth, pageHeight, min(width / pageWidth, height / pageHeight));
       default:
         throw Exception('Unknown BoxFit value: $fit');
     }
+  }
+
+  Size _sizeByRatio(double pageWidth, double pageHeight, double ratio) {
+    return Size(pageWidth * ratio, pageHeight * ratio);
   }
 
   @override
@@ -309,7 +314,6 @@ class _PdfPageViewState extends State<PdfPageView> {
     if (_doc == null || widget.pageNumber == null || widget.pageNumber < 1 || widget.pageNumber > _doc.pageCount || _page == null || _texture == null) {
       return Container(width: _size?.width, height: _size?.height);
     }
-
-    return Container(width: _size.width, height: _size.height, child: Texture(textureId: _texture.texId));
+    return Container(width: _size.width, height: _size.height, child: Texture(textureId: _texture.texId), color: Colors.black);
   }
 }
