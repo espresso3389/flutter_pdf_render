@@ -1,3 +1,7 @@
+## 0.51.0
+
+* PdfPage.render method does not handle w=0,h=0 case.
+
 ## 0.49.0
 
 * Just update documents. Also introduces `PdfPageImageTexture` class that is used internally to interact with Flutter's Texture class.
