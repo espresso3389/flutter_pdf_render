@@ -136,14 +136,63 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
   }
 }
 
+class PdfPageFit {
+  /// Width of the area which PDF page fit into.
+  final double width;
+  /// Height of the area which PDF page fit into.
+  final double height;
+  /// Fit method.
+  final BoxFit fit;
+
+  /// Define how the page fit into the area.
+  PdfPageFit({this.width, this.height, this.fit});
+
+  /// [aspectRatio] is width/height ratio.
+  Size calculateSize(double pageWidth, double pageHeight, double aspectRatio) {
+    switch (fit)
+    {
+      case BoxFit.contain:
+        return aspectRatio >= 1.0 ? Size(width, width / aspectRatio) : Size(height * aspectRatio, height);
+      case BoxFit.cover:
+        return aspectRatio >= 1.0 ? Size(height * aspectRatio, height) : Size(width, width / aspectRatio);
+      case BoxFit.fill:
+        return Size(width, height);
+      case BoxFit.fitWidth:
+        return Size(width, width / aspectRatio);
+      case BoxFit.fitHeight:
+        return Size(height * aspectRatio, height);
+      case BoxFit.none:
+        return Size(pageWidth, pageHeight);
+      case BoxFit.scaleDown:
+        return (pageWidth < width && pageHeight < height) ? Size(pageWidth, pageHeight) : aspectRatio >= 1.0 ? Size(width, width / aspectRatio) : Size(height * aspectRatio, height);
+      default:
+        throw Exception('Unknown BoxFit value: $fit');
+    }
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return
+      other is PdfPageFit &&
+      other.width == width &&
+      other.height == height &&
+      other.fit == fit;
+  }
+
+  @override
+  int get hashCode => width.hashCode ^ height.hashCode ^ fit.hashCode;
+}
+
 /// Widget to render a page of PDF document. Normally used in combination with [PdfDocumentLoader].
 class PdfPageView extends StatefulWidget {
   /// [PdfDocument] to render. If it is null, the actual document is obtained by locating ansestor [PdfDocumentLoader] widget.
   final PdfDocument pdfDocument;
   /// Page number of the page to render if only one page should be shown.
   final int pageNumber;
-  /// Calculate rendering size based on page width/height (in pt.; 72-dpi) or page aspect ratio.
+  /// Calculate rendering size based on page width/height (in pt.; 72-dpi) or page aspect ratio. Mutually exclusive with [pageFit].
   final PdfPageCalculateSize calculateSize;
+  /// Page fit configuration. Mutually exclusive with [calculateSize].
+  final PdfPageFit pageFit;
   /// Whether to fill background before rendering actual page content or not.
   /// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
   final bool backgroundFill;
@@ -152,7 +201,7 @@ class PdfPageView extends StatefulWidget {
   /// Function to customize the behavior/appearance of the PDF page.
   final PdfPageCustomizer customizer;
 
-  PdfPageView({Key key, this.pdfDocument, @required this.pageNumber, this.calculateSize, this.backgroundFill = true, this.renderingPixelRatio, this.customizer}): super(key: key);
+  PdfPageView({Key key, this.pdfDocument, @required this.pageNumber, this.calculateSize, this.pageFit, this.backgroundFill = true, this.renderingPixelRatio, this.customizer}): super(key: key);
 
   @override
   _PdfPageViewState createState() => _PdfPageViewState();
@@ -177,6 +226,7 @@ class _PdfPageViewState extends State<PdfPageView> {
       oldWidget.pdfDocument != widget.pdfDocument ||
       oldWidget.pageNumber != widget.pageNumber ||
       oldWidget.calculateSize != widget.calculateSize ||
+      oldWidget.pageFit != widget.pageFit ||
       oldWidget.backgroundFill != widget.backgroundFill) {
       _release();
       _init();
@@ -205,7 +255,7 @@ class _PdfPageViewState extends State<PdfPageView> {
       _release();
       _size = docLoaderState?._getPageSize(widget.pageNumber);
     } else {
-      _size = widget.calculateSize != null ? widget.calculateSize(_page.width, _page.height, _page.width / _page.height) : Size(_page.width, _page.height);
+      _size = widget.calculateSize != null ? widget.calculateSize(_page.width, _page.height, _page.width / _page.height) : widget.pageFit != null ? widget.pageFit.calculateSize(_page.width, _page.height, _page.width / _page.height) : Size(_page.width, _page.height);
       if (docLoaderState != null)
         docLoaderState?._setPageSize(widget.pageNumber, _size);
       if (mounted) {

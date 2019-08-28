@@ -1,3 +1,7 @@
+## 0.52.0
+
+* Introduces PdfPageFit to specify PDF page size fit rule easier.
+
 ## 0.51.0
 
 * PdfPage.render method does not handle w=0,h=0 case.

@@ -1,6 +1,6 @@
 name: pdf_render
 description: A plugin that provides you with intermediate PDF rendering APIs and easy-to-use Flutter Widgets.
-version: 0.51.0
+version: 0.52.0
 author: Takashi Kawasaki <espresso3389@gmail.com>
 homepage: https://github.com/espresso3389/flutter_pdf_render
 
