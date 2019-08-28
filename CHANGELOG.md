@@ -1,4 +1,4 @@
-## 0.52.0
+## 0.53.0
 
 * Introduces PdfPageFit to specify PDF page size fit rule easier.
 

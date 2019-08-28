@@ -35,9 +35,12 @@ class PdfDocumentLoader extends StatefulWidget {
   /// Page number of the page to render if only one page should be shown.
   /// Could not be used with [documentBuilder].
   final int pageNumber;
-  /// Calculate rendering size based on page width/height (in pt.; 72-dpi) or page aspect ratio.
+  /// Calculate rendering size based on page width/height (in pt.; 72-dpi) or page aspect ratio. Mutually exclusive with [pageFit].
   /// Could not be used with [documentBuilder].
   final PdfPageCalculateSize calculateSize;
+  /// Page fit configuration. Mutually exclusive with [calculateSize].
+  /// Could not be used with [documentBuilder].
+  final PdfPageFit pageFit;
   /// Whether to fill background before rendering actual page content or not.
   /// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
   /// Could not be used with [documentBuilder].
@@ -53,7 +56,7 @@ class PdfDocumentLoader extends StatefulWidget {
   /// For single page use, you must specify [pageNumber] and, optionally [calculateSize].
   PdfDocumentLoader({
     Key key, this.filePath, this.assetName, this.data,
-    this.documentBuilder, this.pageNumber, this.calculateSize, this.backgroundFill = true, this.renderingPixelRatio, this.customizer}): super(key: key);
+    this.documentBuilder, this.pageNumber, this.calculateSize, this.pageFit, this.backgroundFill = true, this.renderingPixelRatio, this.customizer}): super(key: key);
 
 
   @override
@@ -129,7 +132,7 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
   @override
   Widget build(BuildContext context) {
     return widget.pageNumber != null
-      ? PdfPageView(pdfDocument: _doc, pageNumber: widget.pageNumber, calculateSize: widget.calculateSize, backgroundFill: widget.backgroundFill, renderingPixelRatio: widget.renderingPixelRatio, customizer: widget.customizer,)
+      ? PdfPageView(pdfDocument: _doc, pageNumber: widget.pageNumber, calculateSize: widget.calculateSize, pageFit: widget.pageFit, backgroundFill: widget.backgroundFill, renderingPixelRatio: widget.renderingPixelRatio, customizer: widget.customizer,)
       : widget.documentBuilder != null
         ? widget.documentBuilder(context, _doc, _doc?.pageCount ?? 0)
         : Container();
