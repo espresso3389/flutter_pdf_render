@@ -210,14 +210,14 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     }
 
     renderer.openPage(pageNumber - 1).use {
-      val _fw = args["fullWidth"]
-      val _fh = args["fullHeight"]
-      val fw = if (_fw is Int && _fw != 0) _fw.toFloat() else it.width.toFloat()
-      val fh = if (_fh is Int && _fh != 0) _fh.toFloat() else it.height.toFloat()
       val x = args["x"] as? Int ?: 0
       val y = args["y"] as? Int ?: 0
-      val w = args["width"] as? Int ?: fw.toInt()
-      val h = args["height"] as? Int ?: fh.toInt()
+      val w = args["width"] as? Int ?: it.width
+      val h = args["height"] as? Int ?: it.height
+      val _fw = args["fullWidth"]
+      val _fh = args["fullHeight"]
+      val fw = if (_fw is Int && _fw != 0) _fw.toFloat() else w.toFloat()
+      val fh = if (_fh is Int && _fh != 0) _fh.toFloat() else h.toFloat()
       val backgroundFill = args["backgroundFill"] as? Boolean ?: false
 
       val buf = ByteBuffer.allocate(w * h * 4)

@@ -339,10 +339,10 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
 
   let pdfBBox = page.getBoxRect(.mediaBox)
 
-  let fw = fullWidth > 0.0 ? fullWidth : Double(pdfBBox.width)
-  let fh = fullHeight > 0.0 ? fullHeight : Double(pdfBBox.height)
-  let w = width > 0 ? width : Int(fw)
-  let h = height > 0 ? height : Int(fh)
+  let w = width > 0 ? width : Int(pdfBBox.width)
+  let h = height > 0 ? height : Int(pdfBBox.height)
+  let fw = fullWidth > 0.0 ? fullWidth : Double(w)
+  let fh = fullHeight > 0.0 ? fullHeight : Double(h)
 
   let sx = CGFloat(fw) / pdfBBox.width
   let sy = CGFloat(fh) / pdfBBox.height
