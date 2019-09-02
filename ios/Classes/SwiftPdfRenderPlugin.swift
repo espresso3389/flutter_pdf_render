@@ -213,10 +213,10 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       return
     }
 
-    let x = args["x"] as! Int
-    let y = args["y"] as! Int
-    let w = args["width"] as! Int
-    let h = args["height"] as! Int
+    let x = args["x"] as? Int ?? 0
+    let y = args["y"] as? Int ?? 0
+    let w = args["width"] as? Int ?? 0
+    let h = args["height"] as? Int ?? 0
     let fw = args["fullWidth"] as? Double ?? 0.0
     let fh = args["fullHeight"] as? Double ?? 0.0
     let backgroundFill = args["backgroundFill"] as? Bool ?? false

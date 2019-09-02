@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 const MethodChannel _channel = const MethodChannel('pdf_render');
@@ -118,7 +117,7 @@ class PdfPage {
   /// If [boxFit] is set, the page image is rendered in a size, that fits into the box specified by [fullWidth], [fullHeight].
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
   /// By default, [backgroundFill] is true and the page background is once filled with white before rendering page image but you can turn it off if needed.
-  Future<PdfPageImage> render({int x = 0, int y = 0, int width = 0, int height = 0, double fullWidth = 0.0, double fullHeight = 0.0, bool backgroundFill = true}) async {
+  Future<PdfPageImage> render({int x, int y, int width, int height, double fullWidth, double fullHeight, bool backgroundFill}) async {
     return PdfPageImage._render(
       document, pageNumber,
       x: x,
@@ -173,9 +172,9 @@ class PdfPageImage {
 
   static Future<PdfPageImage> _render(
     PdfDocument document, int pageNumber,
-    { int x = 0, int y = 0, int width = 0, int height = 0,
-      double fullWidth = 0.0, double fullHeight = 0.0,
-      bool backgroundFill = true,
+    { int x , int y, int width, int height,
+      double fullWidth, double fullHeight,
+      bool backgroundFill,
     }) async {
     var obj = await _channel.invokeMethod(
       'render',
@@ -209,8 +208,8 @@ class PdfPageImage {
   }
 
   static Future<PdfPageImage> render(String filePath, int pageNumber,
-    { int x = 0, int y = 0, int width = 0, int height = 0,
-      double fullWidth = 0.0, double fullHeight = 0.0}) async {
+    { int x, int y, int width, int height,
+      double fullWidth, double fullHeight}) async {
     final doc = await PdfDocument.openFile(filePath);
     if (doc == null) return null;
     final page = await doc.getPage(pageNumber);
