@@ -219,7 +219,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let h = args["height"] as? Int ?? 0
     let fw = args["fullWidth"] as? Double ?? 0.0
     let fh = args["fullHeight"] as? Double ?? 0.0
-    let backgroundFill = args["backgroundFill"] as? Bool ?? false
+    let backgroundFill = args["backgroundFill"] as? Bool ?? true
 
     dispQueue.async {
       var dict: [String: Any]? = nil
@@ -299,7 +299,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let srcY = args["srcY"] as? Int ?? 0
     let fw = args["fullWidth"] as? Double
     let fh = args["fullHeight"] as? Double
-    let backgroundFill = args["backgroundFill"] as? Bool ?? false
+    let backgroundFill = args["backgroundFill"] as? Bool ?? true
 
     let tw = args["texWidth"] as? Int
     let th = args["texHeight"] as? Int
@@ -335,7 +335,7 @@ class PageData {
   }
 }
 
-func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double = 0.0, fullHeight: Double = 0.0, backgroundFill: Bool = false) -> PageData? {
+func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, backgroundFill: Bool) -> PageData? {
 
   let pdfBBox = page.getBoxRect(.mediaBox)
 

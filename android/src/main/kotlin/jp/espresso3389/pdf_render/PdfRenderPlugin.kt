@@ -220,7 +220,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       val _fh = args["fullHeight"] as? Double ?: 0.0
       val fw = if (_fw > 0) _fw.toFloat() else w.toFloat()
       val fh = if (_fh > 0) _fh.toFloat() else h.toFloat()
-      val backgroundFill = args["backgroundFill"] as? Boolean ?: false
+      val backgroundFill = args["backgroundFill"] as? Boolean ?: true
 
       val buf = ByteBuffer.allocate(w * h * 4)
 
@@ -297,7 +297,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       val height = args["height"] as? Int ?: 0
       val srcX = args["srcX"] as? Int ?: 0
       val srcY = args["srcY"] as? Int ?: 0
-      val backgroundFill = args["backgroundFill"] as? Boolean ?: false
+      val backgroundFill = args["backgroundFill"] as? Boolean ?: true
 
       if (width <= 0 || height <= 0)
         return -7

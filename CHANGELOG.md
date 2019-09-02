@@ -1,3 +1,7 @@
+## 0.56.0
+
+* Woops, backgroundFill must be true for default.
+
 ## 0.55.0
 
 * Now render like functions treat null and 0 almost identical.
