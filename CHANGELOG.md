@@ -1,3 +1,7 @@
+## 0.57.0
+
+* On iOS Simulator, the plugin now uses compatibility rendering mode; to test the actual behavior, please use physical devices.
+
 ## 0.56.0
 
 * Woops, backgroundFill must be true for default.

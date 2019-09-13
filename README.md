@@ -4,6 +4,12 @@
 
 ## Widgets
 
+### Note on iOS Simulator
+
+Althouth the plugin uses Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) to realize fast rendering of PDF pages, it does not work correctly in iOS Simulator and the plugin will fallback to compatibility rendering mode.
+
+Please use the physical device to test the actual behavior.
+
 ### Single page view
 
 The following fragment illustrates the easiest way to render only one page of a PDF document using `PdfDocumentLoader`. It is suitable for showing PDF thumbnail.
