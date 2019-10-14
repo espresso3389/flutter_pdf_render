@@ -101,22 +101,23 @@ class PdfDocument {
 
 class PdfPage {
   final PdfDocument document;
+  /// Page number. The first page is 1.
   final int pageNumber;
+  /// Clockwise page rotation angle in degrees.
   final int rotationAngle;
+  /// PDF page width in points (width in pixels at 72 dpi) (rotated).
   final double width;
+  /// PDF page height in points (height in pixels at 72 dpi) (rotated).
   final double height;
 
   PdfPage({this.document, this.pageNumber, this.rotationAngle, this.width, this.height});
 
   /// Render a sub-area or full image of specified PDF file.
-  /// [pdfFilePath] specifies PDF file to open.
-  /// [pageNumber] specifies page to render in page number (1 is the first page).
   /// [x], [y], [width], [height] specify sub-area to render in pixels.
   /// [fullWidth], [fullHeight] specify virtual full size of the page to render in pixels. If they're not specified, [width] and [height] are used to specify the full size.
-  /// If [dpi] is set, [fullWidth] and [fullHeight] are ignored and the page is rendered in the specified dpi.
-  /// If [boxFit] is set, the page image is rendered in a size, that fits into the box specified by [fullWidth], [fullHeight].
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
   /// By default, [backgroundFill] is true and the page background is once filled with white before rendering page image but you can turn it off if needed.
+  /// ![](./images/render-params.png)
   Future<PdfPageImage> render({int x, int y, int width, int height, double fullWidth, double fullHeight, bool backgroundFill}) async {
     return PdfPageImage._render(
       document, pageNumber,
@@ -233,8 +234,8 @@ class PdfPageImage {
 }
 
 /// Very limited support for Flutter's [Texture] based drawing.
-/// Because it does not transfer the rendered image via platform channel, it could be faster than
-/// the [PdfPageImage] based rendrering process.
+/// Because it does not transfer the rendered image via platform channel,
+/// it could be faster and more efficient than the [PdfPageImage] based rendrering process.
 class PdfPageImageTexture {
   final PdfDocument pdfDocument;
   final int pageNumber;
