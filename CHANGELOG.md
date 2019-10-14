@@ -1,3 +1,7 @@
+## 0.57.1
+
+* Update comments (#6).
+
 ## 0.57.0
 
 * On iOS Simulator, the plugin now uses compatibility rendering mode; to test the actual behavior, please use physical devices.
