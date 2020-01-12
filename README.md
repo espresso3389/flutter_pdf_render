@@ -137,10 +137,10 @@ On `PdfDocument` class, there are three functions to open PDF from a real file, 
 
 ```dart
 // from an asset file
-PdfDocument docFromFile = await PdfDocument.openAsset('assets/hello.pdf');
+PdfDocument docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
-PdfDocument docFromAsset = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
+PdfDocument docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List
 PdfDocument docFromData = await PdfDocument.openData(data);
