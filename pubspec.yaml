@@ -1,11 +1,11 @@
 name: pdf_render
 description: A plugin that provides you with intermediate PDF rendering APIs and easy-to-use Flutter Widgets.
-version: 0.57.1
-author: Takashi Kawasaki <espresso3389@gmail.com>
+version: 0.57.2
 homepage: https://github.com/espresso3389/flutter_pdf_render
 
 environment:
   sdk: ">=2.2.2 <3.0.0"
+  flutter: ">=1.10.0 <2.0.0"
 
 dependencies:
   flutter:
@@ -18,8 +18,12 @@ dependencies:
 # The following section is specific to Flutter.
 flutter:
   plugin:
-    androidPackage: jp.espresso3389.pdf_render
-    pluginClass: PdfRenderPlugin
+    platforms:
+      android:
+        package: jp.espresso3389.pdf_render
+        pluginClass: PdfRenderPlugin
+      ios:
+        pluginClass: PdfRenderPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

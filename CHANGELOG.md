@@ -1,3 +1,7 @@
+## 0.57.2
+
+* Update pubspec.yaml not to be shown as WEB compatible on pub.dev (#11).
+
 ## 0.57.1
 
 * Update comments (#6).
