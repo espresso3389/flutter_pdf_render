@@ -259,7 +259,7 @@ class _PdfPageViewState extends State<PdfPageView> {
 
     final docLoaderState = _getPdfDocumentLoaderState();
     _size = docLoaderState?._getPageSize(widget.pageNumber);
-    _doc = widget.pdfDocument ?? docLoaderState._doc;
+    _doc = widget.pdfDocument ?? docLoaderState?._doc;
     if (_doc == null) {
       _page = null;
       if (mounted) {
@@ -309,7 +309,7 @@ class _PdfPageViewState extends State<PdfPageView> {
     }
   }
 
-  _PdfDocumentLoaderState _getPdfDocumentLoaderState() => context.ancestorStateOfType(const TypeMatcher<_PdfDocumentLoaderState>());
+  _PdfDocumentLoaderState _getPdfDocumentLoaderState() => context?.ancestorStateOfType(const TypeMatcher<_PdfDocumentLoaderState>());
 
   void _release() {
     _doc = null;
