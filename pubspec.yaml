@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  device_info: ^^0.4.2+4
+  device_info: ^0.4.2+4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://www.dartlang.org/tools/pub/pubspec
