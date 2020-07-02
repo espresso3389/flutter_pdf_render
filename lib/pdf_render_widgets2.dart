@@ -301,7 +301,7 @@ class _PdfPageViewState extends State<PdfPageView> {
                 child: AspectRatio(
                     aspectRatio: _aspectRatio, child: contentWidget));
 
-            if (_isIosSimulator) {
+            if (_isIosSimulator == true) {
               contentWidget = Stack(
                 children: <Widget>[
                   contentWidget,
@@ -331,7 +331,7 @@ class _PdfPageViewState extends State<PdfPageView> {
     final pixelRatio =
         widget.renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
     final pixelSize = size * pixelRatio;
-    if (widget.dontUseTexture == true || _isIosSimulator) {
+    if (widget.dontUseTexture == true || _isIosSimulator == true) {
       _image = await _page.render(
           width: pixelSize.width.toInt(),
           height: pixelSize.height.toInt(),
@@ -342,6 +342,8 @@ class _PdfPageViewState extends State<PdfPageView> {
       if (_texture == null ||
           _texture.pdfDocument.docId != _doc.docId ||
           _texture.pageNumber != widget.pageNumber) {
+        _image?.dispose();
+        _image = null;
         _texture?.dispose();
         _texture = await PdfPageImageTexture.create(
             pdfDocument: _doc, pageNumber: widget.pageNumber);

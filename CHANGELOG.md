@@ -1,3 +1,7 @@
+## 0.59.0
+
+* Minor fixes.
+
 ## 0.58.0
 
 * Introduces pdf_render_widgets2.dart and the classes in pdf_render_widgets.dart are deprecated.
