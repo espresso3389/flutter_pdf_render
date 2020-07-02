@@ -10,14 +10,19 @@ Althouth the plugin uses Flutter's [Texture](https://api.flutter.dev/flutter/wid
 
 Please use the physical device to test the actual behavior.
 
+### Importing Widgets Library
+
+Althouth 0.58.0 introduces new PDF rendering widgets, it also contains deprecated but backward compatible old widgets too. Anyway if you're new to the plugin, you had better use the new widgets with the following import:
+
+```dart
+import 'package:pdf_render/pdf_render_widgets2.dart';
+```
+
 ### Single page view
 
 The following fragment illustrates the easiest way to render only one page of a PDF document using `PdfDocumentLoader`. It is suitable for showing PDF thumbnail.
 
 ```dart
-  /// render at 100 dpi
-  static const scale = 100.0 / 72.0;
-
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
@@ -30,7 +35,7 @@ The following fragment illustrates the easiest way to render only one page of a 
           child: PdfDocumentLoader(
             assetName: 'assets/hello.pdf',
             pageNumber: 1,
-            calculateSize: (pageWidth, pageHeight, aspectRatio) => Size(pageWidth * scale, pageHeight * scale)
+            pageBuilder: (context, aspectRatio, textureBuilder) => textureBuilder()
           )
         )
       ),
@@ -45,12 +50,6 @@ Of course, `PdfDocumentLoader` accepts one of `filePath`, `assetName`, or `data`
 Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multiple pages of a PDF document. In the following fragment, `ListView.builder` is utilized to realize scrollable PDF document viewer.
 
 ```dart
-  /// render at 100 dpi
-  static const scale = 100.0 / 72.0;
-  static const margin = 4.0;
-  static const padding = 1.0;
-  static const wmargin = (margin + padding) * 2;
-
   @override
   Widget build(BuildContext context) {
     return new MaterialApp(
@@ -72,11 +71,6 @@ Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multip
                   child: PdfPageView(
                     pdfDocument: pdfDocument,
                     pageNumber: index + 1,
-                    // calculateSize is used to calculate the rendering page size
-                    calculateSize: (pageWidth, pageHeight, aspectRatio) =>
-                      Size(
-                        constraints.maxWidth - wmargin,
-                        (constraints.maxWidth - wmargin) / aspectRatio)
                   )
                 )
               )
@@ -86,6 +80,41 @@ Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multip
       ),
     );
   }
+```
+
+### Customizing page widget
+
+Both `PdfDocumentLoader` and `PdfPageView` accepts `pageBuilder` parameter if you want to customize the visual of each page. The following fragment illustrates that:
+
+```dart
+PdfPageView(
+  pageNumber: index + 1,
+  pageBuilder: (context, aspectRatio, textureBuilder) {
+    //
+    // This illustrates how to decorate the page image with other widgets
+    //
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: <Widget>[
+        // the container adds shadow on each page
+        Container(
+            margin: EdgeInsets.all(margin),
+            padding: EdgeInsets.all(padding),
+            decoration: BoxDecoration(boxShadow: [
+              BoxShadow(
+                  color: Colors.black45,
+                  blurRadius: 4,
+                  offset: Offset(2, 2))
+            ]),
+            // textureBuilder builds the actual page image
+            child: textureBuilder(null)),
+        // adding page number on the bottom of rendered page
+        Text('${index + 1}',
+            style: TextStyle(fontSize: 50))
+      ],
+    );
+  },
+)
 ```
 
 ## PDF rendering APIs

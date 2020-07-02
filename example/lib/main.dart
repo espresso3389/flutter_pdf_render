@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:pdf_render/pdf_render_widgets.dart';
+import 'package:pdf_render/pdf_render_widgets2.dart';
 
 void main() => runApp(new MyApp());
 
@@ -15,38 +15,46 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return new MaterialApp(
       home: new Scaffold(
-        appBar: new AppBar(
-          title: const Text('Pdf_render example app'),
-        ),
-        backgroundColor: Colors.grey,
-        body: Center(
-          child: PdfDocumentLoader(
+          appBar: new AppBar(
+            title: const Text('Pdf_render example app'),
+          ),
+          backgroundColor: Colors.grey,
+          body: Center(
+              child: PdfDocumentLoader(
             assetName: 'assets/hello.pdf',
-            documentBuilder: (context, pdfDocument, pageCount) => LayoutBuilder(
-              builder: (context, constraints) => ListView.builder(
-                controller: controller,
-                itemCount: pageCount,
-                itemBuilder: (context, index) => Container(
-                  margin: EdgeInsets.all(margin),
-                  padding: EdgeInsets.all(padding),
-                  color: Colors.black12,
-                  child: PdfPageView(
-                    pageNumber: index + 1,
-                    calculateSize: (pageWidth, pageHeight, aspectRatio) => Size(constraints.maxWidth - wmargin, (constraints.maxWidth - wmargin) / aspectRatio),
-
-                    customizer: (context, page, size) => Stack(
-                      alignment: Alignment.bottomCenter,
-                      children: <Widget>[
-                        if (page != null) page,
-                        Text('${index + 1}', style: TextStyle(fontSize: 50)) // adding page number on the bottom of rendered page
-                      ],)
-                  )
-                )
-              )
-            ),
-          )
-        )
-      ),
+            documentBuilder: (context, pdfDocument, pageCount) =>
+                ListView.builder(
+                    controller: controller,
+                    itemCount: pageCount,
+                    itemBuilder: (context, index) => PdfPageView(
+                          pageNumber: index + 1,
+                          pageBuilder: (context, aspectRatio, textureBuilder) {
+                            //
+                            // This illustrates how to decorate the page image with other widgets
+                            //
+                            return Stack(
+                              alignment: Alignment.bottomCenter,
+                              children: <Widget>[
+                                // the container adds shadow on each page
+                                Container(
+                                    margin: EdgeInsets.all(margin),
+                                    padding: EdgeInsets.all(padding),
+                                    decoration: BoxDecoration(boxShadow: [
+                                      BoxShadow(
+                                          color: Colors.black45,
+                                          blurRadius: 4,
+                                          offset: Offset(2, 2))
+                                    ]),
+                                    // textureBuilder builds the actual page image
+                                    child: textureBuilder(null)),
+                                // adding page number on the bottom of rendered page
+                                Text('${index + 1}',
+                                    style: TextStyle(fontSize: 50))
+                              ],
+                            );
+                          },
+                        )),
+          ))),
     );
   }
 }

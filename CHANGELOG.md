@@ -1,3 +1,7 @@
+## 0.58.0
+
+* Introduces pdf_render_widgets2.dart and the classes in pdf_render_widgets.dart are deprecated.
+
 ## 0.57.2
 
 * Update pubspec.yaml not to be shown as WEB compatible on pub.dev (#11).
