@@ -114,7 +114,7 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
     Size size;
     if (_cachedPageSizes != null &&
         pageNumber > 0 &&
-        pageNumber <= _doc.pageCount) {
+        pageNumber <= _cachedPageSizes.length) {
       size = _cachedPageSizes[pageNumber - 1];
     }
     size ??= _lastPageSize;
