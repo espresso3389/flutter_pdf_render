@@ -20,15 +20,22 @@ class MyApp extends StatelessWidget {
           ),
           backgroundColor: Colors.grey,
           body: Center(
-              child: PdfDocumentLoader(
-            assetName: 'assets/hello.pdf',
-            documentBuilder: (context, pdfDocument, pageCount) =>
+            // PdfDocumentLoader loads the specified PDF document.
+            // It does not render the pages directly but each PdfPageView below
+            // the widget tree renders each page.
+            child: PdfDocumentLoader(
+              assetName: 'assets/hello.pdf',
+              documentBuilder: (context, pdfDocument, pageCount) =>
                 ListView.builder(
                     controller: controller,
                     itemCount: pageCount,
+                    // each page is rendered by PdfPageView
                     itemBuilder: (context, index) => PdfPageView(
                           pageNumber: index + 1,
-                          pageBuilder: (context, aspectRatio, textureBuilder) {
+                          // The second paramter, [pageSize] is the original page size in pt.
+                          // You can determine the final page size shown in the flutter UI using the size
+                          // and then pass the size to [textureBuilder] function on the third parameter.
+                          pageBuilder: (context, pageSize, textureBuilder) {
                             //
                             // This illustrates how to decorate the page image with other widgets
                             //
@@ -45,7 +52,10 @@ class MyApp extends StatelessWidget {
                                           blurRadius: 4,
                                           offset: Offset(2, 2))
                                     ]),
-                                    // textureBuilder builds the actual page image
+                                    // textureBuilder builds the actual page image.
+                                    // It accepts the page size you want
+                                    // but null can be also accepted to calculate
+                                    // page size.
                                     child: textureBuilder(null)),
                                 // adding page number on the bottom of rendered page
                                 Text('${index + 1}',

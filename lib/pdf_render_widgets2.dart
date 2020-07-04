@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:device_info/device_info.dart';
@@ -15,13 +16,18 @@ typedef Widget PdfDocumentBuilder(
 
 /// Function definition to build widget tree corresponding to a PDF page; normally to decorate the rendered
 /// PDF page with certain border and/or shadow and sometimes add page number on it.
-/// [aspectRatio] is the aspect ratio of the PDF page (width / height). You can calculate the actual PDF page sized to passed to [textureBuilder].
-/// [textureBuilder] will generate the actual widget that contains rendered PDF page image.
-typedef PdfPageBuilder = Widget Function(BuildContext context,
-    double aspectRatio, PdfPageTextureBuilder textureBuilder);
+/// The second paramter [pageSize] is the original page size in pt.
+/// You can determine the final page size shown in the flutter UI using the size
+/// and then pass the size to [textureBuilder] function on the third parameter,
+/// which generates the final [Widget].
+typedef PdfPageBuilder = Widget Function(
+    BuildContext context, Size pageSize, PdfPageTextureBuilder textureBuilder);
 
 /// Function definition to generate the actual widget that contains rendered PDF page image.
 /// [size] should be the page widget size but it can be null if you don't want to calculate it.
+/// Unlike the function name, it may generate widget other than [Texture].
+/// Anyway, please note that the size is in screen coordinates; not the actual pixel size of
+/// the image. In other words, the function correctly deals with the screen pixel density automatically.
 typedef PdfPageTextureBuilder = Widget Function(Size size);
 
 class PdfDocumentLoader extends StatefulWidget {
@@ -35,6 +41,7 @@ class PdfDocumentLoader extends StatefulWidget {
 
   /// Page number of the page to render if only one page should be shown.
   /// Could not be used with [documentBuilder].
+  /// If you want to show multiple pages in the widget tree, use [PdfPageView].
   final int pageNumber;
 
   /// Whether to fill background before rendering actual page content or not.
@@ -156,6 +163,7 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
 
 /// Widget to render a page of PDF document. Normally used in combination with [PdfDocumentLoader].
 class PdfPageView extends StatefulWidget {
+
   /// [PdfDocument] to render. If it is null, the actual document is obtained by locating ansestor [PdfDocumentLoader] widget.
   final PdfDocument pdfDocument;
 
@@ -191,6 +199,10 @@ class PdfPageView extends StatefulWidget {
 }
 
 class _PdfPageViewState extends State<PdfPageView> {
+
+  /// The default size; A4 595x842 px.
+  static const defaultSize = Size(595, 842);
+
   PdfDocument _doc;
   PdfPage _page;
   Size _size;
@@ -260,29 +272,26 @@ class _PdfPageViewState extends State<PdfPageView> {
   @override
   Widget build(BuildContext context) {
     final pageBuilder = widget.pageBuilder ?? _pageBuilder;
-    return pageBuilder(context, _aspectRatio, _textureBuilder);
+    return pageBuilder(context, _pageSize, _textureBuilder);
   }
 
-  Widget _pageBuilder(BuildContext context, double aspectRatio,
+  Widget _pageBuilder(BuildContext context, Size pageSize,
       PdfPageTextureBuilder textureBuilder) {
     return LayoutBuilder(
         builder: (context, constraints) =>
-            _textureBuilder(_sizeFromConstratints(constraints, aspectRatio)));
+            _textureBuilder(_sizeFromConstratints(constraints, pageSize)));
   }
 
-  double get _aspectRatio => _size != null ? _size.width / _size.height : 4 / 3;
+  Size get _pageSize => _size ?? defaultSize;
 
-  Size _sizeFromConstratints(BoxConstraints constraints, double aspectRatio) {
-    if (constraints.maxWidth / aspectRatio < constraints.maxHeight) {
-      return Size(constraints.maxWidth, constraints.maxWidth / aspectRatio);
-    } else {
-      return Size(constraints.maxHeight * aspectRatio, constraints.maxHeight);
-    }
+  Size _sizeFromConstratints(BoxConstraints constraints, Size pageSize) {
+    final ratio = min(constraints.maxWidth / pageSize.width, constraints.maxHeight / pageSize.height);
+    return Size(pageSize.width * ratio, pageSize.height * ratio);
   }
 
   Widget _textureBuilder(Size size) {
     return LayoutBuilder(builder: (context, constraints) {
-      size ??= _sizeFromConstratints(constraints, _aspectRatio);
+      size ??= _sizeFromConstratints(constraints, _pageSize);
       return FutureBuilder<bool>(
           future: _buildTexture(size),
           initialData: false,
@@ -299,7 +308,7 @@ class _PdfPageViewState extends State<PdfPageView> {
                 width: size.width,
                 height: size.height,
                 child: AspectRatio(
-                    aspectRatio: _aspectRatio, child: contentWidget));
+                    aspectRatio: _pageSize.aspectRatio, child: contentWidget));
 
             if (_isIosSimulator == true) {
               contentWidget = Stack(
