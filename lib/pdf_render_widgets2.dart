@@ -21,14 +21,27 @@ typedef Widget PdfDocumentBuilder(
 /// and then pass the size to [textureBuilder] function on the third parameter,
 /// which generates the final [Widget].
 typedef PdfPageBuilder = Widget Function(
-    BuildContext context, Size pageSize, PdfPageTextureBuilder textureBuilder);
+    BuildContext context, PdfPageTextureBuilder textureBuilder, Size pageSize);
 
 /// Function definition to generate the actual widget that contains rendered PDF page image.
 /// [size] should be the page widget size but it can be null if you don't want to calculate it.
 /// Unlike the function name, it may generate widget other than [Texture].
+/// If [returnNullForError] is true, the function returns null if rendering failure; otherwise,
+/// the function generates a placeholder [Container] for the unavailable page image.
 /// Anyway, please note that the size is in screen coordinates; not the actual pixel size of
 /// the image. In other words, the function correctly deals with the screen pixel density automatically.
-typedef PdfPageTextureBuilder = Widget Function(Size size);
+typedef PdfPageTextureBuilder = Widget Function({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder});
+
+/// Creates page placeholder that is shown on page loading or even page load failure.
+typedef PdfPagePlaceholderBuilder = Widget Function(Size size, PdfPageStatus status);
+
+/// Page loading status.
+enum PdfPageStatus {
+  /// The page is currently being loaded.
+  loading,
+  /// The page load failed.
+  loadFailed,
+}
 
 class PdfDocumentLoader extends StatefulWidget {
   // only one of [filePath], [assetName], or [data] have to be specified.
@@ -126,13 +139,17 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
   }
 
   Future<void> _init() async {
-    if (widget.filePath != null) {
-      _doc = await PdfDocument.openFile(widget.filePath);
-    } else if (widget.assetName != null) {
-      _doc = await PdfDocument.openAsset(widget.assetName);
-    } else if (widget.data != null) {
-      _doc = await PdfDocument.openData(widget.data);
-    } else {
+    try {
+      if (widget.filePath != null) {
+        _doc = await PdfDocument.openFile(widget.filePath);
+      } else if (widget.assetName != null) {
+        _doc = await PdfDocument.openAsset(widget.assetName);
+      } else if (widget.data != null) {
+        _doc = await PdfDocument.openData(widget.data);
+      } else {
+        _doc = null;
+      }
+    } catch (e) {
       _doc = null;
     }
     if (mounted) {
@@ -272,14 +289,12 @@ class _PdfPageViewState extends State<PdfPageView> {
   @override
   Widget build(BuildContext context) {
     final pageBuilder = widget.pageBuilder ?? _pageBuilder;
-    return pageBuilder(context, _pageSize, _textureBuilder);
+    return pageBuilder(context, _textureBuilder, _pageSize);
   }
 
-  Widget _pageBuilder(BuildContext context, Size pageSize,
-      PdfPageTextureBuilder textureBuilder) {
+  Widget _pageBuilder(BuildContext context, PdfPageTextureBuilder textureBuilder, Size pageSize) {
     return LayoutBuilder(
-        builder: (context, constraints) =>
-            _textureBuilder(_sizeFromConstratints(constraints, pageSize)));
+        builder: (context, constraints) => textureBuilder());
   }
 
   Size get _pageSize => _size ?? defaultSize;
@@ -289,26 +304,30 @@ class _PdfPageViewState extends State<PdfPageView> {
     return Size(pageSize.width * ratio, pageSize.height * ratio);
   }
 
-  Widget _textureBuilder(Size size) {
+  Widget _textureBuilder({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder}) {
     return LayoutBuilder(builder: (context, constraints) {
       size ??= _sizeFromConstratints(constraints, _pageSize);
+      placeholderBuilder ??= (size, status) => Container(width: size.width, height: size.height, color: Color.fromARGB(255, 220, 220, 220));
       return FutureBuilder<bool>(
           future: _buildTexture(size),
           initialData: false,
           builder: (context, snapshot) {
             if (snapshot.data != true) {
-              return Container(width: size.width, height: size.height);
+              // still loading
+              return placeholderBuilder(size, PdfPageStatus.loading);
             }
 
-            Widget contentWidget = _texture != null
-                ? Texture(textureId: _texture.texId)
-                : _image?.image != null ? RawImage(image: _image.image) : null;
+            if (_texture?.texId == null && _image?.image == null) {
+              // some loading error
+              return returnNullForError == true ? null : placeholderBuilder(size, PdfPageStatus.loadFailed);
+            }
 
-            contentWidget = Container(
-                width: size.width,
-                height: size.height,
-                child: AspectRatio(
-                    aspectRatio: _pageSize.aspectRatio, child: contentWidget));
+            Widget contentWidget = _texture?.texId != null
+            ? SizedBox(
+              width: size.width,
+              height: size.height,
+              child: Texture(textureId: _texture.texId))
+            : RawImage(image: _image.image);
 
             if (_isIosSimulator == true) {
               contentWidget = Stack(
@@ -329,7 +348,8 @@ class _PdfPageViewState extends State<PdfPageView> {
     if (_doc == null ||
         widget.pageNumber == null ||
         widget.pageNumber < 1 ||
-        widget.pageNumber > _doc.pageCount) {
+        widget.pageNumber > _doc.pageCount ||
+        _page == null) {
       return true;
     }
 
@@ -337,16 +357,15 @@ class _PdfPageViewState extends State<PdfPageView> {
       _isIosSimulator = await _determineWhetherIOSSimulatorOrNot();
     }
 
-    final pixelRatio =
-        widget.renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
+    final pixelRatio = widget.renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
     final pixelSize = size * pixelRatio;
     if (widget.dontUseTexture == true || _isIosSimulator == true) {
       _image = await _page.render(
-          width: pixelSize.width.toInt(),
-          height: pixelSize.height.toInt(),
-          fullWidth: pixelSize.width,
-          fullHeight: pixelSize.height,
-          backgroundFill: widget.backgroundFill);
+        width: pixelSize.width.toInt(),
+        height: pixelSize.height.toInt(),
+        fullWidth: pixelSize.width,
+        fullHeight: pixelSize.height,
+        backgroundFill: widget.backgroundFill);
     } else {
       if (_texture == null ||
           _texture.pdfDocument.docId != _doc.docId ||
@@ -358,49 +377,15 @@ class _PdfPageViewState extends State<PdfPageView> {
             pdfDocument: _doc, pageNumber: widget.pageNumber);
       }
       await _texture.updateRect(
-          width: pixelSize.width.toInt(),
-          height: pixelSize.height.toInt(),
-          texWidth: pixelSize.width.toInt(),
-          texHeight: pixelSize.height.toInt(),
-          fullWidth: pixelSize.width,
-          fullHeight: pixelSize.height,
-          backgroundFill: widget.backgroundFill);
+        width: pixelSize.width.toInt(),
+        height: pixelSize.height.toInt(),
+        texWidth: pixelSize.width.toInt(),
+        texHeight: pixelSize.height.toInt(),
+        fullWidth: pixelSize.width,
+        fullHeight: pixelSize.height,
+        backgroundFill: widget.backgroundFill);
     }
     return true;
-  }
-
-  Widget _buildPage() {
-    if (_doc == null ||
-        widget.pageNumber == null ||
-        widget.pageNumber < 1 ||
-        widget.pageNumber > _doc.pageCount ||
-        _page == null ||
-        (_texture == null && _image == null)) {
-      return Container(width: _size?.width, height: _size?.height);
-    }
-
-    Widget contentWidget = _texture != null
-        ? Texture(textureId: _texture.texId)
-        : RawImage(image: _image.image);
-
-    contentWidget = Container(
-        width: _size.width,
-        height: _size.height,
-        color: Colors.black,
-        child: contentWidget);
-
-    if (_isIosSimulator) {
-      contentWidget = Stack(
-        children: <Widget>[
-          contentWidget,
-          const Text(
-              'Warning: on iOS Simulator, pdf_render work differently to physical device.',
-              style: TextStyle(color: Colors.redAccent))
-        ],
-      );
-    }
-
-    return contentWidget;
   }
 
   static Future<bool> _determineWhetherIOSSimulatorOrNot() async {

@@ -12,7 +12,7 @@ Please use the physical device to test the actual behavior.
 
 ### Importing Widgets Library
 
-Althouth 0.58.0 introduces new PDF rendering widgets, it also contains deprecated but backward compatible old widgets too. Anyway if you're new to the plugin, you had better use the new widgets with the following import:
+Althouth 0.61.0 introduces new PDF rendering widgets, it also contains deprecated but backward compatible old widgets too. Anyway if you're new to the plugin, you had better use the new widgets with the following import:
 
 ```dart
 import 'package:pdf_render/pdf_render_widgets2.dart';
@@ -35,7 +35,7 @@ The following fragment illustrates the easiest way to render only one page of a 
           child: PdfDocumentLoader(
             assetName: 'assets/hello.pdf',
             pageNumber: 1,
-            pageBuilder: (context, aspectRatio, textureBuilder) => textureBuilder()
+            pageBuilder: (context, textureBuilder, pageSize) => textureBuilder()
           )
         )
       ),
@@ -89,7 +89,8 @@ Both `PdfDocumentLoader` and `PdfPageView` accepts `pageBuilder` parameter if yo
 ```dart
 PdfPageView(
   pageNumber: index + 1,
-  pageBuilder: (context, aspectRatio, textureBuilder) {
+  // pageSize is the PDF page size in pt.
+  pageBuilder: (context, textureBuilder, pageSize) {
     //
     // This illustrates how to decorate the page image with other widgets
     //
@@ -107,7 +108,7 @@ PdfPageView(
                   offset: Offset(2, 2))
             ]),
             // textureBuilder builds the actual page image
-            child: textureBuilder(null)),
+            child: textureBuilder()),
         // adding page number on the bottom of rendered page
         Text('${index + 1}',
             style: TextStyle(fontSize: 50))
@@ -115,6 +116,41 @@ PdfPageView(
     );
   },
 )
+```
+
+### textureBuilder
+
+`textureBuilder` (`PdfPageTextureBuilder`) generates the actual widget that directly corresponding to the page image. The actual widget generated may vary upon the situation. But you can of course customize the behavior of the funtion with its parameter.
+
+The function is defined as:
+
+```dart
+typedef PdfPageTextureBuilder = Widget Function({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder});
+```
+
+So if you want to generate widget of an exact size, you can specify `size` explicitly.
+
+Please note that the size is in density-independent pixels. The function is responsible for determining the actual pixel size based on device's pixel density.
+
+`returnNullForError` may be true if you want null for PDF page loading/rendering failure; it is, with the parameter, you can handle the behavior on such failures:
+
+```dart
+textureBuilder(returnNullForError: true) ?? Container()
+```
+
+Ultimately, `placeholderBuilder` is the final resort that controls the "placeholder" for loading or failure cases.
+
+```dart
+/// Creates page placeholder that is shown on page loading or even page load failure.
+typedef PdfPagePlaceholderBuilder = Widget Function(Size size, PdfPageStatus status);
+
+/// Page loading status.
+enum PdfPageStatus {
+  /// The page is currently being loaded.
+  loading,
+  /// The page load failed.
+  loadFailed,
+}
 ```
 
 ## PDF rendering APIs
@@ -159,6 +195,8 @@ Widget build(BuildContext context) {
   );
 }
 ```
+
+But if you don't want raw RGBA image data access, you had better use faster and efficient `PdfPageImageTexture`.
 
 ## PdfDocument.openXXX
 
@@ -256,9 +294,7 @@ final Image image;
 
 ## PdfPageImageTexture members
 
-**The class is very experimental and subject to change**
-
-The class is used to interact with Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) class to realize faster rendering comparing to PdfPageImage/RawImage combination.
+The class is used to interact with Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) class to realize faster and resource-saving rendering comparing to PdfPageImage/RawImage combination.
 
 ```dart
 class PdfPageImageTexture {
@@ -285,5 +321,3 @@ class PdfPageImageTexture {
 ## Future plans
 
 - Supporting password protected PDF files (#1)
-  - iOS version is already on [a branch](https://github.com/espresso3389/flutter_pdf_render/tree/support_passwords)
-  - Android version is also planned and it will use [espresso3389/android-support-pdfium](https://github.com/espresso3389/android-support-pdfium)

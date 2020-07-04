@@ -265,8 +265,9 @@ class PdfPageImageTexture {
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
-  Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true}) async {
-    await _channel.invokeMethod('updateTex', {
+  /// Returns true if succeeded.
+  Future<bool> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true}) async {
+    final result = await _channel.invokeMethod<int>('updateTex', {
       'docId': pdfDocument.docId,
       'pageNumber': pageNumber,
       'texId': texId,
@@ -282,5 +283,6 @@ class PdfPageImageTexture {
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill
     });
+    return result >= 0;
   }
 }

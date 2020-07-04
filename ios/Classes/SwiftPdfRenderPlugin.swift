@@ -308,7 +308,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     }
 
     pageTex.updateTex(page: page, destX: destX, destY: destY, width: width, height: height, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill)
-    result(nil)
+    result(0)
   }
 }
 
