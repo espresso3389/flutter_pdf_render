@@ -6,7 +6,7 @@
 
 ### Note on iOS Simulator
 
-Althouth the plugin uses Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) to realize fast rendering of PDF pages, it does not work correctly in iOS Simulator and the plugin will fallback to compatibility rendering mode.
+The plugin uses Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) to realize fast rendering of PDF pages and it does not work correctly in iOS Simulator and the plugin will fallback to compatibility rendering mode.
 
 Please use the physical device to test the actual behavior.
 
@@ -178,14 +178,20 @@ int pageCount = doc.pageCount;
 // The first page is 1
 PdfPage page = await doc.getPage(1);
 
-// For the render function's return, see explanation below.
+// For the render function's return, see explanation below
 PdfPageImage pageImage = await page.render();
+
+// Now, you can access pageImage.pixels for raw RGBA data
+// ...
+
+// Generating dart:ui.Image cache for later use by imageIfAvailable
+await pageImage.createImageIfNotAvailable();
 
 // PDFDocument must be disposed as soon as possible.
 doc.dispose();
 ```
 
-And then, you can use `PdfPageImage` to get the actual RGBA image in [dart.ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html).
+And then, you can use `PdfPageImage` to get the actual RGBA image in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html).
 
 To embed the image in the widget tree, you can use [RawImage](https://docs.flutter.io/flutter/widgets/RawImage-class.html):
 
@@ -197,13 +203,14 @@ Widget build(BuildContext context) {
       padding: EdgeInsets.all(10.0),
       color: Colors.grey,
       child: Center(
-        child: RawImage(image: pageImage.image, fit: BoxFit.contain))
+        // before using imageIfAvailable, you should call createImageIfNotAvailable
+        child: RawImage(image: pageImage.imageIfAvailable, fit: BoxFit.contain))
     )
   );
 }
 ```
 
-But if you don't want raw RGBA image data access, you had better use faster and efficient `PdfPageImageTexture`.
+If you just building widget tree, you had better use faster and efficient `PdfPageImageTexture`.
 
 ## PdfDocument.openXXX
 
