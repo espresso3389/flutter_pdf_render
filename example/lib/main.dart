@@ -45,7 +45,7 @@ class MyApp extends StatelessWidget {
                           )
                         ]),
                         // textureBuilder builds the actual page image.
-                        child: textureBuilder()
+                        child: textureBuilder(dontUseTexture: true)
                       ),
                       // adding page number on the bottom of rendered page
                       Text('${index + 1}',

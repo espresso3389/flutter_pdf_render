@@ -86,6 +86,15 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       }
       render(args: args, result: result)
     }
+    else if call.method == "releaseBuffer"
+    {
+      guard let address = call.arguments as! NSNumber? else {
+        result(SwiftPdfRenderPlugin.invalid)
+        return
+      }
+
+        releaseBuffer(address: address.intValue, result: result)
+    }
     else if call.method == "allocTex"
     {
       result(allocTex())
@@ -235,7 +244,9 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
           "fullHeight": NSNumber(value: data.fullHeight),
           "pageWidth": NSNumber(value: data.pageWidth),
           "pageHeight": NSNumber(value: data.pageHeight),
-          "data": FlutterStandardTypedData(bytes: data.data)
+          "data": data.address == 0 ? FlutterStandardTypedData(bytes: data.data) : nil,
+          "addr": NSNumber(value: data.address),
+          "size": NSNumber(value: data.size)
         ]
       }
       DispatchQueue.main.async {
@@ -243,6 +254,11 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         result(dict != nil ? (dict! as NSDictionary) : nil)
       }
     }
+  }
+
+  func releaseBuffer(address: Int, result: @escaping FlutterResult) {
+    free(UnsafeMutableRawPointer(bitPattern: address))
+    result(nil)
   }
 
   func allocTex() -> Int64 {
@@ -322,7 +338,9 @@ class PageData {
   let pageWidth: Double
   let pageHeight: Double
   let data: Data
-  init(x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, pageWidth: Double, pageHeight: Double, data: Data) {
+  let address: Int64
+  let size: Int
+  init(x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, pageWidth: Double, pageHeight: Double, data: Data, address: Int64, size: Int) {
     self.x = x
     self.y = y
     self.width = width
@@ -332,6 +350,8 @@ class PageData {
     self.pageWidth = pageWidth
     self.pageHeight = pageHeight
     self.data = data
+    self.address = address
+    self.size = size
   }
 }
 
@@ -348,17 +368,18 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
   let sy = CGFloat(fh) / pdfBBox.height
 
   let stride = w * 4
-  var data = Data(repeating: backgroundFill ? 0xff : 0, count: stride * h)
+  let bufSize = stride * h;
+    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
+    buffer.initialize(repeating: backgroundFill ? 0xff : 0, count: bufSize)
   var success = false
-  data.withUnsafeMutableBytes { (ptr: UnsafeMutablePointer<UInt8>) in
-    let rgb = CGColorSpaceCreateDeviceRGB()
-    let context = CGContext(data: ptr, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-    if context != nil {
-      context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
-      context!.scaleBy(x: sx, y: sy)
-      context!.drawPDFPage(page)
-      success = true
-    }
+
+  let rgb = CGColorSpaceCreateDeviceRGB()
+  let context = CGContext(data: buffer, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+  if context != nil {
+    context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
+    context!.scaleBy(x: sx, y: sy)
+    context!.drawPDFPage(page)
+    success = true
   }
   return success ? PageData(
     x: x,
@@ -369,7 +390,9 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
     fullHeight: fh,
     pageWidth: Double(pdfBBox.width),
     pageHeight: Double(pdfBBox.height),
-    data: data) : nil
+    data: Data(bytesNoCopy: buffer, count: bufSize, deallocator: .none),
+    address: unsafeBitCast(buffer, to: Int64.self),
+    size: bufSize) : nil
 }
 
 class PdfPageTexture : NSObject {

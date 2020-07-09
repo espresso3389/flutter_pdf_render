@@ -79,3 +79,4 @@
 .vscode/
 
 example/.flutter-plugins-dependencies
+example/ios/Flutter/Flutter.podspec
