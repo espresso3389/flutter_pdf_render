@@ -155,9 +155,7 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
       }
     } catch (e) {
       _doc = null;
-      if(widget.onError != null){
-        widget.onError(e);
-      }
+      widget.onError?.call(e);
     }
     if (mounted) {
       setState(() {});

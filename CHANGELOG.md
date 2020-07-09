@@ -1,3 +1,7 @@
+## 0.63.0
+
+* Introducing PdfDocumentLoader.onError to handle document open error (#17 by Sp4Rx).
+
 ## 0.62.0
 
 * Minor bug fix.
