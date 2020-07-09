@@ -69,19 +69,23 @@ class PdfDocumentLoader extends StatefulWidget {
   /// Function to build page widget tree. It can be null if you don't want to render the page with the widget or use the default page builder.
   final PdfPageBuilder pageBuilder;
 
+  /// Error callback
+  final Function(dynamic) onError;
+
   /// For multiple pages, use [documentBuilder] with [PdfPageView].
   /// For single page use, you must specify [pageNumber] and, optionally [calculateSize].
-  PdfDocumentLoader(
-      {Key key,
-      this.filePath,
-      this.assetName,
-      this.data,
-      this.documentBuilder,
-      this.pageNumber,
-      this.backgroundFill = true,
-      this.renderingPixelRatio,
-      this.pageBuilder})
-      : super(key: key);
+  PdfDocumentLoader({
+    Key key,
+    this.filePath,
+    this.assetName,
+    this.data,
+    this.documentBuilder,
+    this.pageNumber,
+    this.backgroundFill = true,
+    this.renderingPixelRatio,
+    this.pageBuilder,
+    this.onError,
+  }) : super(key: key);
 
   @override
   _PdfDocumentLoaderState createState() => _PdfDocumentLoaderState();
@@ -151,6 +155,7 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
       }
     } catch (e) {
       _doc = null;
+      widget.onError?.call(e);
     }
     if (mounted) {
       setState(() {});
