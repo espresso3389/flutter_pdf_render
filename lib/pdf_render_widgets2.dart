@@ -30,7 +30,19 @@ typedef PdfPageBuilder = Widget Function(
 /// the function generates a placeholder [Container] for the unavailable page image.
 /// Anyway, please note that the size is in screen coordinates; not the actual pixel size of
 /// the image. In other words, the function correctly deals with the screen pixel density automatically.
-typedef PdfPageTextureBuilder = Widget Function({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder});
+/// [backgroundFill] specifies whether to fill background before rendering actual page content or not.
+/// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
+/// [renderingPixelRatio] specifies pixel density for rendering page image. If it is null, the value is obtained by calling `MediaQuery.of(context).devicePixelRatio`.
+/// Although, the view uses Flutter's [Texture] to render the PDF content by default, you can disable it by setting [dontUseTexture] to true.
+/// Please note that on iOS Simulator, it always use non-[Texture] rendering pass.
+typedef PdfPageTextureBuilder = Widget Function({
+  Size size,
+  bool returnNullForError,
+  PdfPagePlaceholderBuilder placeholderBuilder,
+  bool backgroundFill,
+  double renderingPixelRatio,
+  bool dontUseTexture
+});
 
 /// Creates page placeholder that is shown on page loading or even page load failure.
 typedef PdfPagePlaceholderBuilder = Widget Function(Size size, PdfPageStatus status);
@@ -57,15 +69,6 @@ class PdfDocumentLoader extends StatefulWidget {
   /// If you want to show multiple pages in the widget tree, use [PdfPageView].
   final int pageNumber;
 
-  /// Whether to fill background before rendering actual page content or not.
-  /// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
-  /// Could not be used with [documentBuilder].
-  final bool backgroundFill;
-
-  /// Pixel density for rendering page image. If it is null, the value is obtained by calling `MediaQuery.of(context).devicePixelRatio`.
-  /// Could not be used with [documentBuilder].
-  final double renderingPixelRatio;
-
   /// Function to build page widget tree. It can be null if you don't want to render the page with the widget or use the default page builder.
   final PdfPageBuilder pageBuilder;
 
@@ -81,8 +84,6 @@ class PdfDocumentLoader extends StatefulWidget {
     this.data,
     this.documentBuilder,
     this.pageNumber,
-    this.backgroundFill = true,
-    this.renderingPixelRatio,
     this.pageBuilder,
     this.onError,
   }) : super(key: key);
@@ -173,8 +174,6 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
         ? PdfPageView(
             pdfDocument: _doc,
             pageNumber: widget.pageNumber,
-            backgroundFill: widget.backgroundFill,
-            renderingPixelRatio: widget.renderingPixelRatio,
             pageBuilder: widget.pageBuilder,
           )
         : widget.documentBuilder != null
@@ -195,25 +194,11 @@ class PdfPageView extends StatefulWidget {
   /// Function to build page widget tree. It can be null if you want to use the default page builder.
   final PdfPageBuilder pageBuilder;
 
-  /// Whether to fill background before rendering actual page content or not.
-  /// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
-  final bool backgroundFill;
-
-  /// Pixel density for rendering page image. If it is null, the value is obtained by calling `MediaQuery.of(context).devicePixelRatio`.
-  final double renderingPixelRatio;
-
-  /// Although, the view uses Flutter's [Texture] to render the PDF content by default, you can disable it by setting the value to true.
-  /// Please note that on iOS Simulator, it always use non-[Texture] rendering pass.
-  final bool dontUseTexture;
-
   PdfPageView(
       {Key key,
       this.pdfDocument,
       @required this.pageNumber,
-      this.pageBuilder,
-      this.backgroundFill = true,
-      this.renderingPixelRatio,
-      this.dontUseTexture})
+      this.pageBuilder})
       : super(key: key);
 
   @override
@@ -243,7 +228,6 @@ class _PdfPageViewState extends State<PdfPageView> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.pdfDocument != widget.pdfDocument ||
         oldWidget.pageNumber != widget.pageNumber ||
-        oldWidget.backgroundFill != widget.backgroundFill ||
         oldWidget.pageBuilder != widget.pageBuilder) {
       _release();
       _init();
@@ -309,12 +293,12 @@ class _PdfPageViewState extends State<PdfPageView> {
     return Size(pageSize.width * ratio, pageSize.height * ratio);
   }
 
-  Widget _textureBuilder({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder}) {
+  Widget _textureBuilder({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder, bool backgroundFill, double renderingPixelRatio, bool dontUseTexture}) {
     return LayoutBuilder(builder: (context, constraints) {
       size ??= _sizeFromConstratints(constraints, _pageSize);
       placeholderBuilder ??= (size, status) => Container(width: size.width, height: size.height, color: Color.fromARGB(255, 220, 220, 220));
       return FutureBuilder<bool>(
-          future: _buildTexture(size),
+          future: _buildTexture(size: size, backgroundFill: backgroundFill, renderingPixelRatio: renderingPixelRatio, dontUseTexture: dontUseTexture),
           initialData: false,
           builder: (context, snapshot) {
             if (snapshot.data != true) {
@@ -349,7 +333,7 @@ class _PdfPageViewState extends State<PdfPageView> {
     });
   }
 
-  Future<bool> _buildTexture(Size size) async {
+  Future<bool> _buildTexture({@required Size size, bool backgroundFill, double renderingPixelRatio, bool dontUseTexture}) async {
     if (_doc == null ||
         widget.pageNumber == null ||
         widget.pageNumber < 1 ||
@@ -362,15 +346,15 @@ class _PdfPageViewState extends State<PdfPageView> {
       _isIosSimulator = await _determineWhetherIOSSimulatorOrNot();
     }
 
-    final pixelRatio = widget.renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
+    final pixelRatio = renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
     final pixelSize = size * pixelRatio;
-    if (widget.dontUseTexture == true || _isIosSimulator == true) {
+    if (dontUseTexture == true || _isIosSimulator == true) {
       _image = await _page.render(
         width: pixelSize.width.toInt(),
         height: pixelSize.height.toInt(),
         fullWidth: pixelSize.width,
         fullHeight: pixelSize.height,
-        backgroundFill: widget.backgroundFill);
+        backgroundFill: backgroundFill);
     } else {
       if (_texture == null ||
           _texture.pdfDocument.docId != _doc.docId ||
@@ -388,7 +372,7 @@ class _PdfPageViewState extends State<PdfPageView> {
         texHeight: pixelSize.height.toInt(),
         fullWidth: pixelSize.width,
         fullHeight: pixelSize.height,
-        backgroundFill: widget.backgroundFill);
+        backgroundFill: backgroundFill);
     }
     return true;
   }

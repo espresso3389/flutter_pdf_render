@@ -125,7 +125,14 @@ PdfPageView(
 The function is defined as:
 
 ```dart
-typedef PdfPageTextureBuilder = Widget Function({Size size, bool returnNullForError, PdfPagePlaceholderBuilder placeholderBuilder});
+typedef PdfPageTextureBuilder = Widget Function({
+  Size size,
+  bool returnNullForError,
+  PdfPagePlaceholderBuilder placeholderBuilder,
+  bool backgroundFill,
+  double renderingPixelRatio,
+  bool dontUseTexture
+});
 ```
 
 So if you want to generate widget of an exact size, you can specify `size` explicitly.
@@ -138,7 +145,7 @@ Please note that the size is in density-independent pixels. The function is resp
 textureBuilder(returnNullForError: true) ?? Container()
 ```
 
-Ultimately, `placeholderBuilder` is the final resort that controls the "placeholder" for loading or failure cases.
+`placeholderBuilder` is the final resort that controls the "placeholder" for loading or failure cases.
 
 ```dart
 /// Creates page placeholder that is shown on page loading or even page load failure.
@@ -290,6 +297,8 @@ final double pageWidth;
 final double pageHeight;
 /// Rendered image in dart:ui.Image
 final Image image;
+/// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
+final Pointer<Uint8> buffer;
 ```
 
 ## PdfPageImageTexture members

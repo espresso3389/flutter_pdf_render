@@ -1,3 +1,8 @@
+## 0.64.0
+
+* Introducing faster and memory-friendly PdfPageImage rendering mechanism based on Pointer<Uint8> (dart:ffi) for Android.
+* BREAKING CHANGE: backgroundFill/renderingPixelRatio/dontUseTexture are moved to PdfPageTextureBuilder.
+
 ## 0.63.0
 
 * Introducing PdfDocumentLoader.onError to handle document open error (#17 by Sp4Rx).

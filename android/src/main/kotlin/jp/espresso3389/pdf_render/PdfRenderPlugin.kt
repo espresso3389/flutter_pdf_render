@@ -1,21 +1,27 @@
 package jp.espresso3389.pdf_render
 
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import android.util.SparseArray
 import android.view.Surface
+import androidx.collection.LongSparseArray
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import io.flutter.view.TextureRegistry
 import java.io.File
 import java.io.OutputStream
+import java.nio.Buffer
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   companion object {
@@ -30,6 +36,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   private val documents: SparseArray<PdfRenderer> = SparseArray()
   private var lastDocId: Int = 0
   private val textures: SparseArray<TextureRegistry.SurfaceTextureEntry> = SparseArray()
+  private val buffers: LongSparseArray<ByteBuffer> = LongSparseArray()
 
   override fun onMethodCall(call: MethodCall, result: Result): Unit {
     try {
@@ -87,6 +94,12 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
             return
           }
           render(args, result)
+        }
+        call.method == "releaseBuffer" -> {
+          val addr = call.arguments as? Long
+          if (addr != null)
+            releaseBuffer(addr)
+          result.success(0)
         }
         call.method == "allocTex" -> {
           result.success(allocTex())
@@ -200,13 +213,12 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     }
   }
 
-  private fun render(args: HashMap<String, Any>, result: Result) {
+  private fun renderOnByteBuffer(args: HashMap<String, Any>, createBuffer: (Int) -> ByteBuffer): HashMap<String, Any?>? {
     val docId = args["docId"] as? Int
     val renderer = if (docId != null) documents[docId] else null
     val pageNumber = args["pageNumber"] as? Int
     if (renderer == null || pageNumber == null || pageNumber < 1 || pageNumber > renderer.pageCount) {
-      result.success(-1)
-      return
+      return null
     }
 
     renderer.openPage(pageNumber - 1).use {
@@ -222,7 +234,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       val fh = if (_fh > 0) _fh.toFloat() else h.toFloat()
       val backgroundFill = args["backgroundFill"] as? Boolean ?: true
 
-      val buf = ByteBuffer.allocate(w * h * 4)
+      val buf = createBuffer(w * h * 4)
 
       val mat = Matrix()
       mat.setValues(floatArrayOf(fw / it.width, 0f, -x.toFloat(), 0f, fh / it.height, -y.toFloat(), 0f, 0f, 1f))
@@ -238,7 +250,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       bmp.copyPixelsToBuffer(buf)
       bmp.recycle()
 
-      result.success(hashMapOf(
+      return hashMapOf(
         "docId" to docId,
         "pageNumber" to pageNumber,
         "x" to x,
@@ -248,10 +260,46 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
         "fullWidth" to fw.toDouble(),
         "fullHeight" to fh.toDouble(),
         "pageWidth" to it.width.toDouble(),
-        "pageHeight" to it.height.toDouble(),
-        "data" to buf.array()
-      ))
+        "pageHeight" to it.height.toDouble()
+      )
     }
+  }
+
+  private fun render(args: HashMap<String, Any>, result: Result) {
+    var buf: ByteBuffer? = null
+    var addr: Long = 0L
+    val m = renderOnByteBuffer(args) {
+      if (false) {
+        val abuf = ByteBuffer.allocate(it)
+        buf = abuf
+        return@renderOnByteBuffer abuf
+      }
+      val (addr_, bbuf) = allocBuffer(it)
+      buf = bbuf
+      addr = addr_
+      return@renderOnByteBuffer bbuf
+    }
+    if (addr != 0L) {
+      m?.set("addr", addr)
+    } else {
+      m?.set("data", buf?.array())
+    }
+    m?.set("size", buf?.capacity())
+    result.success(m)
+  }
+
+  private fun allocBuffer(size: Int): Pair<Long, ByteBuffer> {
+    // FIXME: Dirty hack to obtain address of the DirectByteBuffer
+    val addressField = Buffer::class.java.getDeclaredField("address")
+    addressField.setAccessible(true)
+    val bb = ByteBuffer.allocateDirect(size)
+    val addr = addressField.getLong(bb)
+    buffers.put(addr, bb)
+    return addr to bb
+  }
+
+  private fun releaseBuffer(addr: Long) {
+    buffers.remove(addr)
   }
 
   private fun allocTex(): Int {

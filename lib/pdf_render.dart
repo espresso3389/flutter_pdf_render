@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ffi';
 import 'dart:ui';
 import 'dart:typed_data';
 
@@ -164,11 +165,16 @@ class PdfPageImage {
   final double pageHeight;
   /// Rendered image.
   final Image image;
+  /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
+  final Pointer<Uint8> buffer;
 
-  PdfPageImage({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.image});
+  PdfPageImage({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.image, this.buffer});
 
   void dispose() {
     image?.dispose();
+    if (buffer != null) {
+      _channel.invokeMethod('releaseBuffer', buffer.address);
+    }
   }
 
   static Future<PdfPageImage> _render(
@@ -177,6 +183,7 @@ class PdfPageImage {
       double fullWidth, double fullHeight,
       bool backgroundFill,
     }) async {
+
     var obj = await _channel.invokeMethod(
       'render',
       {
@@ -189,7 +196,16 @@ class PdfPageImage {
     if (obj is Map<dynamic, dynamic>) {
       final retWidth = obj['width'] as int;
       final retHeight = obj['height'] as int;
-      final pixels = obj['data'] as Uint8List;
+      Pointer<Uint8> ptr;
+      var pixels = obj['data'] as Uint8List;
+      if (pixels == null) {
+        final addr = obj['addr'] as int;
+        final size = obj['size'] as int;
+        if (addr != null && size != null) {
+          ptr = Pointer<Uint8>.fromAddress(addr);
+          pixels = ptr.asTypedList(size);
+        }
+      }
       var image = await _decodeRgba(retWidth, retHeight, pixels);
 
       return PdfPageImage(
@@ -202,7 +218,8 @@ class PdfPageImage {
         fullHeight: obj['fullHeight'] as double,
         pageWidth: obj['pageWidth'] as double,
         pageHeight: obj['pageHeight'] as double,
-        image: image
+        image: image,
+        buffer: ptr
       );
     }
     return null;
