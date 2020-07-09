@@ -306,7 +306,7 @@ class _PdfPageViewState extends State<PdfPageView> {
               return placeholderBuilder(size, PdfPageStatus.loading);
             }
 
-            if (_texture?.texId == null && _image?.image == null) {
+            if (_texture?.texId == null && _image?.imageIfAvailable == null) {
               // some loading error
               return returnNullForError == true ? null : placeholderBuilder(size, PdfPageStatus.loadFailed);
             }
@@ -316,7 +316,7 @@ class _PdfPageViewState extends State<PdfPageView> {
               width: size.width,
               height: size.height,
               child: Texture(textureId: _texture.texId))
-            : RawImage(image: _image.image);
+            : RawImage(image: _image?.imageIfAvailable);
 
             if (_isIosSimulator == true) {
               contentWidget = Stack(
@@ -355,6 +355,7 @@ class _PdfPageViewState extends State<PdfPageView> {
         fullWidth: pixelSize.width,
         fullHeight: pixelSize.height,
         backgroundFill: backgroundFill);
+      await _image.createImageIfNotAvailable();
     } else {
       if (_texture == null ||
           _texture.pdfDocument.docId != _doc.docId ||

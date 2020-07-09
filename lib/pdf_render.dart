@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:ffi';
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -163,19 +163,31 @@ class PdfPageImage {
   final double pageWidth;
   /// PDF page height in points (height in pixels at 72 dpi).
   final double pageHeight;
-  /// Rendered image.
-  final Image image;
+  /// RGBA pixels in byte array.
+  final Uint8List pixels;
   /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
   final Pointer<Uint8> buffer;
 
-  PdfPageImage({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.image, this.buffer});
+  ui.Image _imageCached;
+
+  PdfPageImage({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.pixels, this.buffer});
 
   void dispose() {
-    image?.dispose();
+    _imageCached?.dispose();
     if (buffer != null) {
       _channel.invokeMethod('releaseBuffer', buffer.address);
     }
   }
+
+  /// Get [ui.Image] for the object.
+  Future<ui.Image> createImageIfNotAvailable() async {
+    _imageCached ??= await _decodeRgba(width, height, pixels);
+    return _imageCached;
+  }
+
+  /// Get [Image] for the object if available; otherwise null.
+  /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
+  ui.Image get imageIfAvailable => _imageCached;
 
   static Future<PdfPageImage> _render(
     PdfDocument document, int pageNumber,
@@ -218,7 +230,7 @@ class PdfPageImage {
         fullHeight: obj['fullHeight'] as double,
         pageWidth: obj['pageWidth'] as double,
         pageHeight: obj['pageHeight'] as double,
-        image: image,
+        pixels: pixels,
         buffer: ptr
       );
     }
@@ -241,10 +253,10 @@ class PdfPageImage {
   }
 
   /// Decode RGBA raw image from native code.
-  static Future<Image> _decodeRgba(
+  static Future<ui.Image> _decodeRgba(
     int width, int height, Uint8List pixels) {
-    final comp = Completer<Image>();
-    decodeImageFromPixels(pixels, width, height, PixelFormat.rgba8888,
+    final comp = Completer<ui.Image>();
+    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888,
       (image) => comp.complete(image));
     return comp.future;
   }

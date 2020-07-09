@@ -349,6 +349,7 @@ class _PdfPageViewState extends State<PdfPageView> {
             fullWidth: size.width,
             fullHeight: size.height,
             backgroundFill: widget.backgroundFill);
+        await _image.createImageIfNotAvailable();
       } else {
         if (_texture == null ||
             _texture.pdfDocument.docId != _doc.docId ||
@@ -401,13 +402,13 @@ class _PdfPageViewState extends State<PdfPageView> {
         widget.pageNumber < 1 ||
         widget.pageNumber > _doc.pageCount ||
         _page == null ||
-        (_texture == null && _image == null)) {
+        (_texture == null && _image?.imageIfAvailable == null)) {
       return Container(width: _size?.width, height: _size?.height);
     }
 
     Widget contentWidget = _texture != null
         ? Texture(textureId: _texture.texId)
-        : RawImage(image: _image.image);
+        : RawImage(image: _image?.imageIfAvailable);
 
     contentWidget = Container(
         width: _size.width,

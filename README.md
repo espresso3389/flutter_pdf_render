@@ -295,11 +295,24 @@ final int fullHeight;
 final double pageWidth;
 /// PDF page height in points (height in pixels at 72 dpi).
 final double pageHeight;
-/// Rendered image in dart:ui.Image
-final Image image;
+/// RGBA pixels in byte array.
+final Uint8List pixels;
 /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
 final Pointer<Uint8> buffer;
+
+/// Get [dart:ui.Image] for the object.
+Future<Image> createImageIfNotAvailable() async;
+
+/// Get [Image] for the object if available; otherwise null.
+/// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
+Image get imageIfAvailable;
 ```
+
+`createImageIfNotAvailable` generates image cache in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html) and `imageIfAvailable` returns the cached image if available.
+
+If you just need RGBA byte array, you can use `pixels` for that purpose. The pixel at `(x,y)` is on `pixels[(x+y*width)*4]`. Anyway, it's highly discouraged to modify the contents directly though it would work correctly.
+
+Basically `buffer` holds the pointer to the native memory block and `pixel` is a projection array to the block.
 
 ## PdfPageImageTexture members
 
