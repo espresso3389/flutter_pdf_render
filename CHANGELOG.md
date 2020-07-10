@@ -1,3 +1,8 @@
+## 0.64.1
+
+* Update documents.
+* BREAKING CHANGE: PdfDocument/PdfPage/PdfPageImage no longer have public constructors.
+
 ## 0.64.0
 
 * Introducing faster and memory-friendly PdfPageImage rendering mechanism based on Pointer<Uint8> (dart:ffi).
