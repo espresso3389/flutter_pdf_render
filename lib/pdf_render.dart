@@ -8,20 +8,29 @@ import 'package:flutter/services.dart';
 
 const MethodChannel _channel = const MethodChannel('pdf_render');
 
+/// Handles PDF document loaded on memory.
 class PdfDocument {
+  /// File path, `asset:[ASSET_PATH]` or `memory:` depending on the content opened.
   final String sourceName;
+  /// Document-ID that uniquely identifies the current instance.
   final int docId;
+  /// Number of pages in the PDF document.
   final int pageCount;
+  /// PDF major version.
   final int verMajor;
+  /// PDF minor version.
   final int verMinor;
+  /// Determine whether the PDF file is encrypted or not.
   final bool isEncrypted;
+  /// Determine whether the PDF file allows copying of the contents.
   final bool allowsCopying;
+  /// Determine whether the PDF file allows printing of the pages.
   final bool allowsPrinting;
   //final bool isUnlocked;
 
   final List<PdfPage> _pages;
 
-  PdfDocument({
+  PdfDocument._({
     this.sourceName,
     this.docId,
     this.pageCount,
@@ -37,7 +46,7 @@ class PdfDocument {
   static PdfDocument _open(Object obj, String sourceName) {
     if (obj is Map<dynamic, dynamic>) {
       final pageCount = obj['pageCount'] as int;
-      return PdfDocument(
+      return PdfDocument._(
         sourceName: sourceName,
         docId: obj['docId'] as int,
         pageCount: pageCount,
@@ -54,16 +63,19 @@ class PdfDocument {
 
   }
 
+  /// Opening the specified file.
   static Future<PdfDocument> openFile(String filePath) async {
     return _open(await _channel.invokeMethod('file', filePath), filePath);
   }
 
+  /// Opening the specified asset.
   static Future<PdfDocument> openAsset(String name) async {
-    return _open(await _channel.invokeMethod('asset', name), 'asset:' + name);
+    return _open(await _channel.invokeMethod('asset', name), 'asset:$name');
   }
 
+  /// Opening the PDF on memory.
   static Future<PdfDocument> openData(Uint8List data) async {
-    return _open(await _channel.invokeMethod('data', data), 'memory:$data');
+    return _open(await _channel.invokeMethod('data', data), 'memory:');
   }
 
   /// Get page object. The first page is 1.
@@ -77,7 +89,7 @@ class PdfDocument {
         "pageNumber": pageNumber
       });
       if (obj is Map<dynamic, dynamic>) {
-        page = _pages[pageNumber - 1] = PdfPage(
+        page = _pages[pageNumber - 1] = PdfPage._(
           document: this,
           pageNumber: pageNumber,
           rotationAngle: obj['rotationAngle'] as int,
@@ -100,7 +112,9 @@ class PdfDocument {
   String toString() => sourceName;
 }
 
+/// Handles a PDF page in [PDFDocument].
 class PdfPage {
+  /// PDF document.
   final PdfDocument document;
   /// Page number. The first page is 1.
   final int pageNumber;
@@ -111,7 +125,7 @@ class PdfPage {
   /// PDF page height in points (height in pixels at 72 dpi) (rotated).
   final double height;
 
-  PdfPage({this.document, this.pageNumber, this.rotationAngle, this.width, this.height});
+  PdfPage._({this.document, this.pageNumber, this.rotationAngle, this.width, this.height});
 
   /// Render a sub-area or full image of specified PDF file.
   /// [x], [y], [width], [height] specify sub-area to render in pixels.
@@ -166,16 +180,16 @@ class PdfPageImage {
   /// RGBA pixels in byte array.
   final Uint8List pixels;
   /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
-  final Pointer<Uint8> buffer;
+  final Pointer<Uint8> _buffer;
 
   ui.Image _imageCached;
 
-  PdfPageImage({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.pixels, this.buffer});
+  PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.pixels, Pointer<Uint8> buffer}): _buffer = buffer;
 
   void dispose() {
     _imageCached?.dispose();
-    if (buffer != null) {
-      _channel.invokeMethod('releaseBuffer', buffer.address);
+    if (_buffer != null) {
+      _channel.invokeMethod('releaseBuffer', _buffer.address);
     }
   }
 
@@ -220,7 +234,7 @@ class PdfPageImage {
       }
       var image = await _decodeRgba(retWidth, retHeight, pixels);
 
-      return PdfPageImage(
+      return PdfPageImage._(
         pageNumber: obj['pageNumber'] as int,
         x: obj['x'] as int,
         y: obj['y'] as int,
