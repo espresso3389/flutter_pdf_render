@@ -390,7 +390,7 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
   let rgb = CGColorSpaceCreateDeviceRGB()
   let context = CGContext(data: buffer, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
   if context != nil {
-    context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
+    context!.translateBy(x: CGFloat(-x), y: CGFloat(Double(y + h) - fh))
     context!.scaleBy(x: sx, y: sy)
     context!.concatenate(page.getRotationTransform())
     context!.drawPDFPage(page)
@@ -470,10 +470,7 @@ class PdfPageTexture : NSObject {
       context?.fill(CGRect(x: 0, y: 0, width: w, height: h))
     }
 
-    context?.setStrokeColor(UIColor.red.cgColor)
-    context?.stroke(CGRect(x: 0, y: 0, width: w, height: h), width: 4)
-
-    context?.translateBy(x: CGFloat(-srcX), y: CGFloat(-srcY))
+    context?.translateBy(x: CGFloat(-srcX), y: CGFloat(Double(srcY + h) - fh))
     context?.scaleBy(x: sx, y: sy)
     context?.concatenate(page.getRotationTransform())
     context?.drawPDFPage(page)
