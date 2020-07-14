@@ -12,6 +12,21 @@ class Doc {
   }
 }
 
+extension CGPDFPage {
+  func getRotatedSize() -> CGSize {
+    let bbox = getBoxRect(.mediaBox)
+    let rot = rotationAngle
+    if rot == 90 || rot == 270 {
+        return CGSize(width: bbox.height, height: bbox.width)
+    }
+    return bbox.size
+  }
+  func getRotationTransform() -> CGAffineTransform {
+    let rect = CGRect(origin: CGPoint.zero, size: getRotatedSize())
+    return getDrawingTransform(.mediaBox, rect: rect, rotate: 0, preserveAspectRatio: true)
+  }
+}
+
 public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   static let invalid = NSNumber(value: -1)
   let dispQueue = DispatchQueue(label: "pdf_render")
@@ -191,13 +206,12 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       doc.pages[pageNumber - 1] = page
     }
 
-    let pdfBBox = page!.getBoxRect(.mediaBox)
+    let rotatedSize = page!.getRotatedSize()
     let dict: [String: Any] = [
       "docId": Int32(docId),
       "pageNumber": Int32(pageNumber),
-      "rotationAngle": Int32(page!.rotationAngle),
-      "width": NSNumber(value: Double(pdfBBox.width)),
-      "height": NSNumber(value: Double(pdfBBox.height))
+      "width": NSNumber(value: Double(rotatedSize.width)),
+      "height": NSNumber(value: Double(rotatedSize.height))
     ]
     return dict as NSDictionary
   }
@@ -357,15 +371,15 @@ class PageData {
 
 func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, backgroundFill: Bool) -> PageData? {
 
-  let pdfBBox = page.getBoxRect(.mediaBox)
+  let rotatedSize = page.getRotatedSize()
 
-  let w = width > 0 ? width : Int(pdfBBox.width)
-  let h = height > 0 ? height : Int(pdfBBox.height)
+  let w = width > 0 ? width : Int(rotatedSize.width)
+  let h = height > 0 ? height : Int(rotatedSize.height)
   let fw = fullWidth > 0.0 ? fullWidth : Double(w)
   let fh = fullHeight > 0.0 ? fullHeight : Double(h)
 
-  let sx = CGFloat(fw) / pdfBBox.width
-  let sy = CGFloat(fh) / pdfBBox.height
+  let sx = CGFloat(fw) / rotatedSize.width
+  let sy = CGFloat(fh) / rotatedSize.height
 
   let stride = w * 4
   let bufSize = stride * h;
@@ -378,6 +392,7 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
   if context != nil {
     context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
     context!.scaleBy(x: sx, y: sy)
+    context!.concatenate(page.getRotationTransform())
     context!.drawPDFPage(page)
     success = true
   }
@@ -388,10 +403,10 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
     height: h,
     fullWidth: fw,
     fullHeight: fh,
-    pageWidth: Double(pdfBBox.width),
-    pageHeight: Double(pdfBBox.height),
+    pageWidth: Double(rotatedSize.width),
+    pageHeight: Double(rotatedSize.height),
     data: Data(bytesNoCopy: buffer, count: bufSize, deallocator: .none),
-    address: unsafeBitCast(buffer, to: Int64.self),
+    address: Int64(Int(bitPattern: buffer)),
     size: bufSize) : nil
 }
 
@@ -419,11 +434,11 @@ class PdfPageTexture : NSObject {
     guard let w = width else { return }
     guard let h = height else { return }
 
-    let pdfBBox = page.getBoxRect(.mediaBox)
-    let fw = fullWidth ?? Double(pdfBBox.width)
-    let fh = fullHeight ?? Double(pdfBBox.height)
-    let sx = CGFloat(fw) / pdfBBox.width
-    let sy = CGFloat(fh) / pdfBBox.height
+    let rotatedSize = page.getRotatedSize()
+    let fw = fullWidth ?? Double(rotatedSize.width)
+    let fh = fullHeight ?? Double(rotatedSize.height)
+    let sx = CGFloat(fw) / rotatedSize.width
+    let sy = CGFloat(fh) / rotatedSize.height
 
     var pixBuf: CVPixelBuffer?
     let options = [
@@ -455,8 +470,12 @@ class PdfPageTexture : NSObject {
       context?.fill(CGRect(x: 0, y: 0, width: w, height: h))
     }
 
+    context?.setStrokeColor(UIColor.red.cgColor)
+    context?.stroke(CGRect(x: 0, y: 0, width: w, height: h), width: 4)
+
     context?.translateBy(x: CGFloat(-srcX), y: CGFloat(-srcY))
     context?.scaleBy(x: sx, y: sy)
+    context?.concatenate(page.getRotationTransform())
     context?.drawPDFPage(page)
     context?.flush()
 

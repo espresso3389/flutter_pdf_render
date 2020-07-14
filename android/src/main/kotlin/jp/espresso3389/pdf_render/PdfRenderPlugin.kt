@@ -206,7 +206,6 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       return hashMapOf(
         "docId" to docId,
         "pageNumber" to pageNumber,
-        "rotationAngle" to 0, // FIXME: no rotation angle can be obtained
         "width" to it.width.toDouble(),
         "height" to it.height.toDouble()
       )

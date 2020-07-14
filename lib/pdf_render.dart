@@ -92,7 +92,6 @@ class PdfDocument {
         page = _pages[pageNumber - 1] = PdfPage._(
           document: this,
           pageNumber: pageNumber,
-          rotationAngle: obj['rotationAngle'] as int,
           width: obj['width'] as double,
           height: obj['height'] as double,
         );
@@ -118,14 +117,12 @@ class PdfPage {
   final PdfDocument document;
   /// Page number. The first page is 1.
   final int pageNumber;
-  /// Clockwise page rotation angle in degrees.
-  final int rotationAngle;
   /// PDF page width in points (width in pixels at 72 dpi) (rotated).
   final double width;
   /// PDF page height in points (height in pixels at 72 dpi) (rotated).
   final double height;
 
-  PdfPage._({this.document, this.pageNumber, this.rotationAngle, this.width, this.height});
+  PdfPage._({this.document, this.pageNumber, this.width, this.height});
 
   /// Render a sub-area or full image of specified PDF file.
   /// [x], [y], [width], [height] specify sub-area to render in pixels.
