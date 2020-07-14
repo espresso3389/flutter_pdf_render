@@ -1,3 +1,8 @@
+## 0.65.0
+
+* Fixes PDF page rotation issue on iOS (#18)
+* Fixes Y-axis flipping issue on iOS (#9)
+
 ## 0.64.1
 
 * Update documents.
