@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
+import 'package:mutex/mutex.dart';
 import 'pdf_render.dart';
 
 /// Function definition to build widget tree for a PDF document.
@@ -385,4 +387,263 @@ class _PdfPageViewState extends State<PdfPageView> {
     final info = await DeviceInfoPlugin().iosInfo;
     return !info.isPhysicalDevice;
   }
+}
+
+class PdfInteractiveViewer extends StatefulWidget {
+
+  PdfDocument doc;
+  double padding;
+
+  PdfInteractiveViewer({this.doc, this.padding});
+
+  @override
+  _PdfInteractiveViewerState createState() => _PdfInteractiveViewerState();
+}
+
+class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
+
+  List<_PdfPageState> _pages;
+  Size _docSize;
+  BoxConstraints _lastConstraints;
+  TransformationController _controller;
+  Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TransformationController();
+    _controller.addListener(() {
+      update();
+    });
+    load();
+  }
+
+  @override
+  void didUpdateWidget(PdfInteractiveViewer oldWidget) {
+    if (oldWidget.doc != widget.doc) {
+      load();
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  void dispose() {
+    _releasePages();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_pages == null) {
+      Future.delayed(Duration.zero, () => load());
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        relayout(constraints);
+        return InteractiveViewer(
+        transformationController: _controller,
+        constrained: false,
+        minScale: 0.1,
+        maxScale: 10,
+        child: Stack(
+          children: <Widget>[
+            if (_docSize != null)
+              SizedBox(width: _docSize.width, height: _docSize.height),
+
+            if (_docSize != null && _pages != null)
+              ..._pages.map((page)
+              {
+                return Positioned(
+                  left: page.rect.left,
+                  top: page.rect.top,
+                  width: page.rect.width,
+                  height: page.rect.height,
+                  child: Container(
+                    width: page.rect.width,
+                    height: page.rect.height,
+                    child: Stack(
+                      children: [
+                        if (page.image72?.imageIfAvailable != null)
+                          RawImage(image: page.image72.imageIfAvailable),
+                        if (page.image?.imageIfAvailable != null)
+                          Positioned(
+                            left: page.ovRect.left,
+                            top: page.ovRect.top,
+                            width: page.ovRect.width,
+                            height: page.ovRect.height,
+                            child: RawImage(image: page.image.imageIfAvailable, scale: 1.0 / _controller.value.row0[0]),
+                          ),
+                      ]
+                    ),
+                    decoration: BoxDecoration(
+                      color: Color.fromARGB(255, 250, 250, 250),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black45,
+                            blurRadius: 4,
+                            offset: Offset(2, 2))
+                      ]
+                    ),
+                  ),
+                );
+              }).toList()
+          ],
+        )
+      );
+      },
+    );
+  }
+
+  Future<void> load() async {
+    _releasePages();
+    _pages = List<_PdfPageState>();
+    final firstPage = await widget.doc.getPage(1);
+    final pageSize1 = Size(firstPage.width, firstPage.height);
+    for (int i = 0; i < widget.doc.pageCount; i++) {
+      _pages.add(_PdfPageState._(pageNumber: i + 1, pageSize: pageSize1));
+    }
+    _lastConstraints = null;
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _releasePages() {
+    if (_pages == null) return;
+    for (final p in _pages) {
+      p.image72?.dispose();
+      p.image?.dispose();
+    }
+    _pages = null;
+  }
+
+  void relayout(BoxConstraints constraints, {bool force = false}) {
+    if (!force && _lastConstraints != null && _lastConstraints == constraints) {
+      return;
+    }
+    final padding = widget.padding ?? 8.0;
+    final maxWidth = _pages.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
+    final ratio = (constraints.maxWidth - padding * 2) / maxWidth;
+    var top = padding;
+    for (int i = 0; i < _pages.length; i++) {
+      final page = _pages[i];
+      final w = page.pageSize.width * ratio;
+      final h = page.pageSize.height * ratio;
+      page.rect = Rect.fromLTWH(padding, top, w, h);
+      top += h + padding;
+    }
+    _docSize = Size(constraints.maxWidth, top);
+    _lastConstraints = constraints;
+    Future.delayed(Duration.zero, () => update());
+  }
+
+  void update() {
+    _timer?.cancel();
+    var updateCount = 0;
+    final m = _controller.value;
+    final r = m.row0[0];
+    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastConstraints.maxWidth, _lastConstraints.maxHeight);
+    for (final page in _pages) {
+      if (page.rect == null) continue;
+      final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
+      final part = pageRectZoomed.intersect(exposed);
+      if (part.isEmpty) {
+        //page.image?.dispose();
+        //page.image = null;
+        continue;
+      }
+      if (page.status == _PdfPageLoadingStatus.notInited) {
+        page.status = _PdfPageLoadingStatus.initializing;
+        Future.delayed(Duration.zero, () async {
+          page.pdfPage = await widget.doc.getPage(page.pageNumber);
+          page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
+          page.status = _PdfPageLoadingStatus.inited;
+          if (mounted) {
+            //print('Re-layout (page #${page.pageNumber})');
+            relayout(_lastConstraints, force: true);
+          }
+        });
+        return;
+      }
+      if (page.status == _PdfPageLoadingStatus.inited) {
+        page.status = _PdfPageLoadingStatus.pageLoading;
+        Future.delayed(Duration.zero, () async {
+          page.image72 = await page.pdfPage.render();
+          await page.image72.createImageIfNotAvailable();
+          page.status = _PdfPageLoadingStatus.pageLoaded;
+          if (mounted) {
+            //print('Loading image (page #${page.pageNumber})');
+            setState(() { });
+            update();
+          }
+        });
+        return;
+      }
+      if (page.status == _PdfPageLoadingStatus.pageLoaded) {
+        updateCount++;
+      }
+    }
+    if (updateCount > 0) {
+      _timer = Timer(Duration(milliseconds: 300), () => updateRealSize());
+    }
+  }
+
+  Future<void> updateRealSize() async {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final m = _controller.value;
+    final r = m.row0[0];
+    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastConstraints.maxWidth, _lastConstraints.maxHeight);
+    for (final page in _pages) {
+      if (page.status != _PdfPageLoadingStatus.pageLoaded) continue;
+      final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
+      final part = pageRectZoomed.intersect(exposed);
+      if (part.isEmpty) continue;
+      final offset = part.topLeft - pageRectZoomed.topLeft;
+      final image = await page.pdfPage.render(
+        x: (offset.dx * dpr).toInt(),
+        y: (offset.dy * dpr).toInt(),
+        width: (part.width * dpr).toInt(),
+        height: (part.height * dpr).toInt(),
+        fullWidth: pageRectZoomed.width * dpr,
+        fullHeight: pageRectZoomed.height * dpr);
+      await image.createImageIfNotAvailable();
+      page.ovRect = Rect.fromLTWH(offset.dx / r, offset.dy / r, part.width / r, part.height / r);
+      page.image?.dispose();
+      page.image = image;
+    }
+    if (mounted) {
+      setState(() {
+      });
+    }
+  }
+}
+
+enum _PdfPageLoadingStatus {
+  notInited,
+  initializing,
+  inited,
+  pageLoading,
+  pageLoaded
+}
+
+class _PdfPageState {
+  /// Page number (started at 1).
+  final int pageNumber;
+  /// Where the page is layed out if available.
+  Rect rect;
+  /// [PdfPage] corresponding to the page if available.
+  PdfPage pdfPage;
+  /// Size at 72-dpi. During the initialization, the size may be just a copy of the size of the first page.
+  Size pageSize;
+  /// Preview image of the page rendered at 72-dpi.
+  PdfPageImage image72;
+
+  Rect ovRect;
+
+  PdfPageImage image;
+
+  _PdfPageLoadingStatus status = _PdfPageLoadingStatus.notInited;
+
+  _PdfPageState._({@required this.pageNumber, @required this.pageSize});
 }

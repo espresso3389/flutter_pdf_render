@@ -181,17 +181,24 @@ class PdfPageImage {
 
   ui.Image _imageCached;
 
+  bool _disposed = false;
+
   PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.pixels, Pointer<Uint8> buffer}): _buffer = buffer;
 
   void dispose() {
     _imageCached?.dispose();
+    _imageCached = null;
     if (_buffer != null) {
       _channel.invokeMethod('releaseBuffer', _buffer.address);
     }
+    _disposed = true;
   }
 
   /// Get [ui.Image] for the object.
   Future<ui.Image> createImageIfNotAvailable() async {
+    if (_disposed) {
+      throw Exception('PdfPageImage was disposed.');
+    }
     _imageCached ??= await _decodeRgba(width, height, pixels);
     return _imageCached;
   }
