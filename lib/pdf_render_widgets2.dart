@@ -6,7 +6,6 @@ import 'dart:typed_data';
 
 import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
-import 'package:mutex/mutex.dart';
 import 'pdf_render.dart';
 
 /// Function definition to build widget tree for a PDF document.
@@ -428,6 +427,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   @override
   void dispose() {
+    _timer?.cancel();
     _releasePages();
     _controller.dispose();
     super.dispose();
@@ -461,9 +461,9 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
                     height: page.rect.height,
                     child: Stack(
                       children: [
-                        if (page.image72?.imageIfAvailable != null)
+                        if (page.isVisibleInsideView && page.image72?.imageIfAvailable != null)
                           RawImage(image: page.image72.imageIfAvailable),
-                        if (page.image?.imageIfAvailable != null)
+                        if (page.isVisibleInsideView && page.image?.imageIfAvailable != null)
                           Positioned(
                             left: page.ovRect.left,
                             top: page.ovRect.top,
@@ -518,74 +518,94 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
   }
 
   void relayout(BoxConstraints constraints, {bool force = false}) {
-    if (!force && _lastConstraints != null && _lastConstraints == constraints) {
-      return;
+    try {
+      if (!force && _lastConstraints != null && _lastConstraints == constraints) {
+        return;
+      }
+      final padding = widget.padding ?? 8.0;
+      final maxWidth = _pages.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
+      final ratio = (constraints.maxWidth - padding * 2) / maxWidth;
+      var top = padding;
+      for (int i = 0; i < _pages.length; i++) {
+        final page = _pages[i];
+        final w = page.pageSize.width * ratio;
+        final h = page.pageSize.height * ratio;
+        page.rect = Rect.fromLTWH(padding, top, w, h);
+        top += h + padding;
+      }
+      _docSize = Size(constraints.maxWidth, top);
+      _lastConstraints = constraints;
+      update();
+    } catch (e, s) {
+      print('relayout: $e: $s');
     }
-    final padding = widget.padding ?? 8.0;
-    final maxWidth = _pages.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
-    final ratio = (constraints.maxWidth - padding * 2) / maxWidth;
-    var top = padding;
-    for (int i = 0; i < _pages.length; i++) {
-      final page = _pages[i];
-      final w = page.pageSize.width * ratio;
-      final h = page.pageSize.height * ratio;
-      page.rect = Rect.fromLTWH(padding, top, w, h);
-      top += h + padding;
-    }
-    _docSize = Size(constraints.maxWidth, top);
-    _lastConstraints = constraints;
-    Future.delayed(Duration.zero, () => update());
   }
 
   void update() {
     if (_lastConstraints == null) return;
     _timer?.cancel();
-    var updateCount = 0;
+    _timer = null;
     final m = _controller.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastConstraints.maxWidth, _lastConstraints.maxHeight);
+    final p0 = exposed.center;
+    final dist2Threshold = exposed.longestSide * exposed.longestSide;
+    _PdfPageState first;
+    var anyFullyLoadedPages = false;
+
     for (final page in _pages) {
-      if (page.rect == null) continue;
-      final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
-      final part = pageRectZoomed.intersect(exposed);
-      if (part.isEmpty) {
-        //page.image?.dispose();
-        //page.image = null;
+      if (page.rect == null) {
+        page.isVisibleInsideView = false;
         continue;
       }
-      if (page.status == _PdfPageLoadingStatus.notInited) {
-        page.status = _PdfPageLoadingStatus.initializing;
-        Future.delayed(Duration.zero, () async {
-          page.pdfPage = await widget.doc.getPage(page.pageNumber);
-          page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
+      final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
+      final part = pageRectZoomed.intersect(exposed);
+      page.isVisibleInsideView = !part.isEmpty;
+      if (part.isEmpty) {
+        if (page.status != _PdfPageLoadingStatus.notInited && (pageRectZoomed.center - p0).distanceSquared > dist2Threshold) {
+          page.image72?.dispose();
+          page.image?.dispose();
+          page.image72 = null;
+          page.image = null;
           page.status = _PdfPageLoadingStatus.inited;
-          if (mounted) {
-            //print('Re-layout (page #${page.pageNumber})');
-            relayout(_lastConstraints, force: true);
-          }
-        });
-        return;
-      }
-      if (page.status == _PdfPageLoadingStatus.inited) {
-        page.status = _PdfPageLoadingStatus.pageLoading;
-        Future.delayed(Duration.zero, () async {
-          page.image72 = await page.pdfPage.render();
-          await page.image72.createImageIfNotAvailable();
-          page.status = _PdfPageLoadingStatus.pageLoaded;
-          if (mounted) {
-            //print('Loading image (page #${page.pageNumber})');
-            setState(() { });
-            update();
-          }
-        });
-        return;
-      }
-      if (page.status == _PdfPageLoadingStatus.pageLoaded) {
-        updateCount++;
+        }
+      } else if (page.status == _PdfPageLoadingStatus.pageLoaded) {
+        anyFullyLoadedPages = true;
+      } else if (first == null) {
+        first = page;
       }
     }
-    if (updateCount > 0) {
+
+    if (first != null) {
+      Future.delayed(Duration.zero, () => updatePageState(first));
+    } else if (anyFullyLoadedPages) {
       _timer = Timer(Duration(milliseconds: 300), () => updateRealSize());
+    }
+  }
+
+  Future<void> updatePageState(_PdfPageState page) async {
+    if (page.status == _PdfPageLoadingStatus.notInited) {
+      page.status = _PdfPageLoadingStatus.initializing;
+      page.pdfPage = await widget.doc.getPage(page.pageNumber);
+      final prevPageSize = page.pageSize;
+      page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
+      page.status = _PdfPageLoadingStatus.inited;
+      if (prevPageSize != page.pageSize && mounted) {
+        //print('Re-layout (page #${page.pageNumber})');
+        relayout(_lastConstraints, force: true);
+        return;
+      }
+    }
+    if (page.status == _PdfPageLoadingStatus.inited) {
+      page.status = _PdfPageLoadingStatus.pageLoading;
+      page.image72 = await page.pdfPage.render();
+      await page.image72.createImageIfNotAvailable();
+      page.status = _PdfPageLoadingStatus.pageLoaded;
+      if (mounted) {
+        //print('Loading image (page #${page.pageNumber})');
+        setState(() { });
+        update();
+      }
     }
   }
 
@@ -642,6 +662,8 @@ class _PdfPageState {
   Rect ovRect;
 
   PdfPageImage image;
+
+  bool isVisibleInsideView = false;
 
   _PdfPageLoadingStatus status = _PdfPageLoadingStatus.notInited;
 
