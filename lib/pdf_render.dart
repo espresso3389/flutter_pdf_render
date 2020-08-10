@@ -174,32 +174,35 @@ class PdfPageImage {
   final double pageWidth;
   /// PDF page height in points (height in pixels at 72 dpi).
   final double pageHeight;
-  /// RGBA pixels in byte array.
-  final Uint8List pixels;
-  /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
-  final Pointer<Uint8> _buffer;
 
+  Uint8List _pixels;
+  Pointer<Uint8> _buffer;
   ui.Image _imageCached;
 
-  bool _disposed = false;
+  PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, Uint8List pixels, Pointer<Uint8> buffer}): _pixels = pixels, _buffer = buffer;
 
-  PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.pixels, Pointer<Uint8> buffer}): _buffer = buffer;
+  /// RGBA pixels in byte array.
+  Uint8List get pixels => _pixels;
+
+  /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
+  Pointer<Uint8> get buffer => _buffer;
 
   void dispose() {
     _imageCached?.dispose();
     _imageCached = null;
     if (_buffer != null) {
       _channel.invokeMethod('releaseBuffer', _buffer.address);
+      _buffer = null;
     }
-    _disposed = true;
+    _pixels = null;
   }
 
   /// Get [ui.Image] for the object.
   Future<ui.Image> createImageIfNotAvailable() async {
-    if (_disposed) {
+    if (_pixels == null) {
       throw Exception('PdfPageImage was disposed.');
     }
-    _imageCached ??= await _decodeRgba(width, height, pixels);
+    _imageCached ??= await _decodeRgba(width, height, _pixels);
     return _imageCached;
   }
 

@@ -435,9 +435,6 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_pages == null) {
-      Future.delayed(Duration.zero, () => load());
-    }
     return LayoutBuilder(
       builder: (context, constraints) {
         relayout(constraints);
@@ -497,6 +494,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   Future<void> load() async {
     _releasePages();
+    print("Loading pages...");
     _pages = List<_PdfPageState>();
     final firstPage = await widget.doc.getPage(1);
     final pageSize1 = Size(firstPage.width, firstPage.height);
@@ -511,6 +509,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   void _releasePages() {
     if (_pages == null) return;
+    print("Releasing pages...");
     for (final p in _pages) {
       p.image72?.dispose();
       p.image?.dispose();
@@ -539,6 +538,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
   }
 
   void update() {
+    if (_lastConstraints == null) return;
     _timer?.cancel();
     var updateCount = 0;
     final m = _controller.value;
