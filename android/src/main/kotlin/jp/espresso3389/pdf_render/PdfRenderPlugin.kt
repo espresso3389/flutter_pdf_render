@@ -8,6 +8,7 @@ import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
+import android.util.Log
 import android.util.SparseArray
 import android.view.Surface
 import androidx.annotation.NonNull
@@ -32,7 +33,6 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
   private val documents: SparseArray<PdfRenderer> = SparseArray()
   private var lastDocId: Int = 0
   private val textures: SparseArray<TextureRegistry.SurfaceTextureEntry> = SparseArray()
-  private val buffers: LongSparseArray<ByteBuffer> = LongSparseArray()
 
   override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
     this.flutterPluginBinding = flutterPluginBinding
@@ -274,11 +274,6 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
     var buf: ByteBuffer? = null
     var addr: Long = 0L
     val m = renderOnByteBuffer(args) {
-      if (false) {
-        val abuf = ByteBuffer.allocate(it)
-        buf = abuf
-        return@renderOnByteBuffer abuf
-      }
       val (addr_, bbuf) = allocBuffer(it)
       buf = bbuf
       addr = addr_
@@ -294,17 +289,15 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
   }
 
   private fun allocBuffer(size: Int): Pair<Long, ByteBuffer> {
-    // FIXME: Dirty hack to obtain address of the DirectByteBuffer
-    val addressField = Buffer::class.java.getDeclaredField("address")
-    addressField.setAccessible(true)
-    val bb = ByteBuffer.allocateDirect(size)
-    val addr = addressField.getLong(bb)
-    buffers.put(addr, bb)
+    val addr = ByteBufferHelper.malloc(size.toLong())
+    Log.i("allocBuffer", "size=$size -> addr=$addr")
+    val bb = ByteBufferHelper.newDirectBuffer(addr, size.toLong())
     return addr to bb
   }
 
   private fun releaseBuffer(addr: Long) {
-    buffers.remove(addr)
+    Log.i("releaseBuffer", "addr=$addr")
+    ByteBufferHelper.free(addr)
   }
 
   private fun allocTex(): Int {
