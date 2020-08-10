@@ -10,7 +10,9 @@ import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 import android.util.SparseArray
 import android.view.Surface
+import androidx.annotation.NonNull
 import androidx.collection.LongSparseArray
+import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
@@ -21,24 +23,28 @@ import java.io.File
 import java.io.OutputStream
 import java.nio.Buffer
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
-class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
-  companion object {
-    @JvmStatic
-    fun registerWith(registrar: Registrar): Unit {
-      val channel = MethodChannel(registrar.messenger(), "pdf_render")
-      channel.setMethodCallHandler(PdfRenderPlugin(registrar))
-    }
-  }
+/** PdfRenderPlugin */
+class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
+  private lateinit var channel : MethodChannel
+  private lateinit var flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
 
-  private val registrar: Registrar = registrar
   private val documents: SparseArray<PdfRenderer> = SparseArray()
   private var lastDocId: Int = 0
   private val textures: SparseArray<TextureRegistry.SurfaceTextureEntry> = SparseArray()
   private val buffers: LongSparseArray<ByteBuffer> = LongSparseArray()
 
-  override fun onMethodCall(call: MethodCall, result: Result): Unit {
+  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    this.flutterPluginBinding = flutterPluginBinding
+    channel = MethodChannel(flutterPluginBinding.binaryMessenger, "pdf_render")
+    channel.setMethodCallHandler(this)
+  }
+
+  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    channel.setMethodCallHandler(null)
+  }
+
+  override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     try {
       when {
         call.method == "file" -> {
@@ -185,10 +191,10 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   }
 
   private fun openAssetDoc(pdfAssetName: String): PdfRenderer {
-    val key = registrar.lookupKeyForAsset(pdfAssetName)
+    val key = flutterPluginBinding.flutterAssets.getAssetFilePathByName(pdfAssetName)
     // NOTE: the input stream obtained from asset may not be
     // a file stream and we should convert it to file
-    registrar.context().assets.open(key).use { input ->
+    flutterPluginBinding.applicationContext.assets.open(key).use { input ->
       return copyToTempFileAndOpenDoc { input.copyTo(it) }
     }
   }
@@ -302,7 +308,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   }
 
   private fun allocTex(): Int {
-    val surfaceTexture = registrar.textures().createSurfaceTexture()
+    val surfaceTexture = flutterPluginBinding.textureRegistry.createSurfaceTexture()
     val id = surfaceTexture.id().toInt()
     textures.put(id, surfaceTexture)
     return id
