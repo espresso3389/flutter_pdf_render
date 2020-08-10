@@ -236,7 +236,6 @@ class PdfPageImage {
           pixels = ptr.asTypedList(size);
         }
       }
-      var image = await _decodeRgba(retWidth, retHeight, pixels);
 
       return PdfPageImage._(
         pageNumber: obj['pageNumber'] as int,

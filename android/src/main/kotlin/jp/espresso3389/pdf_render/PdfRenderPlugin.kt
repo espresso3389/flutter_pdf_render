@@ -8,7 +8,7 @@ import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
-import android.util.Log
+//import android.util.Log
 import android.util.SparseArray
 import android.view.Surface
 import androidx.annotation.NonNull
@@ -290,13 +290,13 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
 
   private fun allocBuffer(size: Int): Pair<Long, ByteBuffer> {
     val addr = ByteBufferHelper.malloc(size.toLong())
-    Log.i("allocBuffer", "size=$size -> addr=$addr")
+    //Log.i("allocBuffer", "size=$size -> addr=$addr")
     val bb = ByteBufferHelper.newDirectBuffer(addr, size.toLong())
     return addr to bb
   }
 
   private fun releaseBuffer(addr: Long) {
-    Log.i("releaseBuffer", "addr=$addr")
+    //Log.i("releaseBuffer", "addr=$addr")
     ByteBufferHelper.free(addr)
   }
 
