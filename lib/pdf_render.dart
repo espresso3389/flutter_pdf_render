@@ -197,7 +197,7 @@ class PdfPageImage {
     _pixels = null;
   }
 
-  /// Get [ui.Image] for the object.
+  /// Create cached [Image] for the page.
   Future<ui.Image> createImageIfNotAvailable() async {
     if (_pixels == null) {
       throw Exception('PdfPageImage was disposed.');
@@ -209,6 +209,8 @@ class PdfPageImage {
   /// Get [Image] for the object if available; otherwise null.
   /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
   ui.Image get imageIfAvailable => _imageCached;
+
+  Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
 
   static Future<PdfPageImage> _render(
     PdfDocument document, int pageNumber,
