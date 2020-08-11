@@ -401,9 +401,8 @@ class PdfInteractiveViewer extends StatefulWidget {
 class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   List<_PdfPageState> _pages;
-  Size _docSize;
-  BoxConstraints _lastConstraints;
   TransformationController _controller;
+  BoxConstraints _lastConstraints;
   Timer _timer;
 
   @override
@@ -411,7 +410,9 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
     super.initState();
     _controller = TransformationController();
     _controller.addListener(() {
-      update();
+      if (_lastConstraints != null) {
+        update(_lastConstraints);
+      }
     });
     load();
   }
@@ -436,7 +437,8 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        relayout(constraints);
+        _lastConstraints = constraints;
+        final docSize = relayout(constraints);
         return InteractiveViewer(
         transformationController: _controller,
         constrained: false,
@@ -444,46 +446,9 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
         maxScale: 20,
         child: Stack(
           children: <Widget>[
-            if (_docSize != null)
-              SizedBox(width: _docSize.width, height: _docSize.height),
+            SizedBox(width: docSize.width, height: docSize.height),
 
-            if (_docSize != null && _pages != null)
-              ..._pages.map((page)
-              {
-                return Positioned(
-                  left: page.rect.left,
-                  top: page.rect.top,
-                  width: page.rect.width,
-                  height: page.rect.height,
-                  child: Container(
-                    width: page.rect.width,
-                    height: page.rect.height,
-                    child: Stack(
-                      children: [
-                        if (page.isVisibleInsideView && page.preview != null)
-                          Texture(textureId: page.preview.texId),
-                        if (page.isVisibleInsideView && page.realSizeOverlayRect != null && page.realSize != null)
-                          Positioned(
-                            left: page.realSizeOverlayRect.left,
-                            top: page.realSizeOverlayRect.top,
-                            width: page.realSizeOverlayRect.width,
-                            height: page.realSizeOverlayRect.height,
-                            child: Texture(textureId: page.realSize.texId),
-                          ),
-                      ]
-                    ),
-                    decoration: BoxDecoration(
-                      color: Color.fromARGB(255, 250, 250, 250),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black45,
-                            blurRadius: 4,
-                            offset: Offset(2, 2))
-                      ]
-                    ),
-                  ),
-                );
-              }).toList()
+            ...iterateLaidOutPages(constraints)
           ],
         )
       );
@@ -499,7 +464,6 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
     for (int i = 0; i < widget.doc.pageCount; i++) {
       _pages.add(_PdfPageState._(pageNumber: i + 1, pageSize: pageSize1));
     }
-    _lastConstraints = null;
     if (mounted) {
       setState(() {});
     }
@@ -508,48 +472,93 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
   void _releasePages() {
     if (_pages == null) return;
     for (final p in _pages) {
-      p.preview?.dispose();
-      p.realSize?.dispose();
+      p.dispose();
     }
     _pages = null;
   }
 
-  void relayout(BoxConstraints constraints, {bool force = false}) {
-    try {
-      if (!force && _lastConstraints != null && _lastConstraints == constraints) {
-        return;
+  double get padding => widget.padding ?? 8.0;
+
+  Size relayout(BoxConstraints constraints, {bool force = false}) {
+    final maxWidth = _pages.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
+    final ratio = (constraints.maxWidth - padding * 2) / maxWidth;
+    var top = padding;
+    for (int i = 0; i < _pages.length; i++) {
+      final page = _pages[i];
+      final w = page.pageSize.width * ratio;
+      final h = page.pageSize.height * ratio;
+      page.rect = Rect.fromLTWH(padding, top, w, h);
+      top += h + padding;
+    }
+    update(constraints);
+    return Size(constraints.maxWidth, top);
+  }
+
+  Iterable<Widget> iterateLaidOutPages(BoxConstraints constraints) sync* {
+    if (_pages != null) {
+      final m = _controller.value;
+      final r = m.row0[0];
+      final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight).inflate(padding);
+
+      for (final page in _pages) {
+        final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
+        final part = pageRectZoomed.intersect(exposed);
+        page.isVisibleInsideView = !part.isEmpty;
+        if (!page.isVisibleInsideView) continue;
+
+        yield Positioned(
+          left: page.rect.left,
+          top: page.rect.top,
+          width: page.rect.width,
+          height: page.rect.height,
+          child: Container(
+            width: page.rect.width,
+            height: page.rect.height,
+            child: Stack(
+              children: [
+                ValueListenableBuilder<int>(
+                  valueListenable: page._previewNotifier,
+                  builder: (context, value, child) => page.preview != null ? Texture(textureId: page.preview.texId) : Container()
+                ),
+                ValueListenableBuilder<int>(
+                  valueListenable: page._realSizeNotifier,
+                  builder: (context, value, child) => page.realSizeOverlayRect != null && page.realSize != null
+                  ? Positioned(
+                      left: page.realSizeOverlayRect.left,
+                      top: page.realSizeOverlayRect.top,
+                      width: page.realSizeOverlayRect.width,
+                      height: page.realSizeOverlayRect.height,
+                      child: Texture(textureId: page.realSize.texId)
+                    )
+                  : Container()
+                ),
+              ]
+            ),
+            decoration: BoxDecoration(
+              color: Color.fromARGB(255, 0, 0, 250),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black45,
+                    blurRadius: 4,
+                    offset: Offset(2, 2))
+              ]
+            ),
+          ),
+        );
       }
-      final padding = widget.padding ?? 8.0;
-      final maxWidth = _pages.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
-      final ratio = (constraints.maxWidth - padding * 2) / maxWidth;
-      var top = padding;
-      for (int i = 0; i < _pages.length; i++) {
-        final page = _pages[i];
-        final w = page.pageSize.width * ratio;
-        final h = page.pageSize.height * ratio;
-        page.rect = Rect.fromLTWH(padding, top, w, h);
-        top += h + padding;
-      }
-      _docSize = Size(constraints.maxWidth, top);
-      _lastConstraints = constraints;
-      update();
-    } catch (e, s) {
-      print('relayout: $e: $s');
     }
   }
 
-  void update() {
-    if (_lastConstraints == null) return;
+  static final extraBufferAroundView = 400.0;
+
+  void update(BoxConstraints constraints) {
     _timer?.cancel();
     _timer = null;
     final m = _controller.value;
     final r = m.row0[0];
-    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastConstraints.maxWidth, _lastConstraints.maxHeight);
-    final p0 = exposed.center;
-    final dist2Threshold = exposed.longestSide * exposed.longestSide;
-    _PdfPageState first;
-    var anyFullyLoadedPages = false;
-
+    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight).inflate(extraBufferAroundView);
+    var pagesToUpdate = 0;
+    var changeCount = 0;
     for (final page in _pages) {
       if (page.rect == null) {
         page.isVisibleInsideView = false;
@@ -557,66 +566,74 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       }
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
       final part = pageRectZoomed.intersect(exposed);
-      page.isVisibleInsideView = !part.isEmpty;
-      if (part.isEmpty) {
-        if (page.status != _PdfPageLoadingStatus.notInited && (pageRectZoomed.center - p0).distanceSquared > dist2Threshold) {
-          page.preview?.dispose();
-          page.realSize?.dispose();
-          page.preview = null;
-          page.realSize = null;
-          page.status = _PdfPageLoadingStatus.inited;
+      if (page.isVisibleInsideView != !part.isEmpty) {
+        page.isVisibleInsideView = !part.isEmpty;
+        changeCount++;
+        if (part.isEmpty) {
+          page.releaseTextures();
+          print('releasing page ${page.pageNumber} $pageRectZoomed of $exposed');
+        } else {
+          pagesToUpdate++;
         }
-      } else if (page.status == _PdfPageLoadingStatus.pageLoaded) {
-        anyFullyLoadedPages = true;
-      } else if (first == null) {
-        first = page;
       }
     }
 
-    if (first != null) {
-      Future.delayed(Duration.zero, () => updatePageState(first));
-    } else if (anyFullyLoadedPages) {
-      _timer = Timer(Duration(milliseconds: 300), () => updateRealSize());
+    if (changeCount > 0) {
+      Future.delayed(Duration.zero, () => setState(() { }));
+    }
+    if (pagesToUpdate > 0) {
+      Future.delayed(Duration.zero, () => updatePageState(constraints));
+    } else {
+      _timer = Timer(Duration(milliseconds: 100), () => updateRealSize(constraints));
     }
   }
 
-  Future<void> updatePageState(_PdfPageState page) async {
-    if (page.status == _PdfPageLoadingStatus.notInited) {
-      page.status = _PdfPageLoadingStatus.initializing;
-      page.pdfPage = await widget.doc.getPage(page.pageNumber);
-      final prevPageSize = page.pageSize;
-      page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
-      page.status = _PdfPageLoadingStatus.inited;
-      if (prevPageSize != page.pageSize && mounted) {
-        relayout(_lastConstraints, force: true);
-        return;
+  Future<void> updatePageState(BoxConstraints constraints) async {
+    final m = _controller.value;
+    final r = m.row0[0];
+    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight).inflate(extraBufferAroundView);
+    for (final page in _pages) {
+      final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
+      final part = pageRectZoomed.intersect(exposed);
+      if (part.isEmpty) continue;
+
+      if (page.status == _PdfPageLoadingStatus.notInited) {
+        page.status = _PdfPageLoadingStatus.initializing;
+        page.pdfPage = await widget.doc.getPage(page.pageNumber);
+        final prevPageSize = page.pageSize;
+        page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
+        page.status = _PdfPageLoadingStatus.inited;
+        if (prevPageSize != page.pageSize && mounted) {
+          relayout(constraints, force: true);
+          return;
+        }
+      }
+      if (page.status == _PdfPageLoadingStatus.inited) {
+        page.status = _PdfPageLoadingStatus.pageLoading;
+        page.preview = await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
+        final w = page.pdfPage.width.toInt();
+        final h = page.pdfPage.height.toInt();
+        await page.preview.updateRect(
+          width: w,
+          height: h,
+          texWidth: w,
+          texHeight: h,
+          fullWidth: page.pdfPage.width,
+          fullHeight: page.pdfPage.height);
+        page.status = _PdfPageLoadingStatus.pageLoaded;
+        page.updatePreview();
       }
     }
-    if (page.status == _PdfPageLoadingStatus.inited) {
-      page.status = _PdfPageLoadingStatus.pageLoading;
-      page.preview = await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
-      final w = page.pdfPage.width.toInt();
-      final h = page.pdfPage.height.toInt();
-      await page.preview.updateRect(
-        width: w,
-        height: h,
-        texWidth: w,
-        texHeight: h,
-        fullWidth: page.pdfPage.width,
-        fullHeight: page.pdfPage.height);
-      page.status = _PdfPageLoadingStatus.pageLoaded;
-      if (mounted) {
-        setState(() { });
-        update();
-      }
-    }
+
+    _timer?.cancel();
+    _timer = Timer(Duration(milliseconds: 100), () => updateRealSize(constraints));
   }
 
-  Future<void> updateRealSize() async {
+  Future<void> updateRealSize(BoxConstraints constraints) async {
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final m = _controller.value;
     final r = m.row0[0];
-    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastConstraints.maxWidth, _lastConstraints.maxHeight);
+    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight);
     for (final page in _pages) {
       if (page.status != _PdfPageLoadingStatus.pageLoaded) continue;
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
@@ -624,7 +641,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       if (part.isEmpty) continue;
       final fw = pageRectZoomed.width * dpr;
       final fh = pageRectZoomed.height * dpr;
-      if (page.preview.hasUpdatedTexture && fw <= page.preview.texWidth && fh <= page.preview.texHeight) {
+      if (page.preview?.hasUpdatedTexture == true && fw <= page.preview.texWidth && fh <= page.preview.texHeight) {
         // no real-size overlay needed; use preview
         page.realSizeOverlayRect = null;
       } else {
@@ -644,10 +661,8 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
           fullWidth: fw,
           fullHeight: fh);
       }
-    }
-    if (mounted) {
-      setState(() {
-      });
+      page.updateRealSize();
+      print('Updating page ${page.pageNumber} ${part}');
     }
   }
 }
@@ -663,6 +678,7 @@ enum _PdfPageLoadingStatus {
 class _PdfPageState {
   /// Page number (started at 1).
   final int pageNumber;
+
   /// Where the page is layed out if available.
   Rect rect;
   /// [PdfPage] corresponding to the page if available.
@@ -680,5 +696,36 @@ class _PdfPageState {
 
   _PdfPageLoadingStatus status = _PdfPageLoadingStatus.notInited;
 
+  final _previewNotifier = ValueNotifier<int>(0);
+  final _realSizeNotifier = ValueNotifier<int>(0);
+
   _PdfPageState._({@required this.pageNumber, @required this.pageSize});
+
+  Widget previewTexture() => _textureFor(preview, _previewNotifier);
+  void updatePreview() { _previewNotifier.value++; }
+
+  Widget realSizeTexture() => _textureFor(realSize, _realSizeNotifier);
+  void updateRealSize() { _realSizeNotifier.value++; }
+
+  Widget _textureFor(PdfPageImageTexture t, ValueNotifier<int> n) {
+    return ValueListenableBuilder<int>(
+      valueListenable: n,
+      builder: (context, value, child) => t != null ? Texture(textureId: t.texId) : Container(),
+    );
+  }
+
+  void releaseTextures() {
+    if (preview == null) return;
+    preview.dispose();
+    realSize?.dispose();
+    preview = null;
+    realSize = null;
+    status = _PdfPageLoadingStatus.inited;
+  }
+
+  void dispose() {
+    releaseTextures();
+    _previewNotifier.dispose();
+    _realSizeNotifier.dispose();
+  }
 }
