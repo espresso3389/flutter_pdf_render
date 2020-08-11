@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
@@ -442,7 +441,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
         transformationController: _controller,
         constrained: false,
         minScale: 0.1,
-        maxScale: 10,
+        maxScale: 20,
         child: Stack(
           children: <Widget>[
             if (_docSize != null)
@@ -461,15 +460,15 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
                     height: page.rect.height,
                     child: Stack(
                       children: [
-                        if (page.isVisibleInsideView && page.image72?.imageIfAvailable != null)
-                          RawImage(image: page.image72.imageIfAvailable),
-                        if (page.isVisibleInsideView && page.image?.imageIfAvailable != null)
+                        if (page.isVisibleInsideView && page.preview != null)
+                          Texture(textureId: page.preview.texId),
+                        if (page.isVisibleInsideView && page.realSizeOverlayRect != null && page.realSize != null)
                           Positioned(
-                            left: page.ovRect.left,
-                            top: page.ovRect.top,
-                            width: page.ovRect.width,
-                            height: page.ovRect.height,
-                            child: RawImage(image: page.image.imageIfAvailable, scale: 1.0 / _controller.value.row0[0]),
+                            left: page.realSizeOverlayRect.left,
+                            top: page.realSizeOverlayRect.top,
+                            width: page.realSizeOverlayRect.width,
+                            height: page.realSizeOverlayRect.height,
+                            child: Texture(textureId: page.realSize.texId),
                           ),
                       ]
                     ),
@@ -494,7 +493,6 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   Future<void> load() async {
     _releasePages();
-    print("Loading pages...");
     _pages = List<_PdfPageState>();
     final firstPage = await widget.doc.getPage(1);
     final pageSize1 = Size(firstPage.width, firstPage.height);
@@ -509,10 +507,9 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
 
   void _releasePages() {
     if (_pages == null) return;
-    print("Releasing pages...");
     for (final p in _pages) {
-      p.image72?.dispose();
-      p.image?.dispose();
+      p.preview?.dispose();
+      p.realSize?.dispose();
     }
     _pages = null;
   }
@@ -563,10 +560,10 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       page.isVisibleInsideView = !part.isEmpty;
       if (part.isEmpty) {
         if (page.status != _PdfPageLoadingStatus.notInited && (pageRectZoomed.center - p0).distanceSquared > dist2Threshold) {
-          page.image72?.dispose();
-          page.image?.dispose();
-          page.image72 = null;
-          page.image = null;
+          page.preview?.dispose();
+          page.realSize?.dispose();
+          page.preview = null;
+          page.realSize = null;
           page.status = _PdfPageLoadingStatus.inited;
         }
       } else if (page.status == _PdfPageLoadingStatus.pageLoaded) {
@@ -591,18 +588,24 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
       page.status = _PdfPageLoadingStatus.inited;
       if (prevPageSize != page.pageSize && mounted) {
-        //print('Re-layout (page #${page.pageNumber})');
         relayout(_lastConstraints, force: true);
         return;
       }
     }
     if (page.status == _PdfPageLoadingStatus.inited) {
       page.status = _PdfPageLoadingStatus.pageLoading;
-      page.image72 = await page.pdfPage.render();
-      await page.image72.createImageIfNotAvailable();
+      page.preview = await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
+      final w = page.pdfPage.width.toInt();
+      final h = page.pdfPage.height.toInt();
+      await page.preview.updateRect(
+        width: w,
+        height: h,
+        texWidth: w,
+        texHeight: h,
+        fullWidth: page.pdfPage.width,
+        fullHeight: page.pdfPage.height);
       page.status = _PdfPageLoadingStatus.pageLoaded;
       if (mounted) {
-        //print('Loading image (page #${page.pageNumber})');
         setState(() { });
         update();
       }
@@ -619,18 +622,28 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
       final part = pageRectZoomed.intersect(exposed);
       if (part.isEmpty) continue;
-      final offset = part.topLeft - pageRectZoomed.topLeft;
-      final image = await page.pdfPage.render(
-        x: (offset.dx * dpr).toInt(),
-        y: (offset.dy * dpr).toInt(),
-        width: (part.width * dpr).toInt(),
-        height: (part.height * dpr).toInt(),
-        fullWidth: pageRectZoomed.width * dpr,
-        fullHeight: pageRectZoomed.height * dpr);
-      await image.createImageIfNotAvailable();
-      page.ovRect = Rect.fromLTWH(offset.dx / r, offset.dy / r, part.width / r, part.height / r);
-      page.image?.dispose();
-      page.image = image;
+      final fw = pageRectZoomed.width * dpr;
+      final fh = pageRectZoomed.height * dpr;
+      if (page.preview.hasUpdatedTexture && fw <= page.preview.texWidth && fh <= page.preview.texHeight) {
+        // no real-size overlay needed; use preview
+        page.realSizeOverlayRect = null;
+      } else {
+        // render real-size overlay
+        final offset = part.topLeft - pageRectZoomed.topLeft;
+        page.realSizeOverlayRect = Rect.fromLTWH(offset.dx / r, offset.dy / r, part.width / r, part.height / r);
+        page.realSize ??= await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
+        final w = (part.width * dpr).toInt();
+        final h = (part.height * dpr).toInt();
+        page.realSize.updateRect(
+          width: w,
+          height: h,
+          srcX: (offset.dx * dpr).toInt(),
+          srcY: (offset.dy * dpr).toInt(),
+          texWidth: w,
+          texHeight: h,
+          fullWidth: fw,
+          fullHeight: fh);
+      }
     }
     if (mounted) {
       setState(() {
@@ -656,12 +669,12 @@ class _PdfPageState {
   PdfPage pdfPage;
   /// Size at 72-dpi. During the initialization, the size may be just a copy of the size of the first page.
   Size pageSize;
-  /// Preview image of the page rendered at 72-dpi.
-  PdfPageImage image72;
-
-  Rect ovRect;
-
-  PdfPageImage image;
+  /// Preview image of the page rendered at low resolution.
+  PdfPageImageTexture preview;
+  /// Relative position of the realSize overlay. null to not show realSize overlay.
+  Rect realSizeOverlayRect;
+  /// realSize overlay.
+  PdfPageImageTexture realSize;
 
   bool isVisibleInsideView = false;
 

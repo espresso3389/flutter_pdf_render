@@ -292,6 +292,13 @@ class PdfPageImageTexture {
   final int pageNumber;
   final int texId;
 
+  int _texWidth;
+  int _texHeight;
+
+  int get texWidth => _texWidth;
+  int get texHeight => _texHeight;
+  bool get hasUpdatedTexture => _texWidth != null;
+
   bool operator ==(Object other) {
     return other is PdfPageImageTexture &&
       other.pdfDocument == pdfDocument &&
@@ -334,6 +341,10 @@ class PdfPageImageTexture {
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill
     });
+    if (result >= 0) {
+      _texWidth = texWidth ?? _texWidth;
+      _texHeight = texHeight ?? _texHeight;
+    }
     return result >= 0;
   }
 }
