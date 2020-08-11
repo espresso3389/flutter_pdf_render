@@ -552,8 +552,6 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
   static final extraBufferAroundView = 400.0;
 
   void update(BoxConstraints constraints) {
-    _timer?.cancel();
-    _timer = null;
     final m = _controller.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight).inflate(extraBufferAroundView);
@@ -577,6 +575,9 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
         }
       }
     }
+
+    _timer?.cancel();
+    _timer = null;
 
     if (changeCount > 0) {
       Future.delayed(Duration.zero, () => setState(() { }));
