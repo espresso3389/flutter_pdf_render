@@ -496,6 +496,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       final m = _controller.value;
       final r = m.row0[0];
       final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight).inflate(_padding);
+      print('ex: $exposed');
 
       for (final page in _pages) {
         final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
@@ -577,13 +578,21 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
     _cancelLastRealSizeUpdate();
 
     if (changeCount > 0) {
-      Future.delayed(Duration.zero, () => setState(() { }));
+      _needRelayout();
     }
     if (pagesToUpdate > 0) {
-      Future.delayed(Duration.zero, () => _updatePageState());
+      _needPagePreviewGenerateion();
     } else {
-      _requestRealSizeUpdate();
+      _needRealSizeOverlayUpdate();
     }
+  }
+
+  void _needRelayout() {
+    Future.delayed(Duration.zero, () => setState(() { }));
+  }
+
+  void _needPagePreviewGenerateion() {
+    Future.delayed(Duration.zero, () => _updatePageState());
   }
 
   void _cancelLastRealSizeUpdate() {
@@ -591,9 +600,9 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
     _realSizeUpdateTimer = null;
   }
 
-  void _requestRealSizeUpdate() {
+  void _needRealSizeOverlayUpdate() {
     _realSizeUpdateTimer?.cancel();
-    _realSizeUpdateTimer = Timer(Duration(milliseconds: 100), () => _updateRealSize());
+    _realSizeUpdateTimer = Timer(Duration(milliseconds: 100), () => _updateRealSizeOverlay());
   }
 
   Future<void> _updatePageState() async {
@@ -633,10 +642,10 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
       }
     }
 
-    _requestRealSizeUpdate();
+    _needRealSizeOverlayUpdate();
   }
 
-  Future<void> _updateRealSize() async {
+  Future<void> _updateRealSizeOverlay() async {
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final m = _controller.value;
     final r = m.row0[0];
@@ -668,8 +677,7 @@ class _PdfInteractiveViewerState extends State<PdfInteractiveViewer> {
           fullWidth: fw,
           fullHeight: fh);
       }
-      page._updateRealSize();
-      print('Updating page ${page.pageNumber} ${part}');
+      page._updateRealSizeOverlay();
     }
   }
 }
@@ -712,7 +720,7 @@ class _PdfPageState {
   void updatePreview() { _previewNotifier.value++; }
 
   Widget realSizeTexture() => _textureFor(realSize, _realSizeNotifier);
-  void _updateRealSize() { _realSizeNotifier.value++; }
+  void _updateRealSizeOverlay() { _realSizeNotifier.value++; }
 
   Widget _textureFor(PdfPageImageTexture t, ValueNotifier<int> n) {
     return ValueListenableBuilder<int>(
