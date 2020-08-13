@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
           // the widget tree renders each page.
           child: PdfDocumentLoader(
             assetName: 'assets/hello.pdf',
-            documentBuilder: (context, pdfDocument, pageCount) => pdfDocument == null ? Container() : PdfViewer(doc: pdfDocument, pageNumber: 1, padding: 16, onViewerControllerInitialized: (c) { controller = c; })
+            documentBuilder: (context, pdfDocument, pageCount) => PdfViewer(doc: pdfDocument, pageNumber: 1, padding: 16, onViewerControllerInitialized: (c) { controller = c; })
           )
         ),
         floatingActionButton: Column(
