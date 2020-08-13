@@ -6,6 +6,7 @@ void main() => runApp(new MyApp());
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    PdfViewerController controller;
     return new MaterialApp(
       home: new Scaffold(
         appBar: new AppBar(
@@ -18,8 +19,15 @@ class MyApp extends StatelessWidget {
           // the widget tree renders each page.
           child: PdfDocumentLoader(
             assetName: 'assets/hello.pdf',
-            documentBuilder: (context, pdfDocument, pageCount) => pdfDocument == null ? Container() : PdfInteractiveViewer(doc: pdfDocument, padding: 16)
+            documentBuilder: (context, pdfDocument, pageCount) => pdfDocument == null ? Container() : PdfViewer(doc: pdfDocument, padding: 16, onViewerControllerInitialized: (c) { controller = c; })
           )
+        ),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            FloatingActionButton(heroTag: 'firstPage', child: Icon(Icons.first_page), onPressed: () => controller?.goToPage(pageNumber: 1)),
+            FloatingActionButton(heroTag: 'lastPage', child: Icon(Icons.last_page), onPressed: () => controller?.goToPage(pageNumber: controller?.pageCount)),
+          ]
         )
       )
     );
