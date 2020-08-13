@@ -830,7 +830,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   }
 
   void _updateControllerMatrix() {
-    _controller.value = _anim.value;
+    _controller.value = _animGoTo.value;
   }
 }
 
