@@ -568,7 +568,8 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        _relayout(Size(constraints.maxWidth, constraints.maxHeight));
+        final viewSize = Size(constraints.maxWidth, constraints.maxHeight);
+        _relayout(viewSize);
         final docSize = _docSize ?? Size(10, 10); // dummy size
         return InteractiveViewer(
           transformationController: widget.viewerController ?? _controller,
@@ -586,7 +587,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
             children: <Widget>[
               SizedBox(width: docSize.width, height: docSize.height),
 
-              ...iterateLaidOutPages(constraints)
+              ...iterateLaidOutPages(viewSize)
             ],
           )
         );
@@ -669,11 +670,11 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     _docSize = Size(viewSize.width, top);
   }
 
-  Iterable<Widget> iterateLaidOutPages(BoxConstraints constraints) sync* {
+  Iterable<Widget> iterateLaidOutPages(Size viewSize) sync* {
     if (!_firstMove && _pages != null) {
       final m = _controller.value;
       final r = m.row0[0];
-      final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], constraints.maxWidth, constraints.maxHeight).inflate(_padding);
+      final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], viewSize.width, viewSize.height).inflate(_padding);
 
       for (final page in _pages) {
         final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
@@ -739,7 +740,6 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     final m = _controller.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height);//.inflate(_extraBufferAroundView);
-    //print('r=$r, ex: (${exposed.left.toInt()},${exposed.top.toInt()}) ${exposed.width.toInt()}x${exposed.height.toInt()}');
     var pagesToUpdate = 0;
     var changeCount = 0;
     for (final page in _pages) {
@@ -748,18 +748,13 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         continue;
       }
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
-      final n = pageRectZoomed.translate(-exposed.left, -exposed.top);
-      if (page.isVisibleInsideView) print('page ${page.pageNumber} (${pageRectZoomed.left.toInt()},${pageRectZoomed.top.toInt()}) ${pageRectZoomed.width.toInt()}x${pageRectZoomed.height.toInt()} of (${exposed.left.toInt()},${exposed.top.toInt()}) ${exposed.width.toInt()}x${exposed.height.toInt()}');
       final part = pageRectZoomed.intersect(exposed);
       final isVisible = !part.isEmpty;
       if (page.isVisibleInsideView != isVisible) {
         page.isVisibleInsideView = isVisible;
         changeCount++;
-        if (!isVisible) {
-          final r = page.releaseTextures();
-          print('Page ${page.pageNumber}: Releasing: (${n.left.toInt()},${n.top.toInt()}) ${n.width.toInt()}x${n.height.toInt()} of (${exposed.left.toInt()},${exposed.top.toInt()}) ${exposed.width.toInt()}x${exposed.height.toInt()}');
-        } else {
-          pagesToUpdate++;
+        if (isVisible) {
+          pagesToUpdate++; // the page gets inside the view
         }
       }
     }
@@ -786,10 +781,11 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
   Future<void> _updatePageState() async {
     _forceUpdatePagePreviews = false;
-    final m = _controller.value;
-    final r = m.row0[0];
-    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height).inflate(_extraBufferAroundView);
     for (final page in _pages) {
+      final m = _controller.value;
+      final r = m.row0[0];
+      final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height).inflate(_extraBufferAroundView);
+
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
       final part = pageRectZoomed.intersect(exposed);
       if (part.isEmpty) continue;
@@ -808,16 +804,16 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
       if (page.status == _PdfPageLoadingStatus.inited) {
         page.status = _PdfPageLoadingStatus.pageLoading;
         page.preview = await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
-        final w = page.pdfPage.width.toInt();
-        final h = page.pdfPage.height.toInt();
+        final w = page.pdfPage.width;// * 2;
+        final h = page.pdfPage.height;// * 2;
         final sw = Stopwatch()..start();
         await page.preview.updateRect(
-          width: w,
-          height: h,
-          texWidth: w,
-          texHeight: h,
-          fullWidth: page.pdfPage.width,
-          fullHeight: page.pdfPage.height).then((value) => print('Page ${page.pageNumber}: preview rendered in ${sw.elapsedMilliseconds} msec.'));
+          width: w.toInt(),
+          height: h.toInt(),
+          texWidth: w.toInt(),
+          texHeight: h.toInt(),
+          fullWidth: w,
+          fullHeight: h).then((value) => print('Page ${page.pageNumber}: preview rendered in ${sw.elapsedMilliseconds} msec.'));
         page.status = _PdfPageLoadingStatus.pageLoaded;
         page.updatePreview();
       }
@@ -947,9 +943,9 @@ class _PdfPageState {
     );
   }
 
-  /// Release the allocated textures.
+  /// Release allocated textures.
   /// It's always safe to call the method. If all the textures were already released, the method does nothing.
-  /// Returns true if textures are really released; otherwise if the method does nothing, it returns false.
+  /// Returns true if textures are really released; otherwise if the method does nothing and returns false.
   bool releaseTextures() {
     if (preview == null) return false;
     preview.dispose();
