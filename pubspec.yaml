@@ -11,6 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   device_info: ^0.4.2+4
+  vector_math:
 
 dev_dependencies:
   flutter_test:

@@ -93,23 +93,6 @@ typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNum
 
 The third parameter, `pageRect` is location of page in viewer's world coordinates.
 
-#### Page layout customization
-
-Normally, `PdfViewer` uses `ListView`-like vertical scroling page layout. But you can customize the layout logic using `layoutPages` parameter. `layoutPages` is defined as `LayoutPagesFunc`:
-
-```dart
-typedef LayoutPagesFunc = List<Rect> Function(Size contentViewSize, List<Size> pageSizes);
-```
-
-The first parameter, `contentViewSize` is the valid content area of `PdfViewer`.
-
-The second parameter, `pageSizes` is array of page sizes in pt. (points; pixel size in 72-dpi).
-
-And the function returns actual page locations.
-
-
-
-
 ### Single page view
 
 The following fragment illustrates the easiest way to render only one page of a PDF document using `PdfDocumentLoader`. It is suitable for showing PDF thumbnail.
