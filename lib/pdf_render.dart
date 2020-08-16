@@ -174,31 +174,43 @@ class PdfPageImage {
   final double pageWidth;
   /// PDF page height in points (height in pixels at 72 dpi).
   final double pageHeight;
-  /// RGBA pixels in byte array.
-  final Uint8List pixels;
-  /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
-  final Pointer<Uint8> _buffer;
 
+  Uint8List _pixels;
+  Pointer<Uint8> _buffer;
   ui.Image _imageCached;
 
-  PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, this.pixels, Pointer<Uint8> buffer}): _buffer = buffer;
+  PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, Uint8List pixels, Pointer<Uint8> buffer}): _pixels = pixels, _buffer = buffer;
+
+  /// RGBA pixels in byte array.
+  Uint8List get pixels => _pixels;
+
+  /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
+  Pointer<Uint8> get buffer => _buffer;
 
   void dispose() {
     _imageCached?.dispose();
+    _imageCached = null;
     if (_buffer != null) {
       _channel.invokeMethod('releaseBuffer', _buffer.address);
+      _buffer = null;
     }
+    _pixels = null;
   }
 
-  /// Get [ui.Image] for the object.
+  /// Create cached [Image] for the page.
   Future<ui.Image> createImageIfNotAvailable() async {
-    _imageCached ??= await _decodeRgba(width, height, pixels);
+    if (_pixels == null) {
+      throw Exception('PdfPageImage was disposed.');
+    }
+    _imageCached ??= await _decodeRgba(width, height, _pixels);
     return _imageCached;
   }
 
   /// Get [Image] for the object if available; otherwise null.
   /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
   ui.Image get imageIfAvailable => _imageCached;
+
+  Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
 
   static Future<PdfPageImage> _render(
     PdfDocument document, int pageNumber,
@@ -229,7 +241,6 @@ class PdfPageImage {
           pixels = ptr.asTypedList(size);
         }
       }
-      var image = await _decodeRgba(retWidth, retHeight, pixels);
 
       return PdfPageImage._(
         pageNumber: obj['pageNumber'] as int,
@@ -281,6 +292,13 @@ class PdfPageImageTexture {
   final int pageNumber;
   final int texId;
 
+  int _texWidth;
+  int _texHeight;
+
+  int get texWidth => _texWidth;
+  int get texHeight => _texHeight;
+  bool get hasUpdatedTexture => _texWidth != null;
+
   bool operator ==(Object other) {
     return other is PdfPageImageTexture &&
       other.pdfDocument == pdfDocument &&
@@ -323,6 +341,10 @@ class PdfPageImageTexture {
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill
     });
+    if (result >= 0) {
+      _texWidth = texWidth ?? _texWidth;
+      _texHeight = texHeight ?? _texHeight;
+    }
     return result >= 0;
   }
 }
