@@ -862,7 +862,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         final w = (part.width * dpr).toInt();
         final h = (part.height * dpr).toInt();
         final sw = Stopwatch()..start();
-        page.realSize.updateRect(
+        await page.realSize.updateRect(
           width: w,
           height: h,
           srcX: (offset.dx * dpr).toInt(),
@@ -871,8 +871,8 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
           texHeight: h,
           fullWidth: fw,
           fullHeight: fh).then((value) => print('Page ${page.pageNumber}: realSize rendered in ${sw.elapsedMilliseconds} msec.'));
+        page._updateRealSizeOverlay();
       }
-      page._updateRealSizeOverlay();
     }
   }
 
