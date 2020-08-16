@@ -718,7 +718,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
               ]
             ),
             decoration: widget.pageDecoration ?? BoxDecoration(
-              color: Color.fromARGB(255, 0, 0, 250),
+              color: Color.fromARGB(255, 250, 250, 250),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black45,
