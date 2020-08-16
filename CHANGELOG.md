@@ -1,3 +1,7 @@
+## 0.66.0
+
+* Introducing PdfViewer that supports interactive pinch-zoom (#5); not yet complete but things just work well.
+
 ## 0.65.0
 
 * Fixes PDF page rotation issue on iOS (#18)

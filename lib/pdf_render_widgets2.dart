@@ -388,17 +388,12 @@ class _PdfPageViewState extends State<PdfPageView> {
   }
 }
 
-typedef LayoutPagesFunc = List<Rect> Function(Size, List<Size>);
-typedef BuildPageContentFunc = Widget Function(BuildContext, int pageNumber, Rect pageRect);
+typedef LayoutPagesFunc = List<Rect> Function(Size contentViewSize, List<Size> pageSizes);
+typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
 
 /// Controller for [PdfViewer].
 class PdfViewerController extends TransformationController {
   PdfViewerController();
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   /// Associated [_PdfViewerState].
   /// FIXME: I don't think this is a good structure for our purpose...
@@ -413,7 +408,7 @@ class PdfViewerController extends TransformationController {
   int get pageCount => _state._pages.length;
 
   /// Get page location.
-  Rect getPageRect(int pageNumber) => _state._pages[pageNumber - 1].rect;
+  Rect getPageRect(int pageNumber) => _state._pages.firstWhere((p) => p.pageNumber == pageNumber, orElse: null)?.rect;
 
   /// Calculate the matrix that corresponding to the page position.
   /// [defValue] is the default value for invalid page number case.
@@ -425,8 +420,9 @@ class PdfViewerController extends TransformationController {
     if (pageNumber == null || pageNumber < 1 || pageNumber > pageCount) {
       return defValue ?? Matrix4.identity();
     }
-    final rect = getPageRect(pageNumber).inflate(padding ?? _state._padding);
-    final scale = rect.width / _state._lastViewSize.width;
+    final rect = getPageRect(pageNumber)?.inflate(padding ?? _state._padding);
+    if (rect == null) return null;
+    final scale = _state._lastViewSize.width / rect.width;
     final left = max(0.0, min(rect.left, _state._docSize.width - _state._lastViewSize.width));
     final top = max(0.0, min(rect.top, _state._docSize.height - _state._lastViewSize.height));
     return Matrix4.compose(math64.Vector3(-left, -top, 0), math64.Quaternion.identity(), math64.Vector3(scale, scale, 1));
@@ -443,7 +439,10 @@ typedef OnPdfViewerControllerInitialized = void Function(PdfViewerController);
 
 /// A PDF viewer implementation with user interactive zooming support.
 class PdfViewer extends StatefulWidget {
-  /// [PdfDocument] to show on the viewer.
+  // only one of [filePath], [assetName], [data], or [doc] have to be specified.
+  final String filePath;
+  final String assetName;
+  final Uint8List data;
   final PdfDocument doc;
   /// Page number to show on the first time.
   final int pageNumber;
@@ -483,7 +482,10 @@ class PdfViewer extends StatefulWidget {
 
   PdfViewer({
     Key key,
-    @required this.doc,
+    this.filePath,
+    this.assetName,
+    this.data,
+    this.doc,
     this.pageNumber,
     this.padding,
     this.layoutPages,
@@ -509,6 +511,7 @@ class PdfViewer extends StatefulWidget {
 
 class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMixin {
 
+  PdfDocument _doc;
   List<_PdfPageState> _pages;
   PdfViewerController _myController;
   Size _lastViewSize;
@@ -518,7 +521,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   AnimationController _animController;
   Animation<Matrix4> _animGoTo;
 
-  bool _firstMove = true;
+  bool _firstControllerAttach = true;
   bool _forceUpdatePagePreviews = true;
 
   PdfViewerController get _controller => widget.viewerController ?? _myController;
@@ -533,12 +536,23 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   @override
   void didUpdateWidget(PdfViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.doc != widget.doc) {
+    if (!_widgetDocsEqual(oldWidget)) {
       init();
     } else if (oldWidget.pageNumber != widget.pageNumber) {
       widget.onViewerControllerInitialized?.call(_controller);
-      _controller.value = _controller.calculatePageFitMatrix(pageNumber: widget.pageNumber);
+      final m = _controller.calculatePageFitMatrix(pageNumber: widget.pageNumber);
+      if (m != null) {
+        _controller.value = m;
+      }
     }
+  }
+
+  bool _widgetDocsEqual(PdfViewer oldWidget) {
+    if (oldWidget.filePath  != null && oldWidget.filePath == widget.filePath) return true;
+    if (oldWidget.assetName != null && oldWidget.assetName == widget.assetName) return true;
+    if (oldWidget.data != null && oldWidget.data == widget.data) return true;
+    if (oldWidget.doc != null && oldWidget.doc == widget.doc) return true;
+    return false;
   }
 
   void init() {
@@ -547,9 +561,6 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     if (widget.viewerController == null) {
       _myController ??= PdfViewerController();
     }
-    _controller.addListener(_determinePagesToShow);
-    _controller._setViewerState(this);
-    widget.onViewerControllerInitialized?.call(_controller);
     load();
   }
 
@@ -562,6 +573,42 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     _myController?.dispose();
     _animController.dispose();
     super.dispose();
+  }
+
+  Future<void> load() async {
+    _releasePages();
+    if (widget.filePath != null) {
+      _doc = await PdfDocument.openFile(widget.filePath);
+    } else if (widget.assetName != null) {
+      _doc = await PdfDocument.openAsset(widget.assetName);
+    } else if (widget.data != null) {
+      _doc = await PdfDocument.openData(widget.data);
+    } else {
+      _doc = widget.doc;
+    }
+
+    if (_doc != null) {
+      final pages = List<_PdfPageState>();
+      final firstPage = await _doc.getPage(1);
+      final pageSize1 = Size(firstPage.width, firstPage.height);
+      for (int i = 0; i < _doc.pageCount; i++) {
+        pages.add(_PdfPageState._(pageNumber: i + 1, pageSize: pageSize1));
+      }
+      _firstControllerAttach = true;
+      _pages = pages;
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _releasePages() {
+    if (_pages == null) return;
+    for (final p in _pages) {
+      p.dispose();
+    }
+    _pages = null;
   }
 
   @override
@@ -595,31 +642,6 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     );
   }
 
-  Future<void> load() async {
-    _releasePages();
-    if (widget.doc != null) {
-      final pages = List<_PdfPageState>();
-      final firstPage = await widget.doc.getPage(1);
-      final pageSize1 = Size(firstPage.width, firstPage.height);
-      for (int i = 0; i < widget.doc.pageCount; i++) {
-        pages.add(_PdfPageState._(pageNumber: i + 1, pageSize: pageSize1));
-      }
-      _firstMove = true;
-      _pages = pages;
-    }
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  void _releasePages() {
-    if (_pages == null) return;
-    for (final p in _pages) {
-      p.dispose();
-    }
-    _pages = null;
-  }
-
   double get _padding => widget.padding ?? 8.0;
 
   void _relayout(Size viewSize) {
@@ -629,7 +651,8 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     if (widget.layoutPages == null) {
       _relayoutDefault(viewSize);
     } else {
-      final rects = widget.layoutPages(viewSize, _pages.map((p) => p.pageSize).toList());
+      final contentSize = Size(viewSize.width - _padding * 2, viewSize.height - _padding * 2);
+      final rects = widget.layoutPages(contentSize, _pages.map((p) => p.pageSize).toList());
       var allRect = Rect.fromLTWH(0, 0, viewSize.width, viewSize.height);
       for (int i = 0; i < _pages.length; i++) {
         final rect = rects[i].translate(_padding, _padding);
@@ -640,11 +663,19 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     }
     _lastViewSize = viewSize;
 
-    if (_firstMove) {
-      _firstMove = false;
+    if (_firstControllerAttach) {
+      _firstControllerAttach = false;
+
       Future.delayed(Duration.zero, () {
+        // NOTE: controller should be associated after first layout calculation finished.
+        _controller.addListener(_determinePagesToShow);
+        _controller._setViewerState(this);
+        widget.onViewerControllerInitialized?.call(_controller);
+
         if (mounted) {
-          _controller.value = _controller.calculatePageFitMatrix(pageNumber: widget.pageNumber ?? 1);
+          if (widget.pageNumber != null) {
+            _controller.value = _controller.calculatePageFitMatrix(pageNumber: widget.pageNumber);
+          }
           _forceUpdatePagePreviews = true;
           _determinePagesToShow();
         }
@@ -671,12 +702,13 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   }
 
   Iterable<Widget> iterateLaidOutPages(Size viewSize) sync* {
-    if (!_firstMove && _pages != null) {
+    if (!_firstControllerAttach && _pages != null) {
       final m = _controller.value;
       final r = m.row0[0];
       final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], viewSize.width, viewSize.height).inflate(_padding);
 
       for (final page in _pages) {
+        if (page.rect == null) continue;
         final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
         final part = pageRectZoomed.intersect(exposed);
         page.isVisibleInsideView = !part.isEmpty;
@@ -739,7 +771,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     if (_lastViewSize == null) return;
     final m = _controller.value;
     final r = m.row0[0];
-    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height);//.inflate(_extraBufferAroundView);
+    final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height);
     var pagesToUpdate = 0;
     var changeCount = 0;
     for (final page in _pages) {
@@ -782,6 +814,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   Future<void> _updatePageState() async {
     _forceUpdatePagePreviews = false;
     for (final page in _pages) {
+      if (page.rect == null) continue;
       final m = _controller.value;
       final r = m.row0[0];
       final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height).inflate(_extraBufferAroundView);
@@ -792,7 +825,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
       if (page.status == _PdfPageLoadingStatus.notInited) {
         page.status = _PdfPageLoadingStatus.initializing;
-        page.pdfPage = await widget.doc.getPage(page.pageNumber);
+        page.pdfPage = await _doc.getPage(page.pageNumber);
         final prevPageSize = page.pageSize;
         page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
         page.status = _PdfPageLoadingStatus.inited;
@@ -806,14 +839,13 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         page.preview = await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
         final w = page.pdfPage.width;// * 2;
         final h = page.pdfPage.height;// * 2;
-        final sw = Stopwatch()..start();
         await page.preview.updateRect(
           width: w.toInt(),
           height: h.toInt(),
           texWidth: w.toInt(),
           texHeight: h.toInt(),
           fullWidth: w,
-          fullHeight: h).then((value) => print('Page ${page.pageNumber}: preview rendered in ${sw.elapsedMilliseconds} msec.'));
+          fullHeight: h);
         page.status = _PdfPageLoadingStatus.pageLoaded;
         page.updatePreview();
       }
@@ -822,21 +854,18 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     _needRealSizeOverlayUpdate();
   }
 
-  final _sw = Stopwatch()..start();
-  int _swLastRequest;
-
   void _cancelLastRealSizeUpdate() {
     if (_realSizeUpdateTimer != null) {
-      print('Canceling realSizeUpdate request in ${_sw.elapsedMilliseconds - _swLastRequest} msec.');
       _realSizeUpdateTimer.cancel();
       _realSizeUpdateTimer = null;
     }
   }
 
+  final _realSizeOverlayUpdateBufferDuration = Duration(milliseconds: 100);
+
   void _needRealSizeOverlayUpdate() {
     _cancelLastRealSizeUpdate();
-    _swLastRequest = _sw.elapsedMilliseconds;
-    _realSizeUpdateTimer = Timer(Duration(milliseconds: 100), () => _updateRealSizeOverlay());
+    _realSizeUpdateTimer = Timer(_realSizeOverlayUpdateBufferDuration, () => _updateRealSizeOverlay());
   }
 
   Future<void> _updateRealSizeOverlay() async {
@@ -845,7 +874,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height);
     for (final page in _pages) {
-      if (page.status != _PdfPageLoadingStatus.pageLoaded) continue;
+      if (page.rect == null || page.status != _PdfPageLoadingStatus.pageLoaded) continue;
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
       final part = pageRectZoomed.intersect(exposed);
       if (part.isEmpty) continue;
@@ -861,7 +890,6 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         page.realSize ??= await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
         final w = (part.width * dpr).toInt();
         final h = (part.height * dpr).toInt();
-        final sw = Stopwatch()..start();
         await page.realSize.updateRect(
           width: w,
           height: h,
@@ -870,7 +898,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
           texWidth: w,
           texHeight: h,
           fullWidth: fw,
-          fullHeight: fh).then((value) => print('Page ${page.pageNumber}: realSize rendered in ${sw.elapsedMilliseconds} msec.'));
+          fullHeight: fh);
         page._updateRealSizeOverlay();
       }
     }
@@ -879,6 +907,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   /// Go to the specified location by the matrix.
   Future<void> _goTo({Matrix4 destination, Duration duration = const Duration(milliseconds: 200)}) async {
     try {
+      if (destination == null) return; // do nothing
       _animGoTo?.removeListener(_updateControllerMatrix);
       _animController.reset();
       _animGoTo = Matrix4Tween(begin: _controller.value, end: destination).animate(_animController);
@@ -907,7 +936,7 @@ class _PdfPageState {
   /// Page number (started at 1).
   final int pageNumber;
 
-  /// Where the page is layed out if available.
+  /// Where the page is layed out if available. It can be null to not show in the view.
   Rect rect;
   /// [PdfPage] corresponding to the page if available.
   PdfPage pdfPage;

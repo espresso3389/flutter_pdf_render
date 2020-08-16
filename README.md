@@ -18,6 +18,98 @@ Althouth 0.61.0 introduces new PDF rendering widgets, it also contains deprecate
 import 'package:pdf_render/pdf_render_widgets2.dart';
 ```
 
+### PdfViewer
+
+`PdfViewer` is an extensible PDF document viewer widget which supports pinch-zoom.
+
+The following fragment is a simplest use of the widget:
+
+```dart
+  @override
+  Widget build(BuildContext context) {
+    PdfViewerController controller;
+    return new MaterialApp(
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: const Text('Pdf_render example app'),
+        ),
+        backgroundColor: Colors.grey,
+        body: PdfViewer(assetName: 'assets/hello.pdf', pageNumber: 2); // show the page-2
+      )
+    );
+  }
+```
+
+`PdfViewerController` can be used to obtain number of pages inside the document and it also provide `goTo` and `goToPage` methods
+that you can scroll the viewer to make certain page/area of the document visible:
+
+```dart
+  @override
+  Widget build(BuildContext context) {
+    PdfViewerController controller;
+    return new MaterialApp(
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: const Text('Pdf_render example app'),
+        ),
+        backgroundColor: Colors.grey,
+        body: PdfViewer(
+          assetName: 'assets/hello.pdf', onViewerControllerInitialized: (PdfViewerController c) {
+            controller = c;
+            c.goToPage(pageNumber: 3); // scrolling animation to page 3.
+          }
+        )
+      ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          // move to the first page.
+          FloatingActionButton(heroTag: 'firstPage', child: Icon(Icons.first_page), onPressed: () => controller?.goToPage(pageNumber: 1)),
+          // move to the last page.
+          FloatingActionButton(heroTag: 'lastPage', child: Icon(Icons.last_page), onPressed: () => controller?.goToPage(pageNumber: controller?.pageCount)),
+        ]
+      )
+    );
+  }
+```
+
+`PdfViewerController` implementation is based on [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) and you can use almsot all parameters of InteractiveViewer.
+
+#### Page decoration
+
+Each page shown in `PdfViewerController` is by default has drop-shadow using [BoxDecoration](https://api.flutter.dev/flutter/painting/BoxDecoration-class.html). You can override the appearance by `pageDecoration` property.
+
+#### Further page appearance customization
+
+`buildPagePlaceholder` is used to customize the white blank page that is shown before loading the page contents.
+
+`buildPageOverlay` is used to overlay something on every page.
+
+Both functions are defined as `BuildPageContentFunc`:
+
+```dart
+typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
+```
+
+The third parameter, `pageRect` is location of page in viewer's world coordinates.
+
+#### Page layout customization
+
+Normally, `PdfViewer` uses `ListView`-like vertical scroling page layout. But you can customize the layout logic using `layoutPages` parameter. `layoutPages` is defined as `LayoutPagesFunc`:
+
+```dart
+typedef LayoutPagesFunc = List<Rect> Function(Size contentViewSize, List<Size> pageSizes);
+```
+
+The first parameter, `contentViewSize` is the valid content area of `PdfViewer`.
+
+The second parameter, `pageSizes` is array of page sizes in pt. (points; pixel size in 72-dpi).
+
+And the function returns actual page locations.
+
+
+
+
 ### Single page view
 
 The following fragment illustrates the easiest way to render only one page of a PDF document using `PdfDocumentLoader`. It is suitable for showing PDF thumbnail.
