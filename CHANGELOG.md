@@ -1,3 +1,7 @@
+## 0.66.1
+
+* FIXED: SDK version requirement is not compatible to stable releases.
+
 ## 0.66.0
 
 * Introducing PdfViewer that supports interactive pinch-zoom (#5); not yet complete but things just work well.
