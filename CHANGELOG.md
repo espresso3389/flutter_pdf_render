@@ -1,4 +1,4 @@
-## 0.66.1
+## 0.66.2
 
 * FIXED: SDK version requirement is not compatible to stable releases.
 
