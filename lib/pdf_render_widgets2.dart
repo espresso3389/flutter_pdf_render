@@ -392,6 +392,8 @@ typedef LayoutPagesFunc = List<Rect> Function(Size contentViewSize, List<Size> p
 typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
 
 /// Controller for [PdfViewer].
+/// It is derived from [TransformationController] and basically compatible to [ValueNotifier<Matrix4>].
+/// So you can pass it to [ValueListenableBuilder<Matrix4>] or such to receive any view status changes.
 class PdfViewerController extends TransformationController {
   PdfViewerController();
 
@@ -402,13 +404,17 @@ class PdfViewerController extends TransformationController {
   /// Associate a [_PdfViewerState] to the controller.
   void _setViewerState(_PdfViewerState state) {
     _state = state;
+    this.notifyListeners();
   }
 
+  /// Whether the controller is ready or not.
+  bool get isReady => _state != null;
+
   /// Get total page count in the PDF document.
-  int get pageCount => _state._pages.length;
+  int get pageCount => _state?._pages?.length;
 
   /// Get page location.
-  Rect getPageRect(int pageNumber) => _state._pages.firstWhere((p) => p.pageNumber == pageNumber, orElse: null)?.rect;
+  Rect getPageRect(int pageNumber) => _state == null ? null : _state._pages.firstWhere((p) => p.pageNumber == pageNumber, orElse: null)?.rect;
 
   /// Calculate the matrix that corresponding to the page position.
   /// [defValue] is the default value for invalid page number case.
@@ -433,6 +439,29 @@ class PdfViewerController extends TransformationController {
   Future<void> goTo({Matrix4 destination, Duration duration = const Duration(milliseconds: 200)}) => _state._goTo(destination: destination, duration: duration);
 
   Future<void> goToPage({@required int pageNumber, double padding, Duration duration = const Duration(milliseconds: 500)}) => goTo(destination: calculatePageFitMatrix(pageNumber: pageNumber, padding: padding), duration: duration);
+
+  /// Current view rectangle.
+  Rect get viewRect => _state == null ? null : Rect.fromLTWH(-value.row0[3], -value.row1[3], _state._lastViewSize.width, _state._lastViewSize.height);
+
+  /// Current view zoom ratio.
+  double get zoomRatio => _state == null ? null : value.row0[0];
+
+  /// Get list of the page numbers of the pages visible inside the viewport.
+  /// The map keys are the page numbers. And each page number is associated to the page area (width x height) exposed to the viewport;
+  Map<int, double> get visiblePages => _state?._visiblePages;
+
+  /// Get the current page number by obtaining the page that has the largest area from [visiblePages].
+  /// If no pages are visible, it returns 1.
+  int get currentPageNumber {
+    if (visiblePages == null) return null;
+    MapEntry<int, double> max;
+    for (final v in visiblePages.entries) {
+      if (max == null || max.value < v.value) {
+        max = v;
+      }
+    }
+    return max?.key;
+  }
 }
 
 typedef OnPdfViewerControllerInitialized = void Function(PdfViewerController);
@@ -517,6 +546,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   Size _lastViewSize;
   Timer _realSizeUpdateTimer;
   Size _docSize;
+  Map<int, double> _visiblePages = Map<int, double>();
 
   AnimationController _animController;
   Animation<Matrix4> _animGoTo;
@@ -774,6 +804,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize.width, _lastViewSize.height);
     var pagesToUpdate = 0;
     var changeCount = 0;
+    _visiblePages.clear();
     for (final page in _pages) {
       if (page.rect == null) {
         page.isVisibleInsideView = false;
@@ -782,6 +813,9 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
       final pageRectZoomed = Rect.fromLTRB(page.rect.left * r, page.rect.top * r, page.rect.right * r, page.rect.bottom * r);
       final part = pageRectZoomed.intersect(exposed);
       final isVisible = !part.isEmpty;
+      if (isVisible) {
+        _visiblePages[page.pageNumber] = part.width * part.height;
+      }
       if (page.isVisibleInsideView != isVisible) {
         page.isVisibleInsideView = isVisible;
         changeCount++;

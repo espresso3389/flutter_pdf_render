@@ -5,20 +5,37 @@ import 'package:pdf_render/pdf_render_widgets2.dart';
 
 void main() => runApp(new MyApp());
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+
+  final controller = PdfViewerController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    PdfViewerController controller;
     return new MaterialApp(
       home: new Scaffold(
         appBar: new AppBar(
-          title: const Text('Pdf_render example app'),
+          title: ValueListenableBuilder<Object>(
+            // The controller is compatible with ValueListenable<Matrix4> and you can receive notifications on scrolling and zooming of the view.
+            valueListenable: controller,
+            builder: (context, _, child) => Text(controller.isReady ? 'Page #${controller.currentPageNumber}' : 'Page -')
+          ),
         ),
         backgroundColor: Colors.grey,
         body: PdfViewer(
           assetName: 'assets/hello.pdf', padding: 16,
           minScale: 1.0,
-          onViewerControllerInitialized: (c) { controller = c; },
+          viewerController: controller,
         ),
         floatingActionButton: Column(
           mainAxisAlignment: MainAxisAlignment.end,

@@ -1,3 +1,7 @@
+## 0.67.0
+
+* PdfViewerController now supports viewRect, zoomRatio, visiblePages, and currentPageNumber.
+
 ## 0.66.2
 
 * FIXED: SDK version requirement is not compatible to stable releases.
