@@ -1,3 +1,7 @@
+## 0.68.0
+
+* Update device_info version.
+
 ## 0.67.0
 
 * PdfViewerController now supports viewRect, zoomRatio, visiblePages, and currentPageNumber.
