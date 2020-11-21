@@ -3,7 +3,6 @@ import 'dart:ffi';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 const MethodChannel _channel = const MethodChannel('pdf_render');
@@ -28,22 +27,25 @@ class PdfDocument {
   final bool allowsPrinting;
   //final bool isUnlocked;
 
-  final List<PdfPage> _pages;
+  final List<PdfPage?> _pages;
 
   PdfDocument._({
-    this.sourceName,
-    this.docId,
-    this.pageCount,
-    this.verMajor, this.verMinor,
-    this.isEncrypted, this.allowsCopying, this.allowsPrinting,
-    //this.isUnlocked,
-  }) : _pages = List<PdfPage>(pageCount);
+    required this.sourceName,
+    required this.docId,
+    required this.pageCount,
+    required this.verMajor,
+    required this.verMinor,
+    required this.isEncrypted,
+    required this.allowsCopying,
+    required this.allowsPrinting,
+    //required this.isUnlocked,
+  }) : _pages = List<PdfPage?>.filled(pageCount, null);
 
   Future<void> dispose() async {
     await _channel.invokeMethod('close', docId);
   }
 
-  static PdfDocument _open(Object obj, String sourceName) {
+  static PdfDocument? _open(Object? obj, String sourceName) {
     if (obj is Map<dynamic, dynamic>) {
       final pageCount = obj['pageCount'] as int;
       return PdfDocument._(
@@ -64,22 +66,22 @@ class PdfDocument {
   }
 
   /// Opening the specified file.
-  static Future<PdfDocument> openFile(String filePath) async {
+  static Future<PdfDocument?> openFile(String filePath) async {
     return _open(await _channel.invokeMethod('file', filePath), filePath);
   }
 
   /// Opening the specified asset.
-  static Future<PdfDocument> openAsset(String name) async {
+  static Future<PdfDocument?> openAsset(String name) async {
     return _open(await _channel.invokeMethod('asset', name), 'asset:$name');
   }
 
   /// Opening the PDF on memory.
-  static Future<PdfDocument> openData(Uint8List data) async {
+  static Future<PdfDocument?> openData(Uint8List data) async {
     return _open(await _channel.invokeMethod('data', data), 'memory:');
   }
 
   /// Get page object. The first page is 1.
-  Future<PdfPage> getPage(int pageNumber) async {
+  Future<PdfPage?> getPage(int pageNumber) async {
     if (pageNumber < 1 || pageNumber > pageCount)
       return null;
     var page = _pages[pageNumber - 1];
@@ -122,7 +124,7 @@ class PdfPage {
   /// PDF page height in points (height in pixels at 72 dpi) (rotated).
   final double height;
 
-  PdfPage._({this.document, this.pageNumber, this.width, this.height});
+  PdfPage._({required this.document, required this.pageNumber, required this.width, required this.height});
 
   /// Render a sub-area or full image of specified PDF file.
   /// [x], [y], [width], [height] specify sub-area to render in pixels.
@@ -130,7 +132,7 @@ class PdfPage {
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
   /// By default, [backgroundFill] is true and the page background is once filled with white before rendering page image but you can turn it off if needed.
   /// ![](./images/render-params.png)
-  Future<PdfPageImage> render({int x, int y, int width, int height, double fullWidth, double fullHeight, bool backgroundFill}) async {
+  Future<PdfPageImage?> render({int? x, int? y, int? width, int? height, double? fullWidth, double? fullHeight, bool? backgroundFill}) async {
     return PdfPageImage._render(
       document, pageNumber,
       x: x,
@@ -176,47 +178,43 @@ class PdfPageImage {
   final double pageHeight;
 
   Uint8List _pixels;
-  Pointer<Uint8> _buffer;
-  ui.Image _imageCached;
+  Pointer<Uint8>? _buffer;
+  ui.Image? _imageCached;
 
-  PdfPageImage._({this.pageNumber, this.x, this.y, this.width, this.height, this.fullWidth, this.fullHeight, this.pageWidth, this.pageHeight, Uint8List pixels, Pointer<Uint8> buffer}): _pixels = pixels, _buffer = buffer;
+  PdfPageImage._({required this.pageNumber, required this.x, required this.y, required this.width, required this.height, required this.fullWidth, required this.fullHeight, required this.pageWidth, required this.pageHeight, required Uint8List pixels, Pointer<Uint8>? buffer}): _pixels = pixels, _buffer = buffer;
 
   /// RGBA pixels in byte array.
   Uint8List get pixels => _pixels;
 
   /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
-  Pointer<Uint8> get buffer => _buffer;
+  Pointer<Uint8>? get buffer => _buffer;
 
   void dispose() {
     _imageCached?.dispose();
     _imageCached = null;
     if (_buffer != null) {
-      _channel.invokeMethod('releaseBuffer', _buffer.address);
+      _channel.invokeMethod('releaseBuffer', _buffer!.address);
       _buffer = null;
     }
-    _pixels = null;
   }
 
   /// Create cached [Image] for the page.
-  Future<ui.Image> createImageIfNotAvailable() async {
-    if (_pixels == null) {
-      throw Exception('PdfPageImage was disposed.');
-    }
+  Future<ui.Image?> createImageIfNotAvailable() async {
     _imageCached ??= await _decodeRgba(width, height, _pixels);
     return _imageCached;
   }
 
   /// Get [Image] for the object if available; otherwise null.
   /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
-  ui.Image get imageIfAvailable => _imageCached;
+  ui.Image? get imageIfAvailable => _imageCached;
 
   Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
 
-  static Future<PdfPageImage> _render(
-    PdfDocument document, int pageNumber,
-    { int x , int y, int width, int height,
-      double fullWidth, double fullHeight,
-      bool backgroundFill,
+  static Future<PdfPageImage?> _render(
+    PdfDocument document, int? pageNumber,
+    { int? x , int? y, int? width, int? height,
+      double? fullWidth, double? fullHeight,
+      bool? backgroundFill,
     }) async {
 
     var obj = await _channel.invokeMethod(
@@ -231,14 +229,16 @@ class PdfPageImage {
     if (obj is Map<dynamic, dynamic>) {
       final retWidth = obj['width'] as int;
       final retHeight = obj['height'] as int;
-      Pointer<Uint8> ptr;
-      var pixels = obj['data'] as Uint8List;
+      Pointer<Uint8>? ptr;
+      var pixels = obj['data'] as Uint8List?;
       if (pixels == null) {
-        final addr = obj['addr'] as int;
-        final size = obj['size'] as int;
+        final addr = obj['addr'] as int?;
+        final size = obj['size'] as int?;
         if (addr != null && size != null) {
           ptr = Pointer<Uint8>.fromAddress(addr);
           pixels = ptr.asTypedList(size);
+        } else {
+          return null;
         }
       }
 
@@ -259,12 +259,12 @@ class PdfPageImage {
     return null;
   }
 
-  static Future<PdfPageImage> render(String filePath, int pageNumber,
-    { int x, int y, int width, int height,
-      double fullWidth, double fullHeight}) async {
+  static Future<PdfPageImage?> render(String filePath, int pageNumber,
+    { int? x, int? y, int? width, int? height,
+      double? fullWidth, double? fullHeight}) async {
     final doc = await PdfDocument.openFile(filePath);
     if (doc == null) return null;
-    final page = await doc.getPage(pageNumber);
+    final page = await (doc.getPage(pageNumber) as FutureOr<PdfPage>);
     final image = await page.render(
       x: x, y: y,
       width: width,
@@ -292,11 +292,11 @@ class PdfPageImageTexture {
   final int pageNumber;
   final int texId;
 
-  int _texWidth;
-  int _texHeight;
+  int? _texWidth;
+  int? _texHeight;
 
-  int get texWidth => _texWidth;
-  int get texHeight => _texHeight;
+  int? get texWidth => _texWidth;
+  int? get texHeight => _texHeight;
   bool get hasUpdatedTexture => _texWidth != null;
 
   bool operator ==(Object other) {
@@ -307,12 +307,12 @@ class PdfPageImageTexture {
 
   int get hashCode => pdfDocument.docId ^ pageNumber;
 
-  PdfPageImageTexture._({this.pdfDocument, this.pageNumber, this.texId});
+  PdfPageImageTexture._({required this.pdfDocument, required this.pageNumber, required this.texId});
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
-  static Future<PdfPageImageTexture> create({@required PdfDocument pdfDocument, @required int pageNumber}) async {
+  static Future<PdfPageImageTexture> create({required PdfDocument pdfDocument, required int pageNumber}) async {
     final texId = await _channel.invokeMethod<int>('allocTex');
-    return PdfPageImageTexture._(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
+    return PdfPageImageTexture._(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId!);
   }
 
   /// Release the object.
@@ -324,8 +324,8 @@ class PdfPageImageTexture {
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
   /// Returns true if succeeded.
-  Future<bool> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true}) async {
-    final result = await _channel.invokeMethod<int>('updateTex', {
+  Future<bool> updateRect({int destX = 0, int destY = 0, int? width, int? height, int srcX = 0, int srcY = 0, int? texWidth, int? texHeight, double? fullWidth, double? fullHeight, bool backgroundFill = true}) async {
+    final result = await (_channel.invokeMethod<int>('updateTex', {
       'docId': pdfDocument.docId,
       'pageNumber': pageNumber,
       'texId': texId,
@@ -340,7 +340,7 @@ class PdfPageImageTexture {
       'fullWidth': fullWidth,
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill
-    });
+    }) as FutureOr<int>);
     if (result >= 0) {
       _texWidth = texWidth ?? _texWidth;
       _texHeight = texHeight ?? _texHeight;
