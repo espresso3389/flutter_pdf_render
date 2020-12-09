@@ -1,3 +1,8 @@
+## 1.0.0-dev
+
+* Introducing platform interface packages.
+* Initial release that supports NNBD (Currently not compatible with Flutter stable).
+
 ## 0.68.0
 
 * Update device_info version.
