@@ -10,15 +10,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   device_info: ^2.0.0-nullsafety.1
+  js: ^0.6.3-nullsafety.3
   vector_math: ^2.1.0-nullsafety.5
-
-  pdf_render_platform_interface: ^0.70.0
-
+  pdf_render_platform_interface: ^1.0.3-dev
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
   plugin_platform_interface: ^1.1.0-nullsafety
+
+dependency_overrides:
+  pdf_render_platform_interface:
+    path: ../pdf_render_platform_interface
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -36,6 +42,9 @@ flutter:
         pluginClass: PdfRenderPlugin
       ios:
         pluginClass: PdfRenderPlugin
+      web:
+        pluginClass: PdfRenderWebPlugin
+        fileName: web/pdf_render_web.dart
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

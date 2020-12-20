@@ -81,6 +81,18 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_web_plugins:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
+  js:
+    dependency: transitive
+    description:
+      name: js
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.6.3-nullsafety.3"
   matcher:
     dependency: transitive
     description:
@@ -108,7 +120,14 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.70.0"
+    version: "1.0.0-dev"
+  pdf_render_platform_interface:
+    dependency: "direct overridden"
+    description:
+      path: "../../pdf_render_platform_interface"
+      relative: true
+    source: path
+    version: "1.0.3-dev"
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -179,4 +198,4 @@ packages:
     version: "2.1.0-nullsafety.5"
 sdks:
   dart: ">=2.12.0-0.0 <3.0.0"
-  flutter: ">=1.20.0 <2.0.0"
+  flutter: ">=1.12.13+hotfix.5 <2.0.0"

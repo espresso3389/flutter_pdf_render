@@ -1,0 +1,95 @@
+@JS()
+library pdf.js;
+
+import 'dart:js_util';
+import 'dart:typed_data';
+
+import 'package:js/js.dart';
+
+@JS('pdfjsLib.getDocument')
+external _PDFDocumentLoadingTask _pdfjsGetDocument(dynamic data);
+
+@JS()
+@anonymous
+class _PDFDocumentLoadingTask {
+  external Object get promise;
+}
+
+Future<PdfjsDocument> pdfjsGetDocument(String data) => promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
+Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) => promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
+
+@JS()
+@anonymous
+class PdfjsDocument {
+  external Object getPage(int num);
+  external int get numPages;
+  external void destroy();
+}
+
+
+@JS()
+@anonymous
+class PdfjsPage {
+  external PdfjsViewport getViewport(Object config);
+  /// `viewport` for [PdfjsViewport] and `transform` for
+  external PdfjsRender render(PdfjsRenderContext params);
+  external int get pageNumber;
+  external List<num> get view;
+}
+
+@JS()
+@anonymous
+class PdfjsRenderContext {
+    external dynamic get canvasContext;
+    external set canvasContext(dynamic ctx);
+    external PdfjsViewport get viewport;
+    external set viewport(PdfjsViewport viewport);
+    external String get intent;
+    /// `display` or `print`
+    external set intent(String intent);
+    external bool get enableWebGL;
+    external set enableWebGL(bool enableWebGL);
+    external bool get renderInteractiveForms;
+    external set renderInteractiveForms(bool renderInteractiveForms);
+    external List<int>? get transform;
+    external set transform(List<int>? transform);
+    external dynamic? get imageLayer;
+    external set imageLayer(dynamic? imageLayer);
+    external dynamic? get canvasFactory;
+    external set canvasFactory(dynamic? canvasFactory);
+    external dynamic? get background;
+    external set background(dynamic? background);
+    external factory PdfjsRenderContext({
+      required dynamic canvasContext,
+      required PdfjsViewport viewport,
+      String intent = 'display',
+      bool enableWebGL = false,
+      bool renderInteractiveForms = false,
+      List<int>? transform,
+      dynamic? imageLayer,
+      dynamic? canvasFactory,
+      dynamic? background
+    });
+}
+
+@JS()
+@anonymous
+class PdfjsViewport {
+  external num get width;
+  external set width(num w);
+  external num get height;
+  external set height(num h);
+  external List<num>? get transform;
+  external set transform(List<num>? m);
+  external factory PdfjsViewport({
+    required num width,
+    required num height,
+    List<num>? transform
+  });
+}
+
+@anonymous
+@JS()
+class PdfjsRender {
+  external Future<void> get promise;
+}

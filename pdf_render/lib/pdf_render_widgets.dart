@@ -352,7 +352,7 @@ class _PdfPageViewState extends State<PdfPageView> {
         await _image!.createImageIfNotAvailable();
       } else {
         if (_texture == null ||
-            _texture!.pdfDocument.docId != _doc!.docId ||
+            _texture!.pdfDocument != _doc ||
             _texture!.pageNumber != widget.pageNumber) {
           _texture?.dispose();
           _texture = await PdfPageImageTexture.create(

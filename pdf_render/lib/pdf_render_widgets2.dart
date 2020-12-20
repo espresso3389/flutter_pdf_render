@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:device_info/device_info.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math64;
+
 import 'pdf_render.dart';
+import 'pdf_texture.dart';
 
 /// Function definition to build widget tree for a PDF document.
 /// [pdfDocument] is the PDF document and it is valid until the corresponding
@@ -216,7 +216,6 @@ class _PdfPageViewState extends State<PdfPageView> {
   Size? _size;
   PdfPageImageTexture? _texture;
   PdfPageImage? _image;
-  bool? _isIosSimulator;
 
   @override
   void initState() {
@@ -316,19 +315,9 @@ class _PdfPageViewState extends State<PdfPageView> {
             ? SizedBox(
               width: fsize.width,
               height: fsize.height,
-              child: Texture(textureId: _texture!.texId))
+              child: PdfTexture(textureId: _texture!.texId))
             : RawImage(image: _image?.imageIfAvailable);
 
-            if (_isIosSimulator == true) {
-              contentWidget = Stack(
-                children: <Widget>[
-                  contentWidget,
-                  const Text(
-                      'Warning: on iOS Simulator, pdf_render work differently to physical device.',
-                      style: TextStyle(color: Colors.redAccent))
-                ],
-              );
-            }
             return contentWidget;
           });
     });
@@ -343,13 +332,9 @@ class _PdfPageViewState extends State<PdfPageView> {
       return true;
     }
 
-    if (_isIosSimulator == null) {
-      _isIosSimulator = await _determineWhetherIOSSimulatorOrNot();
-    }
-
     final pixelRatio = renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
     final pixelSize = size! * pixelRatio;
-    if (dontUseTexture == true || _isIosSimulator == true) {
+    if (dontUseTexture == true) {
       _image = await _page!.render(
         width: pixelSize.width.toInt(),
         height: pixelSize.height.toInt(),
@@ -359,7 +344,7 @@ class _PdfPageViewState extends State<PdfPageView> {
       await _image!.createImageIfNotAvailable();
     } else {
       if (_texture == null ||
-          _texture!.pdfDocument.docId != _doc!.docId ||
+          _texture!.pdfDocument != _doc ||
           _texture!.pageNumber != widget.pageNumber) {
         _image?.dispose();
         _image = null;
@@ -377,14 +362,6 @@ class _PdfPageViewState extends State<PdfPageView> {
         backgroundFill: backgroundFill ?? true);
     }
     return true;
-  }
-
-  static Future<bool> _determineWhetherIOSSimulatorOrNot() async {
-    if (!Platform.isIOS) {
-      return false;
-    }
-    final info = await DeviceInfoPlugin().iosInfo;
-    return !info.isPhysicalDevice;
   }
 }
 
@@ -757,7 +734,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
                 ValueListenableBuilder<int>(
                   valueListenable: page._previewNotifier,
                   builder: (context, value, child) => page.preview != null
-                    ? Texture(textureId: page.preview!.texId)
+                    ? PdfTexture(textureId: page.preview!.texId)
                     : widget.buildPagePlaceholder != null
                       ? widget.buildPagePlaceholder!(context, page.pageNumber, page.rect)
                       : Container()
@@ -770,7 +747,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
                       top: page.realSizeOverlayRect!.top,
                       width: page.realSizeOverlayRect!.width,
                       height: page.realSizeOverlayRect!.height,
-                      child: Texture(textureId: page.realSize!.texId)
+                      child: PdfTexture(textureId: page.realSize!.texId)
                     )
                   : Container()
                 ),
@@ -1002,7 +979,7 @@ class _PdfPageState {
   Widget _textureFor(PdfPageImageTexture? t, ValueNotifier<int> n) {
     return ValueListenableBuilder<int>(
       valueListenable: n,
-      builder: (context, value, child) => t != null ? Texture(textureId: t.texId) : Container(),
+      builder: (context, value, child) => t != null ? PdfTexture(textureId: t.texId) : Container(),
     );
   }
 

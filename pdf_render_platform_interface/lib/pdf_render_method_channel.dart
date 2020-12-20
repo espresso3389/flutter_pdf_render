@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:ffi';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+
+import 'utils/ffi_wrapper.dart';
 
 import 'pdf_render.dart';
 import 'pdf_render_platform_interface.dart';
