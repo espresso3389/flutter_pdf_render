@@ -1,3 +1,5 @@
+// Dummy implementation for artifacts defined in dart:html.
+
 import 'dart:typed_data';
 
 abstract class CanvasElement {
@@ -17,10 +19,10 @@ abstract class CanvasImageData {
   Uint8ClampedList get data;
 }
 
-Object window = {};
+final window = {};
 
 class HtmlDocument {
   HtmlDocument._();
   Object createElement(String name) => throw UnimplementedError();
 }
-HtmlDocument document = HtmlDocument._();
+final document = HtmlDocument._();

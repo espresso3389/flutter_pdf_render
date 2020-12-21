@@ -1,10 +1,4 @@
 import 'package:flutter/widgets.dart';
 
-class PdfTexture extends StatelessWidget {
-  final int textureId;
-  PdfTexture({required this.textureId, Key? key}) : super(key: key);
-  @override
-  Widget build(BuildContext context) {
-    return Texture(textureId: textureId);
-  }
-}
+// ignore: non_constant_identifier_names
+Texture PdfTexture({Key? key, required int textureId}) => Texture(key: key, textureId: textureId);
