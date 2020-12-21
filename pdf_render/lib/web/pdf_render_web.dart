@@ -7,8 +7,8 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
-import '../util/html.dart' as html;
-import '../util/js_util.dart' as js_util;
+import '../wrappers/html.dart' as html;
+import '../wrappers/js_util.dart' as js_util;
 
 import 'pdf.js.dart';
 

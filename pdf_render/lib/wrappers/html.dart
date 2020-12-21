@@ -1,2 +1,2 @@
-export './dummy/html.dart'
+export './impls/html.dart'
    if (dart.library.js) 'dart:html';

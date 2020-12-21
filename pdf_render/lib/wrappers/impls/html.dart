@@ -10,6 +10,7 @@ abstract class CanvasElement {
 abstract class CanvasContext2D {
   CanvasImageData getImageData(int x, int y, int w, int h);
   String get fillStyle;
+  set fillStyle(String fillStyle);
   void fillRect(int x, int y, int w, int h);
 }
 abstract class CanvasImageData {

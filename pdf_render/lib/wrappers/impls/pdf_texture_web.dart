@@ -4,8 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../util/html.dart' as html;
-import '../util/js_util.dart' as js_util;
+import '../html.dart' as html;
+import '../js_util.dart' as js_util;
 
 
 class PdfTexture extends StatefulWidget {
