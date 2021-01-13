@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../html.dart' as html;
 import '../js_util.dart' as js_util;
-
+import '../../web/pdf_render_web.dart';
 
 class PdfTexture extends StatefulWidget {
   final int textureId;
@@ -14,7 +14,7 @@ class PdfTexture extends StatefulWidget {
   @override
   _PdfTextureState createState() => _PdfTextureState();
 
-  html.CanvasElement get canvas => js_util.getProperty(html.window, 'pdf_render_texture_$textureId') as html.CanvasElement;
+  RgbaData get data => js_util.getProperty(html.window, 'pdf_render_texture_$textureId') as RgbaData;
 }
 
 class _PdfTextureState extends State<PdfTexture> {
@@ -34,14 +34,12 @@ class _PdfTextureState extends State<PdfTexture> {
 
   @override
   Widget build(BuildContext context) {
-    return RawImage(image: _image);
+    return RawImage(image: _image, fit: BoxFit.fill);
   }
 
   void _requestUpdate() async {
-    final canvas = widget.canvas;
-    final data = canvas.context2D.getImageData(0, 0, canvas.width!, canvas.height!);
     final comp = Completer<ui.Image>();
-    ui.decodeImageFromPixels(data.data.buffer.asUint8List(), canvas.width!, canvas.height!, ui.PixelFormat.bgra8888,
+    ui.decodeImageFromPixels(widget.data.data, widget.data.width, widget.data.height, ui.PixelFormat.bgra8888,
       (image) => comp.complete(image));
     _image = await comp.future;
     if (mounted) setState(() {});

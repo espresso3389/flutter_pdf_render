@@ -6,6 +6,8 @@ import 'dart:typed_data';
 
 import 'package:js/js.dart';
 
+import '../wrappers/html.dart';
+
 @JS('pdfjsLib.getDocument')
 external _PDFDocumentLoadingTask _pdfjsGetDocument(dynamic data);
 
@@ -21,7 +23,7 @@ Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) => promiseToFutu
 @JS()
 @anonymous
 class PdfjsDocument {
-  external Object getPage(int num);
+  external Object getPage(int pageNumber);
   external int get numPages;
   external void destroy();
 }
@@ -30,18 +32,68 @@ class PdfjsDocument {
 @JS()
 @anonymous
 class PdfjsPage {
-  external PdfjsViewport getViewport(Object config);
+  external PdfjsViewport getViewport(PdfjsViewportParams params);
   /// `viewport` for [PdfjsViewport] and `transform` for
   external PdfjsRender render(PdfjsRenderContext params);
   external int get pageNumber;
-  external List<num> get view;
+  external List<double> get view;
+}
+
+
+@JS()
+@anonymous
+class PdfjsViewportParams {
+  external double get scale;
+  external set scale(double scale);
+  external int get rotation;
+  external set rotation(int rotation);
+  external double get offsetX;
+  external set offsetX(double offsetX);
+  external double get offsetY;
+  external set offsetY(double offsetY);
+  external bool get dontFlip;
+  external set dontFlip(bool dontFlip);
+
+  external factory PdfjsViewportParams({
+    double scale,
+    int rotation, // 0, 90, 180, 270
+    double offsetX = 0,
+    double offsetY = 0,
+    bool dontFlip = false
+  });
+}
+
+@JS('PageViewport')
+class PdfjsViewport {
+  external List<double> get viewBox;
+  external set viewBox(List<double> viewBox);
+
+  external double get scale;
+  external set scale(double scale);
+  /// 0, 90, 180, 270
+  external int get rotation;
+  external set rotation(int rotation);
+  external double get offsetX;
+  external set offsetX(double offsetX);
+  external double get offsetY;
+  external set offsetY(double offsetY);
+  external bool get dontFlip;
+  external set dontFlip(bool dontFlip);
+
+  external double get width;
+  external set width(double w);
+  external double get height;
+  external set height(double h);
+
+  external List<double>? get transform;
+  external set transform(List<double>? m);
 }
 
 @JS()
 @anonymous
 class PdfjsRenderContext {
-    external dynamic get canvasContext;
-    external set canvasContext(dynamic ctx);
+    external CanvasRenderingContext2D get canvasContext;
+    external set canvasContext(CanvasRenderingContext2D ctx);
     external PdfjsViewport get viewport;
     external set viewport(PdfjsViewport viewport);
     external String get intent;
@@ -60,32 +112,16 @@ class PdfjsRenderContext {
     external dynamic? get background;
     external set background(dynamic? background);
     external factory PdfjsRenderContext({
-      required dynamic canvasContext,
+      required CanvasRenderingContext2D canvasContext,
       required PdfjsViewport viewport,
       String intent = 'display',
       bool enableWebGL = false,
       bool renderInteractiveForms = false,
-      List<int>? transform,
+      List<double>? transform,
       dynamic? imageLayer,
       dynamic? canvasFactory,
       dynamic? background
     });
-}
-
-@JS()
-@anonymous
-class PdfjsViewport {
-  external num get width;
-  external set width(num w);
-  external num get height;
-  external set height(num h);
-  external List<num>? get transform;
-  external set transform(List<num>? m);
-  external factory PdfjsViewport({
-    required num width,
-    required num height,
-    List<num>? transform
-  });
 }
 
 @anonymous

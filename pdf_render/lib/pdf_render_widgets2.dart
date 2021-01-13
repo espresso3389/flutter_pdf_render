@@ -734,7 +734,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
                 ValueListenableBuilder<int>(
                   valueListenable: page._previewNotifier,
                   builder: (context, value, child) => page.preview != null
-                    ? PdfTexture(textureId: page.preview!.texId)
+                    ? Positioned.fill(child: PdfTexture(textureId: page.preview!.texId))
                     : widget.buildPagePlaceholder != null
                       ? widget.buildPagePlaceholder!(context, page.pageNumber, page.rect)
                       : Container()

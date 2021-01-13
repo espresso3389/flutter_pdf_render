@@ -1,15 +1,14 @@
 
 
 import 'dart:async';
-
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 import '../wrappers/html.dart' as html;
 import '../wrappers/js_util.dart' as js_util;
-
 import 'pdf.js.dart';
 
 class PdfRenderWebPlugin {
@@ -49,7 +48,7 @@ class PdfRenderWebPlugin {
   final _eventChannel = PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
   final _docs = Map<int, PdfjsDocument>();
   int _lastDocId = -1;
-  final _textures = Map<int, html.CanvasElement>();
+  final _textures = Map<int, RgbaData>();
   int _texId = -1;
 
   Future<dynamic> handleMethodCall(MethodCall call) async {
@@ -112,19 +111,17 @@ class PdfRenderWebPlugin {
     final pageNumber = args['pageNumber'] as int;
     if (pageNumber < 1 || pageNumber > doc.numPages) return null;
     final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
+    final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
     return {
       'docId': docId,
       'pageNumber': pageNumber,
-      'width': page.view[2] - page.view[0],
-      'height': page.view[3] - page.view[1],
+      'width': vp1.width,
+      'height': vp1.height,
     };
   }
 
   int _allocTex() {
-    final canvas = html.document.createElement('canvas') as html.CanvasElement;
-    _textures[++_texId] = canvas;
-    js_util.setProperty(html.window, 'pdf_render_texture_$_texId', canvas);
-    return _texId;
+    return ++_texId;
   }
 
   void _releaseTex(int id) {
@@ -138,17 +135,24 @@ class PdfRenderWebPlugin {
     if (canvas == null) return -1;
     final width = args['width'] as int;
     final height = args['height'] as int;
-    canvas.width = width;
-    canvas.height = height;
+    _updateTexSize(id, width, height);
 
     _eventStreamController.sink.add(id);
     return 0;
   }
 
+  RgbaData _updateTexSize(int id, int width, int height) {
+    final oldData = _textures[id];
+    if (oldData != null && oldData.width == width && oldData.height == height) {
+      return oldData;
+    }
+    final data = _textures[id] = RgbaData.alloc(width, height);
+    js_util.setProperty(html.window, 'pdf_render_texture_$_texId', data);
+    return data;
+  }
+
   Future<int> _updateTex(dynamic args) async {
     final id = args['texId'] as int;
-    final canvas = _textures[id];
-    if (canvas == null) return -1;
     final docId = args['docId'] as int;
     final doc = _docs[docId];
     if (doc == null) return -3;
@@ -156,43 +160,87 @@ class PdfRenderWebPlugin {
     if (pageNumber < 1 || pageNumber > doc.numPages)
       return -6;
     final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
-    final vp = page.getViewport({'scale': 1.0});
 
-    final fullWidth = args['fullWidth'] as double? ?? vp.width.toDouble();
-    final fullHeight = args['fullHeight'] as double? ?? vp.height.toDouble();
-    // FIXME: destX, destY not used yet
-    // final destX = args['destX'] as int? ?? 0;
-    // final destY = args['destY'] as int? ?? 0;
-    final width = args['width'] as int? ?? 0;
-    final height = args['height'] as int? ?? 0;
+    final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
+    final pw = vp1.width;
+    final ph = vp1.height;
+    final fullWidth = args['fullWidth'] as double? ?? pw;
+    final fullHeight = args['fullHeight'] as double? ?? ph;
+    final destX = args['destX'] as int? ?? 0;
+    final destY = args['destY'] as int? ?? 0;
+    final width = args['width'] as int?;
+    final height = args['height'] as int?;
     final srcX = args['srcX'] as int? ?? 0;
     final srcY = args['srcY'] as int? ?? 0;
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
-    if (width <= 0 || height <= 0)
+    if (width == null || height == null || width <= 0 || height <= 0)
       return -7;
 
-    final texWidth = args['texWidth'] as int?;
-    final texHeight = args['texHeight'] as int?;
-    if (texWidth != null && texHeight != null) {
-      canvas.width = texWidth;
-      canvas.height = texHeight;
-    }
+    final vp = page.getViewport(PdfjsViewportParams(
+      scale: fullWidth / pw,
+      offsetX: srcX.toDouble(),
+      offsetY: (fullWidth - srcY).toDouble(),
+      //dontFlip: true
+    ));
+    // final h = height * fullHeight / ph;
+    // vp.offsetX = srcX.toDouble();
+    // vp.offsetY = (fullHeight - srcY).toDouble();
+    // final v = vp.transform = [vp.scale, 0, 0, -vp.scale, vp.offsetX, vp.offsetY];
+    // print('  ' + v.map((v) => v.toStringAsFixed(2)).join(','));
 
-    vp.width = canvas.width!;
-    vp.height = canvas.height!;
-    vp.transform = [fullWidth / vp.width, 0, -srcX, 0, fullHeight / vp.height, -srcY];
+    final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
+    final canvas = html.document.createElement('canvas') as html.CanvasElement;
+    canvas.width = width;
+    canvas.height = height;
+
+    print('$id: ($srcX,$srcY) $width x $height');
+    print('  full: ${fullWidth.toStringAsFixed(1)} x ${fullHeight.toStringAsFixed(1)}');
+    print('  page: $pw x $ph');
+    print('  dest: ${destX.toStringAsFixed(1)} x ${destY.toStringAsFixed(1)}');
+    print('  tex: ${data.width.toStringAsFixed(1)} x ${data.height.toStringAsFixed(1)}');
 
     if (backgroundFill) {
-      canvas.context2D.fillStyle = 'white';
-      canvas.context2D.fillRect(0, 0, canvas.width!, canvas.height!);
+      canvas.context2D.fillStyle = ['red', 'blue', 'green', 'black', 'cyan'][id % 5];
+      canvas.context2D.fillRect(0, 0, width, height);
     }
 
-    page.render(PdfjsRenderContext(
-      canvasContext: canvas.context2D,
-      viewport: vp
-    ));
+    await js_util.promiseToFuture(
+      page.render(
+        PdfjsRenderContext(
+          canvasContext: canvas.context2D,
+          viewport: vp
+        )
+      ).promise
+    );
+
+    final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
+    final dstride = data.stride;
+    final bpl = width * 4;
+    int dp = data.getOffset(destX, destY);
+    int sp = 0;
+    for (int y = 0; y < height; y++) {
+      for (int i = 0; i < bpl; i++) {
+        data.data[dp + i] = src[sp + i];
+      }
+      dp += dstride;
+      sp += bpl;
+    }
 
     _eventStreamController.sink.add(id);
     return 0;
   }
+}
+
+@immutable
+class RgbaData {
+  final int width;
+  final int height;
+  final Uint8List data;
+
+  int get stride => width * 4;
+  int getOffset(int x, int y) => (x + y * width) * 4;
+
+  RgbaData(this.width, this.height, this.data);
+
+  factory RgbaData.alloc(int width, int height) => RgbaData(width, height, Uint8List(width * 4 * height));
 }
