@@ -29,7 +29,6 @@ class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
     } else {
       return null;
     }
-
   }
 
   /// Opening the specified file.
@@ -58,7 +57,6 @@ class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
   }
 }
 
-
 /// Handles PDF document loaded on memory.
 class PdfDocumentMethodChannel extends PdfDocument {
   /// Document-ID that uniquely identifies the current instance.
@@ -75,17 +73,16 @@ class PdfDocumentMethodChannel extends PdfDocument {
     required bool isEncrypted,
     required bool allowsCopying,
     required bool allowsPrinting,
-  }) :
-    docId = docId,
-    _pages = List<PdfPage?>.filled(pageCount, null),
-    super(
-      sourceName: sourceName,
-      pageCount: pageCount,
-      verMajor: verMajor,
-      verMinor: verMinor,
-      isEncrypted: isEncrypted,
-      allowsCopying: allowsCopying,
-      allowsPrinting: allowsPrinting);
+  })   : docId = docId,
+        _pages = List<PdfPage?>.filled(pageCount, null),
+        super(
+            sourceName: sourceName,
+            pageCount: pageCount,
+            verMajor: verMajor,
+            verMinor: verMinor,
+            isEncrypted: isEncrypted,
+            allowsCopying: allowsCopying,
+            allowsPrinting: allowsPrinting);
 
   @override
   Future<void> dispose() async {
@@ -95,14 +92,10 @@ class PdfDocumentMethodChannel extends PdfDocument {
   /// Get page object. The first page is 1.
   @override
   Future<PdfPage?> getPage(int pageNumber) async {
-    if (pageNumber < 1 || pageNumber > pageCount)
-      return null;
+    if (pageNumber < 1 || pageNumber > pageCount) return null;
     var page = _pages[pageNumber - 1];
     if (page == null) {
-      var obj = await _channel.invokeMethod('page', {
-        "docId": docId,
-        "pageNumber": pageNumber
-      });
+      var obj = await _channel.invokeMethod('page', {"docId": docId, "pageNumber": pageNumber});
       if (obj is Map<dynamic, dynamic>) {
         page = _pages[pageNumber - 1] = PdfPageMethodChannel._(
           document: this,
@@ -116,8 +109,7 @@ class PdfDocumentMethodChannel extends PdfDocument {
   }
 
   @override
-  bool operator ==(dynamic other) => other is PdfDocumentMethodChannel &&
-    other.docId == docId;
+  bool operator ==(dynamic other) => other is PdfDocumentMethodChannel && other.docId == docId;
 
   @override
   int get hashCode => docId;
@@ -128,16 +120,24 @@ class PdfDocumentMethodChannel extends PdfDocument {
 
 /// Handles a PDF page in [PDFDocument].
 class PdfPageMethodChannel extends PdfPage {
-
-  PdfPageMethodChannel._({
-    required PdfDocumentMethodChannel document,
-    required int pageNumber,
-    required double width,
-    required double height})
-  : super(document: document, pageNumber: pageNumber, width: width, height: height);
+  PdfPageMethodChannel._(
+      {required PdfDocumentMethodChannel document,
+      required int pageNumber,
+      required double width,
+      required double height})
+      : super(document: document, pageNumber: pageNumber, width: width, height: height);
 
   @override
-  Future<PdfPageImage?> render({int? x, int? y, int? width, int? height, double? fullWidth, double? fullHeight, bool? backgroundFill}) async {
+  Future<PdfPageImage?> render({
+    int? x,
+    int? y,
+    int? width,
+    int? height,
+    double? fullWidth,
+    double? fullHeight,
+    bool? backgroundFill,
+    bool? allowAntialiasingIOS,
+  }) async {
     return PdfPageImageMethodChannel._render(
       document as PdfDocumentMethodChannel,
       pageNumber,
@@ -147,14 +147,14 @@ class PdfPageMethodChannel extends PdfPage {
       height: height,
       fullWidth: fullWidth,
       fullHeight: fullHeight,
-      backgroundFill: backgroundFill
+      backgroundFill: backgroundFill,
+      allowAntialiasingIOS: allowAntialiasingIOS,
     );
   }
 
   @override
-  bool operator ==(dynamic other) => other is PdfPageMethodChannel &&
-    other.document == document &&
-    other.pageNumber == pageNumber;
+  bool operator ==(dynamic other) =>
+      other is PdfPageMethodChannel && other.document == document && other.pageNumber == pageNumber;
 
   @override
   int get hashCode => document.hashCode ^ pageNumber;
@@ -168,30 +168,30 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   Pointer<Uint8>? _buffer;
   ui.Image? _imageCached;
 
-  PdfPageImageMethodChannel._({
-    required int pageNumber,
-    required int x,
-    required int y,
-    required int width,
-    required int height,
-    required double fullWidth,
-    required double fullHeight,
-    required double pageWidth,
-    required double pageHeight,
-    required Uint8List pixels,
-    Pointer<Uint8>? buffer}):
-      _pixels = pixels,
-      _buffer = buffer,
-      super(
-        pageNumber: pageNumber,
-        x: x,
-        y: y,
-        width: width,
-        height: height,
-        fullWidth: fullWidth,
-        fullHeight: fullHeight,
-        pageWidth: pageWidth,
-        pageHeight: pageHeight);
+  PdfPageImageMethodChannel._(
+      {required int pageNumber,
+      required int x,
+      required int y,
+      required int width,
+      required int height,
+      required double fullWidth,
+      required double fullHeight,
+      required double pageWidth,
+      required double pageHeight,
+      required Uint8List pixels,
+      Pointer<Uint8>? buffer})
+      : _pixels = pixels,
+        _buffer = buffer,
+        super(
+            pageNumber: pageNumber,
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            fullWidth: fullWidth,
+            fullHeight: fullHeight,
+            pageWidth: pageWidth,
+            pageHeight: pageHeight);
 
   /// RGBA pixels in byte array.
   @override
@@ -227,20 +227,29 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
 
   static Future<PdfPageImage?> _render(
-    PdfDocumentMethodChannel document, int? pageNumber,
-    { int? x , int? y, int? width, int? height,
-      double? fullWidth, double? fullHeight,
-      bool? backgroundFill,
-    }) async {
-
-    var obj = await _channel.invokeMethod(
-      'render',
-      {
-        'docId': document.docId, 'pageNumber': pageNumber,
-        'x': x, 'y': y, 'width': width, 'height': height,
-        'fullWidth': fullWidth, 'fullHeight': fullHeight,
-        'backgroundFill': backgroundFill
-      });
+    PdfDocumentMethodChannel document,
+    int? pageNumber, {
+    int? x,
+    int? y,
+    int? width,
+    int? height,
+    double? fullWidth,
+    double? fullHeight,
+    bool? backgroundFill,
+    bool? allowAntialiasingIOS,
+  }) async {
+    var obj = await _channel.invokeMethod('render', {
+      'docId': document.docId,
+      'pageNumber': pageNumber,
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'fullWidth': fullWidth,
+      'fullHeight': fullHeight,
+      'backgroundFill': backgroundFill,
+      'allowAntialiasingIOS': allowAntialiasingIOS,
+    });
 
     if (obj is Map<dynamic, dynamic>) {
       final retWidth = obj['width'] as int;
@@ -259,50 +268,57 @@ class PdfPageImageMethodChannel extends PdfPageImage {
       }
 
       return PdfPageImageMethodChannel._(
-        pageNumber: obj['pageNumber'] as int,
-        x: obj['x'] as int,
-        y: obj['y'] as int,
-        width: retWidth,
-        height: retHeight,
-        fullWidth: obj['fullWidth'] as double,
-        fullHeight: obj['fullHeight'] as double,
-        pageWidth: obj['pageWidth'] as double,
-        pageHeight: obj['pageHeight'] as double,
-        pixels: pixels,
-        buffer: ptr
-      );
+          pageNumber: obj['pageNumber'] as int,
+          x: obj['x'] as int,
+          y: obj['y'] as int,
+          width: retWidth,
+          height: retHeight,
+          fullWidth: obj['fullWidth'] as double,
+          fullHeight: obj['fullHeight'] as double,
+          pageWidth: obj['pageWidth'] as double,
+          pageHeight: obj['pageHeight'] as double,
+          pixels: pixels,
+          buffer: ptr);
     }
     return null;
   }
 
   static Future<PdfPageImage?> render(String filePath, int pageNumber,
-    { int? x, int? y, int? width, int? height,
-      double? fullWidth, double? fullHeight}) async {
+      {int x = 0,
+      int y = 0,
+      int? width,
+      int? height,
+      double? fullWidth,
+      double? fullHeight,
+      bool backgroundFill = true,
+      bool allowAntialiasingIOS = false}) async {
     final doc = await PdfDocument.openFile(filePath);
     if (doc == null) return null;
     final page = await (doc.getPage(pageNumber) as FutureOr<PdfPage>);
     final image = await page.render(
-      x: x, y: y,
-      width: width,
-      height: height,
-      fullWidth: fullWidth, fullHeight: fullHeight);
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+        fullWidth: fullWidth,
+        fullHeight: fullHeight,
+        backgroundFill: backgroundFill,
+        allowAntialiasingIOS: allowAntialiasingIOS);
     doc.dispose();
     return image;
   }
 
   /// Decode RGBA raw image from native code.
-  static Future<ui.Image> _decodeRgba(
-    int width, int height, Uint8List pixels) {
+  static Future<ui.Image> _decodeRgba(int width, int height, Uint8List pixels) {
     final comp = Completer<ui.Image>();
-    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888,
-      (image) => comp.complete(image));
+    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888, (image) => comp.complete(image));
     return comp.future;
   }
 }
 
 /// Very limited support for Flutter's [Texture] based drawing.
 /// Because it does not transfer the rendered image via platform channel,
-/// it could be faster and more efficient than the [PdfPageImage] based rendrering process.
+/// it could be faster and more efficient than the [PdfPageImage] based rendering process.
 class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   int? _texWidth;
   int? _texHeight;
@@ -317,8 +333,8 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   @override
   bool operator ==(Object other) {
     return other is PdfPageImageTextureMethodChannel &&
-      other.pdfDocument == pdfDocument &&
-      other.pageNumber == pageNumber;
+        other.pdfDocument == pdfDocument &&
+        other.pageNumber == pageNumber;
   }
 
   PdfDocumentMethodChannel get _doc => pdfDocument as PdfDocumentMethodChannel;
@@ -326,19 +342,32 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   @override
   int get hashCode => _doc.docId ^ pageNumber;
 
-  PdfPageImageTextureMethodChannel._({required PdfDocument pdfDocument, required int pageNumber, required int texId}):
-    super(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
+  PdfPageImageTextureMethodChannel._({required PdfDocument pdfDocument, required int pageNumber, required int texId})
+      : super(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
 
   /// Release the object.
   Future<void> dispose() async {
     await _channel.invokeMethod('releaseTex', texId);
   }
 
-  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle
+  /// ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
   /// Returns true if succeeded.
-  Future<bool> updateRect({int destX = 0, int destY = 0, int? width, int? height, int srcX = 0, int srcY = 0, int? texWidth, int? texHeight, double? fullWidth, double? fullHeight, bool backgroundFill = true}) async {
+  Future<bool> updateRect(
+      {int destX = 0,
+      int destY = 0,
+      int? width,
+      int? height,
+      int srcX = 0,
+      int srcY = 0,
+      int? texWidth,
+      int? texHeight,
+      double? fullWidth,
+      double? fullHeight,
+      bool backgroundFill = true,
+      bool allowAntialiasingIOS = true}) async {
     final result = await (_channel.invokeMethod<int>('updateTex', {
       'docId': _doc.docId,
       'pageNumber': pageNumber,
@@ -353,7 +382,8 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
       'texHeight': texHeight,
       'fullWidth': fullWidth,
       'fullHeight': fullHeight,
-      'backgroundFill': backgroundFill
+      'backgroundFill': backgroundFill,
+      'allowAntialiasingIOS': allowAntialiasingIOS,
     }) as FutureOr<int>);
     if (result >= 0) {
       _texWidth = texWidth ?? _texWidth;

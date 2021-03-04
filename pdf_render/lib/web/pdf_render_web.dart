@@ -1,5 +1,3 @@
-
-
 import 'dart:async';
 import 'dart:typed_data';
 
@@ -13,11 +11,7 @@ import 'pdf.js.dart';
 
 class PdfRenderWebPlugin {
   static void registerWith(Registrar registrar) {
-    final channel = MethodChannel(
-      'pdf_render',
-      const StandardMethodCodec(),
-      registrar
-    );
+    final channel = MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
     final plugin = PdfRenderWebPlugin._();
     // final script = html.ScriptElement()
     //   ..type = "text/javascript"
@@ -44,6 +38,12 @@ class PdfRenderWebPlugin {
   PdfRenderWebPlugin._() {
     _eventChannel.setController(_eventStreamController);
   }
+
+  // NOTE: No-one calls the method anyway...
+  void dispose() {
+    _eventStreamController.close();
+  }
+
   final _eventStreamController = StreamController<int>();
   final _eventChannel = PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
   final _docs = Map<int, PdfjsDocument>();
@@ -52,7 +52,7 @@ class PdfRenderWebPlugin {
   int _texId = -1;
 
   Future<dynamic> handleMethodCall(MethodCall call) async {
-    switch(call.method) {
+    switch (call.method) {
       case 'file':
         throw Exception('`file` is not implemented yet.');
       case 'asset':
@@ -157,8 +157,7 @@ class PdfRenderWebPlugin {
     final doc = _docs[docId];
     if (doc == null) return -3;
     final pageNumber = args['pageNumber'] as int;
-    if (pageNumber < 1 || pageNumber > doc.numPages)
-      return -6;
+    if (pageNumber < 1 || pageNumber > doc.numPages) return -6;
     final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
 
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
@@ -173,8 +172,7 @@ class PdfRenderWebPlugin {
     final srcX = args['srcX'] as int? ?? 0;
     final srcY = args['srcY'] as int? ?? 0;
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
-    if (width == null || height == null || width <= 0 || height <= 0)
-      return -7;
+    if (width == null || height == null || width <= 0 || height <= 0) return -7;
 
     final vp = page.getViewport(PdfjsViewportParams(
       scale: fullWidth / pw,
@@ -204,17 +202,11 @@ class PdfRenderWebPlugin {
       canvas.context2D.fillRect(0, 0, width, height);
     }
 
-    await js_util.promiseToFuture(
-      page.render(
-        PdfjsRenderContext(
-          canvasContext: canvas.context2D,
-          viewport: vp
-        )
-      ).promise
-    );
+    await js_util
+        .promiseToFuture(page.render(PdfjsRenderContext(canvasContext: canvas.context2D, viewport: vp)).promise);
 
     final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
-    final dstride = data.stride;
+    final destStride = data.stride;
     final bpl = width * 4;
     int dp = data.getOffset(destX, destY);
     int sp = 0;
@@ -222,7 +214,7 @@ class PdfRenderWebPlugin {
       for (int i = 0; i < bpl; i++) {
         data.data[dp + i] = src[sp + i];
       }
-      dp += dstride;
+      dp += destStride;
       sp += bpl;
     }
 

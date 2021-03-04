@@ -2,6 +2,9 @@
 
 * Introducing platform interface packages.
 * Initial release that supports NNBD (Currently not compatible with Flutter stable).
+# 0.69.0
+
+* allowAntialiasingIOS support.
 
 ## 0.68.0
 
