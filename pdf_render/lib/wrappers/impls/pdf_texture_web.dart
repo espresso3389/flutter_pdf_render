@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -72,7 +71,7 @@ class _PdfTextureState extends State<PdfTexture> {
 class _WebTextureManager {
   static final instance = _WebTextureManager._();
 
-  final _id2state = Map<int, List<_PdfTextureState>>();
+  final _id2states = Map<int, List<_PdfTextureState>>();
   final _events = EventChannel('jp.espresso3389.pdf_render/web_texture_events');
 
   _WebTextureManager._() {
@@ -83,10 +82,20 @@ class _WebTextureManager {
     });
   }
 
-  void register(int id, _PdfTextureState state) => _id2state.putIfAbsent(id, () => []).add(state);
-  void unregister(int id, _PdfTextureState state) => _id2state[id]!.remove(state);
+  void register(int id, _PdfTextureState state) => _id2states.putIfAbsent(id, () => []).add(state);
+  void unregister(int id, _PdfTextureState state) {
+    final states = _id2states[id];
+    if (states != null) {
+      if (states.remove(state)) {
+        if (states.isEmpty) {
+          _id2states.remove(id);
+        }
+      }
+    }
+  }
+
   void notify(int id) {
-    final list = _id2state[id];
+    final list = _id2states[id];
     if (list != null) {
       for (final s in list) {
         s._requestUpdate();

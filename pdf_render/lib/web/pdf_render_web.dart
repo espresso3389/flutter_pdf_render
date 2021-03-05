@@ -192,8 +192,12 @@ class PdfRenderWebPlugin {
       canvas.context2D.fillRect(0, 0, width, height);
     }
 
-    await js_util
-        .promiseToFuture(page.render(PdfjsRenderContext(canvasContext: canvas.context2D, viewport: vp)).promise);
+    try {
+      await js_util
+          .promiseToFuture(page.render(PdfjsRenderContext(canvasContext: canvas.context2D, viewport: vp)).promise);
+    } catch (e) {
+      print('$e');
+    }
 
     final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
     final destStride = data.stride;

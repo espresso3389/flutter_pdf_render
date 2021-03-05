@@ -12,7 +12,10 @@ import '../wrappers/html.dart';
 external _PDFDocumentLoadingTask _pdfjsGetDocument(dynamic data);
 
 @JS('pdfjsLib.GlobalWorkerOptions')
-external _GlobalWorkerOptions globalWorkerOptions;
+external _GlobalWorkerOptions _globalWorkerOptions;
+
+@JS('pdfRenderOptions')
+external Object _pdfRenderOptions;
 
 @JS()
 @anonymous
@@ -29,9 +32,25 @@ class _PDFDocumentLoadingTask {
   external Object get promise;
 }
 
-Future<PdfjsDocument> pdfjsGetDocument(String data) => promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
-Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) =>
-    promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
+Map<String, dynamic> _getParams(Map<String, dynamic> jsParams) {
+  final params = {
+    'cMapUrl': getProperty(_pdfRenderOptions, 'cMapUrl'),
+    'cMapPacked': getProperty(_pdfRenderOptions, 'cMapPacked'),
+  }..addAll(jsParams);
+  final otherParams = getProperty(_pdfRenderOptions, 'params');
+  if (otherParams != null) {
+    params.addAll(otherParams);
+  }
+  return params;
+}
+
+Future<PdfjsDocument> _pdfjsGetDocumentJsParams(Map<String, dynamic> jsParams) {
+  return promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(jsify(_getParams(jsParams))).promise);
+}
+
+Future<PdfjsDocument> pdfjsGetDocument(String url) => _pdfjsGetDocumentJsParams({'url': url});
+
+Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) => _pdfjsGetDocumentJsParams({'data': data});
 
 @JS()
 @anonymous
