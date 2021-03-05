@@ -235,4 +235,9 @@ class RgbaData {
   RgbaData(this.width, this.height, this.data);
 
   factory RgbaData.alloc(int width, int height) => RgbaData(width, height, Uint8List(width * 4 * height));
+
+  @override
+  String toString() {
+    return 'RgbaData($width x $height, data.length=${data.length})';
+  }
 }

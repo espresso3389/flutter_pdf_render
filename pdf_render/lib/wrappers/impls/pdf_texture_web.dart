@@ -38,10 +38,24 @@ class _PdfTextureState extends State<PdfTexture> {
   }
 
   void _requestUpdate() async {
+    final descriptor = ui.ImageDescriptor.raw(
+      await ui.ImmutableBuffer.fromUint8List(widget.data.data),
+      width: widget.data.width,
+      height: widget.data.height,
+      pixelFormat: ui.PixelFormat.bgra8888,
+    );
+    final codec = await descriptor.instantiateCodec();
+    final frame = await codec.getNextFrame();
+    _image = frame.image;
+    /*
+    // The following code seems OK but not working on Web.
+    // - [web] instantiateImageCodec (decodeImageFromPixels) not supported
+    //   https://github.com/flutter/flutter/issues/45190
     final comp = Completer<ui.Image>();
     ui.decodeImageFromPixels(widget.data.data, widget.data.width, widget.data.height, ui.PixelFormat.bgra8888,
-      (image) => comp.complete(image));
+        (image) => comp.complete(image));
     _image = await comp.future;
+    */
     if (mounted) setState(() {});
   }
 }

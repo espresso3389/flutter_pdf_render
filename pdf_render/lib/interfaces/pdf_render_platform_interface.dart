@@ -4,8 +4,9 @@ import 'dart:typed_data';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'pdf_render.dart';
-import 'pdf_render_method_channel.dart';
+import '../pdf_render_method_channel.dart';
 
+/// Abstraction layer to isolate [PdfDocument]/[PdfPageImageTexture] implementation from the public interface.
 abstract class PdfRenderPlatform extends PlatformInterface {
   /// Constructs a PdfRenderPlatform.
   PdfRenderPlatform() : super(token: _token);

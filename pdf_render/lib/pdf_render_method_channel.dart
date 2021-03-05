@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 
 import 'utils/ffi_wrapper.dart';
 
-import 'pdf_render.dart';
-import 'pdf_render_platform_interface.dart';
+import 'interfaces/pdf_render.dart';
+import 'interfaces/pdf_render_platform_interface.dart';
 
 const MethodChannel _channel = const MethodChannel('pdf_render');
 
