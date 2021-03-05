@@ -417,6 +417,30 @@ class PdfPageImageTexture {
 }
 ```
 
-## Future plans
+## Highly Experimental Flutter Web Support
 
-- Supporting password protected PDF files (#1)
+The plugin now utilizes [PDF.js](https://mozilla.github.io/pdf.js/) to support Flutter Web (still very early stage of implementation).
+
+To use the Flutter Web support, you should add the following code just before `<script src="main.dart.js" type="application/javascript"></script>` inside `index.html`:
+
+```html
+  <!-- IMPORTANT: load pdfjs files -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    // set worker script source URL
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js";
+    // options vital to the plugin
+    pdfRenderOptions = {
+      // for correctly loading cmaps, we should specify
+      // https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/cmap/ or it in relative form.
+      cMapUrl: '../cmaps/',
+      // The cmaps are compressed in the case
+      cMapPacked: true,
+      // any other options for pdfjsLib.getDocument.
+      // params: {}
+    }
+  </script>
+```
+
+You can use any URL that specify `PDF.js` distribution URL.
+`cMapUrl` indicates cmap files base URL and `cMapPacked` determines whether the cmap files are compressed or not.

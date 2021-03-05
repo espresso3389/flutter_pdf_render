@@ -1,7 +1,8 @@
 ## 1.0.0-dev
 
-* Introducing platform interface packages.
-* Initial release that supports NNBD (Currently not compatible with Flutter stable).
+* Initial release that supports null-safety (Currently not compatible with Flutter stable).
+* Alpha preview of Flutter Web support (I mean, not yet working correctly).
+
 # 0.69.0
 
 * allowAntialiasingIOS support.
