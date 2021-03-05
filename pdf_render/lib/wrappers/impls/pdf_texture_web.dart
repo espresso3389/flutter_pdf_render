@@ -14,7 +14,7 @@ class PdfTexture extends StatefulWidget {
   @override
   _PdfTextureState createState() => _PdfTextureState();
 
-  RgbaData get data => js_util.getProperty(html.window, 'pdf_render_texture_$textureId') as RgbaData;
+  RgbaData? get data => js_util.getProperty(html.window, 'pdf_render_texture_$textureId') as RgbaData?;
 }
 
 class _PdfTextureState extends State<PdfTexture> {
@@ -34,14 +34,22 @@ class _PdfTextureState extends State<PdfTexture> {
 
   @override
   Widget build(BuildContext context) {
-    return RawImage(image: _image, fit: BoxFit.fill);
+    return RawImage(
+      image: _image,
+      alignment: Alignment.topLeft,
+      fit: BoxFit.fill,
+    );
   }
 
   void _requestUpdate() async {
+    final data = widget.data;
+    if (data == null) {
+      return;
+    }
     final descriptor = ui.ImageDescriptor.raw(
-      await ui.ImmutableBuffer.fromUint8List(widget.data.data),
-      width: widget.data.width,
-      height: widget.data.height,
+      await ui.ImmutableBuffer.fromUint8List(data.data),
+      width: data.width,
+      height: data.height,
       pixelFormat: ui.PixelFormat.bgra8888,
     );
     final codec = await descriptor.instantiateCodec();
@@ -52,7 +60,7 @@ class _PdfTextureState extends State<PdfTexture> {
     // - [web] instantiateImageCodec (decodeImageFromPixels) not supported
     //   https://github.com/flutter/flutter/issues/45190
     final comp = Completer<ui.Image>();
-    ui.decodeImageFromPixels(widget.data.data, widget.data.width, widget.data.height, ui.PixelFormat.bgra8888,
+    ui.decodeImageFromPixels(data.data, data.width, data.height, ui.PixelFormat.bgra8888,
         (image) => comp.complete(image));
     _image = await comp.future;
     */

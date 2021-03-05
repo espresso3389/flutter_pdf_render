@@ -31,7 +31,7 @@ class _MyAppState extends State<MyApp> {
             backgroundColor: Colors.grey,
             body: PdfViewer(
               assetName: 'assets/hello.pdf',
-              padding: 16,
+              padding: 256,
               minScale: 1.0,
               viewerController: controller,
             ),

@@ -9,30 +9,27 @@ import '../wrappers/html.dart' as html;
 import '../wrappers/js_util.dart' as js_util;
 import 'pdf.js.dart';
 
+//final pdfjsUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.js';
+//final pdfWorkerJsUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js';
+// globalWorkerOptions.workerSrc = pdfWorkerJsUrl;
+
 class PdfRenderWebPlugin {
   static void registerWith(Registrar registrar) {
     final channel = MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
     final plugin = PdfRenderWebPlugin._();
-    // final script = html.ScriptElement()
-    //   ..type = "text/javascript"
-    //   ..charset = "utf-8"
-    //   ..async = true
-    //   ..src = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.min.js';
-    // html.querySelector('head')!.children.add(script);
-    // script.onLoad.listen((event) {
-    //   print('loaded!');
-    //   Timer.periodic(Duration(milliseconds: 100), (timer) {
-    //     final p = js.context['pdfjs-dist/build/pdf'];
-    //     if (p is PdfJs) {
-    //       plugin.comp.complete(p);
-    //       timer.cancel();
-    //       print('pdfjsLib loaded.');
-    //       return;
-    //     }
-    //     print('pdfjsLib loading...: $p');
-    //   });
-    // });
     channel.setMethodCallHandler(plugin.handleMethodCall);
+    /*
+    final body = html.querySelector('body')!;
+    final script = html.ScriptElement()
+      ..type = "text/javascript"
+      ..charset = "utf-8"
+      ..async = true
+      ..onLoad.listen((event) {
+        channel.setMethodCallHandler(plugin.handleMethodCall);
+      });
+    body.children.add(script);
+    script.src = pdfjsUrl;
+    */
   }
 
   PdfRenderWebPlugin._() {
@@ -121,12 +118,12 @@ class PdfRenderWebPlugin {
   }
 
   int _allocTex() {
-    return ++_texId;
+    return (++_texId) ^ 0x325741;
   }
 
   void _releaseTex(int id) {
     _textures.remove(id);
-    js_util.setProperty(html.window, 'pdf_render_texture_$_texId', null);
+    js_util.setProperty(html.window, 'pdf_render_texture_$id', null);
   }
 
   int _resizeTex(dynamic args) {
@@ -147,7 +144,7 @@ class PdfRenderWebPlugin {
       return oldData;
     }
     final data = _textures[id] = RgbaData.alloc(width, height);
-    js_util.setProperty(html.window, 'pdf_render_texture_$_texId', data);
+    js_util.setProperty(html.window, 'pdf_render_texture_$id', data);
     return data;
   }
 
@@ -169,36 +166,29 @@ class PdfRenderWebPlugin {
     final destY = args['destY'] as int? ?? 0;
     final width = args['width'] as int?;
     final height = args['height'] as int?;
-    final srcX = args['srcX'] as int? ?? 0;
-    final srcY = args['srcY'] as int? ?? 0;
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
     if (width == null || height == null || width <= 0 || height <= 0) return -7;
 
+    final srcX = args['srcX'] as int? ?? 0;
+    final offsetX = srcX.toDouble() + width - fullWidth;
+
+    final srcY = args['srcY'] as int? ?? 0;
+    final offsetY = srcY.toDouble() + height - fullHeight;
+
     final vp = page.getViewport(PdfjsViewportParams(
       scale: fullWidth / pw,
-      offsetX: srcX.toDouble(),
-      offsetY: (fullWidth - srcY).toDouble(),
-      //dontFlip: true
+      offsetX: offsetX,
+      offsetY: offsetY,
+      dontFlip: true,
     ));
-    // final h = height * fullHeight / ph;
-    // vp.offsetX = srcX.toDouble();
-    // vp.offsetY = (fullHeight - srcY).toDouble();
-    // final v = vp.transform = [vp.scale, 0, 0, -vp.scale, vp.offsetX, vp.offsetY];
-    // print('  ' + v.map((v) => v.toStringAsFixed(2)).join(','));
 
     final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
     final canvas = html.document.createElement('canvas') as html.CanvasElement;
     canvas.width = width;
     canvas.height = height;
 
-    print('$id: ($srcX,$srcY) $width x $height');
-    print('  full: ${fullWidth.toStringAsFixed(1)} x ${fullHeight.toStringAsFixed(1)}');
-    print('  page: $pw x $ph');
-    print('  dest: ${destX.toStringAsFixed(1)} x ${destY.toStringAsFixed(1)}');
-    print('  tex: ${data.width.toStringAsFixed(1)} x ${data.height.toStringAsFixed(1)}');
-
     if (backgroundFill) {
-      canvas.context2D.fillStyle = ['red', 'blue', 'green', 'black', 'cyan'][id % 5];
+      canvas.context2D.fillStyle = 'white';
       canvas.context2D.fillRect(0, 0, width, height);
     }
 
@@ -237,7 +227,5 @@ class RgbaData {
   factory RgbaData.alloc(int width, int height) => RgbaData(width, height, Uint8List(width * 4 * height));
 
   @override
-  String toString() {
-    return 'RgbaData($width x $height, data.length=${data.length})';
-  }
+  String toString() => 'RgbaData($width x $height, data.length=${data.length})';
 }

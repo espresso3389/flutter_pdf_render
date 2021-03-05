@@ -11,6 +11,18 @@ import '../wrappers/html.dart';
 @JS('pdfjsLib.getDocument')
 external _PDFDocumentLoadingTask _pdfjsGetDocument(dynamic data);
 
+@JS('pdfjsLib.GlobalWorkerOptions')
+external _GlobalWorkerOptions globalWorkerOptions;
+
+@JS()
+@anonymous
+class _GlobalWorkerOptions {
+  external Object get workerPort;
+  external set workerPort(Object port);
+  external String get workerSrc;
+  external set workerSrc(String src);
+}
+
 @JS()
 @anonymous
 class _PDFDocumentLoadingTask {
@@ -18,7 +30,8 @@ class _PDFDocumentLoadingTask {
 }
 
 Future<PdfjsDocument> pdfjsGetDocument(String data) => promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
-Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) => promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
+Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) =>
+    promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(data).promise);
 
 @JS()
 @anonymous
@@ -28,17 +41,16 @@ class PdfjsDocument {
   external void destroy();
 }
 
-
 @JS()
 @anonymous
 class PdfjsPage {
   external PdfjsViewport getViewport(PdfjsViewportParams params);
+
   /// `viewport` for [PdfjsViewport] and `transform` for
   external PdfjsRender render(PdfjsRenderContext params);
   external int get pageNumber;
   external List<double> get view;
 }
-
 
 @JS()
 @anonymous
@@ -54,13 +66,12 @@ class PdfjsViewportParams {
   external bool get dontFlip;
   external set dontFlip(bool dontFlip);
 
-  external factory PdfjsViewportParams({
-    double scale,
-    int rotation, // 0, 90, 180, 270
-    double offsetX = 0,
-    double offsetY = 0,
-    bool dontFlip = false
-  });
+  external factory PdfjsViewportParams(
+      {double scale,
+      int rotation, // 0, 90, 180, 270
+      double offsetX = 0,
+      double offsetY = 0,
+      bool dontFlip = false});
 }
 
 @JS('PageViewport')
@@ -70,6 +81,7 @@ class PdfjsViewport {
 
   external double get scale;
   external set scale(double scale);
+
   /// 0, 90, 180, 270
   external int get rotation;
   external set rotation(int rotation);
@@ -92,27 +104,28 @@ class PdfjsViewport {
 @JS()
 @anonymous
 class PdfjsRenderContext {
-    external CanvasRenderingContext2D get canvasContext;
-    external set canvasContext(CanvasRenderingContext2D ctx);
-    external PdfjsViewport get viewport;
-    external set viewport(PdfjsViewport viewport);
-    external String get intent;
-    /// `display` or `print`
-    external set intent(String intent);
-    external bool get enableWebGL;
-    external set enableWebGL(bool enableWebGL);
-    external bool get renderInteractiveForms;
-    external set renderInteractiveForms(bool renderInteractiveForms);
-    external List<int>? get transform;
-    external set transform(List<int>? transform);
-    external dynamic? get imageLayer;
-    external set imageLayer(dynamic? imageLayer);
-    external dynamic? get canvasFactory;
-    external set canvasFactory(dynamic? canvasFactory);
-    external dynamic? get background;
-    external set background(dynamic? background);
-    external factory PdfjsRenderContext({
-      required CanvasRenderingContext2D canvasContext,
+  external CanvasRenderingContext2D get canvasContext;
+  external set canvasContext(CanvasRenderingContext2D ctx);
+  external PdfjsViewport get viewport;
+  external set viewport(PdfjsViewport viewport);
+  external String get intent;
+
+  /// `display` or `print`
+  external set intent(String intent);
+  external bool get enableWebGL;
+  external set enableWebGL(bool enableWebGL);
+  external bool get renderInteractiveForms;
+  external set renderInteractiveForms(bool renderInteractiveForms);
+  external List<int>? get transform;
+  external set transform(List<int>? transform);
+  external dynamic? get imageLayer;
+  external set imageLayer(dynamic? imageLayer);
+  external dynamic? get canvasFactory;
+  external set canvasFactory(dynamic? canvasFactory);
+  external dynamic? get background;
+  external set background(dynamic? background);
+  external factory PdfjsRenderContext(
+      {required CanvasRenderingContext2D canvasContext,
       required PdfjsViewport viewport,
       String intent = 'display',
       bool enableWebGL = false,
@@ -120,8 +133,7 @@ class PdfjsRenderContext {
       List<double>? transform,
       dynamic? imageLayer,
       dynamic? canvasFactory,
-      dynamic? background
-    });
+      dynamic? background});
 }
 
 @anonymous
