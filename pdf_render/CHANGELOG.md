@@ -1,3 +1,12 @@
+## 1.0.0-dev
+
+* Initial release that supports null-safety (Currently not compatible with Flutter stable).
+* Alpha preview of Flutter Web support (I mean, not yet working correctly).
+
+# 0.69.0
+
+* allowAntialiasingIOS support.
+
 ## 0.68.0
 
 * Update device_info version.

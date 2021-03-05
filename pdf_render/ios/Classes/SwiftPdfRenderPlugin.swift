@@ -243,10 +243,11 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let fw = args["fullWidth"] as? Double ?? 0.0
     let fh = args["fullHeight"] as? Double ?? 0.0
     let backgroundFill = args["backgroundFill"] as? Bool ?? true
+    let allowAntialiasing = args["allowAntialiasingIOS"] as? Bool ?? true
 
     dispQueue.async {
       var dict: [String: Any]? = nil
-      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill) {
+      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill, allowAntialiasing: allowAntialiasing) {
         dict = [
           "docId": Int32(docId),
           "pageNumber": Int32(pageNumber),
@@ -330,6 +331,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let fw = args["fullWidth"] as? Double
     let fh = args["fullHeight"] as? Double
     let backgroundFill = args["backgroundFill"] as? Bool ?? true
+    let allowAntialiasing = args["allowAntialiasingIOS"] as? Bool ?? true
 
     let tw = args["texWidth"] as? Int
     let th = args["texHeight"] as? Int
@@ -337,7 +339,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       pageTex.resize(width: tw!, height: th!)
     }
 
-    pageTex.updateTex(page: page, destX: destX, destY: destY, width: width, height: height, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill)
+    pageTex.updateTex(page: page, destX: destX, destY: destY, width: width, height: height, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill, allowAntialiasing: allowAntialiasing)
     result(0)
   }
 }
@@ -369,7 +371,7 @@ class PageData {
   }
 }
 
-func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, backgroundFill: Bool) -> PageData? {
+func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, backgroundFill: Bool, allowAntialiasing: Bool) -> PageData? {
 
   let rotatedSize = page.getRotatedSize()
 
@@ -390,9 +392,12 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
   let rgb = CGColorSpaceCreateDeviceRGB()
   let context = CGContext(data: buffer, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
   if context != nil {
+    context!.setAllowsAntialiasing(allowAntialiasing);
+
     context!.translateBy(x: CGFloat(-x), y: CGFloat(Double(y + h) - fh))
     context!.scaleBy(x: sx, y: sy)
     context!.concatenate(page.getRotationTransform())
+
     context!.drawPDFPage(page)
     success = true
   }
@@ -429,7 +434,7 @@ class PdfPageTexture : NSObject {
     self.texHeight = height
   }
 
-  func updateTex(page: CGPDFPage, destX: Int, destY: Int, width: Int?, height: Int?, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false) {
+  func updateTex(page: CGPDFPage, destX: Int, destY: Int, width: Int?, height: Int?, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false, allowAntialiasing: Bool = true) {
 
     guard let w = width else { return }
     guard let h = height else { return }
@@ -469,6 +474,8 @@ class PdfPageTexture : NSObject {
       context?.setFillColor(UIColor.white.cgColor)
       context?.fill(CGRect(x: 0, y: 0, width: w, height: h))
     }
+
+    context?.setAllowsAntialiasing(allowAntialiasing)
 
     context?.translateBy(x: CGFloat(-srcX), y: CGFloat(Double(srcY + h) - fh))
     context?.scaleBy(x: sx, y: sy)

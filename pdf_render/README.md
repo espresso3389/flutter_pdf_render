@@ -12,7 +12,7 @@ Please use the physical device to test the actual behavior.
 
 ### Importing Widgets Library
 
-Althouth 0.61.0 introduces new PDF rendering widgets, it also contains deprecated but backward compatible old widgets too. Anyway if you're new to the plugin, you had better use the new widgets with the following import:
+Although 0.61.0 introduces new PDF rendering widgets, it also contains deprecated but backward compatible old widgets too. Anyway if you're new to the plugin, you had better use the new widgets with the following import:
 
 ```dart
 import 'package:pdf_render/pdf_render_widgets2.dart';
@@ -73,7 +73,7 @@ that you can scroll the viewer to make certain page/area of the document visible
   }
 ```
 
-`PdfViewerController` implementation is based on [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) and you can use almsot all parameters of InteractiveViewer.
+`PdfViewerController` implementation is based on [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) and you can use almost all parameters of InteractiveViewer.
 
 #### Page decoration
 
@@ -120,7 +120,7 @@ The following fragment illustrates the easiest way to render only one page of a 
 
 Of course, `PdfDocumentLoader` accepts one of `filePath`, `assetName`, or `data` to load PDF document from a file, or other sources.
 
-### Multipage view using ListView.builder
+### Multi-page view using ListView.builder
 
 Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multiple pages of a PDF document. In the following fragment, `ListView.builder` is utilized to realize scrollable PDF document viewer.
 
@@ -195,30 +195,24 @@ PdfPageView(
 
 ### textureBuilder
 
-`textureBuilder` (`PdfPageTextureBuilder`) generates the actual widget that directly corresponding to the page image. The actual widget generated may vary upon the situation. But you can of course customize the behavior of the funtion with its parameter.
+`textureBuilder` (`PdfPageTextureBuilder`) generates the actual widget that directly corresponding to the page image. The actual widget generated may vary upon the situation. But you can of course customize the behavior of the function with its parameter.
 
 The function is defined as:
 
 ```dart
 typedef PdfPageTextureBuilder = Widget Function({
   Size size,
-  bool returnNullForError,
   PdfPagePlaceholderBuilder placeholderBuilder,
   bool backgroundFill,
   double renderingPixelRatio,
-  bool dontUseTexture
+  bool dontUseTexture,
+  bool allowAntialiasingIOS
 });
 ```
 
 So if you want to generate widget of an exact size, you can specify `size` explicitly.
 
 Please note that the size is in density-independent pixels. The function is responsible for determining the actual pixel size based on device's pixel density.
-
-`returnNullForError` may be true if you want null for PDF page loading/rendering failure; it is, with the parameter, you can handle the behavior on such failures:
-
-```dart
-textureBuilder(returnNullForError: true) ?? Container()
-```
 
 `placeholderBuilder` is the final resort that controls the "placeholder" for loading or failure cases.
 
@@ -334,9 +328,11 @@ class PdfPage {
 
   // render sub-region of the PDF page.
   Future<PdfPageImage> render({
-    int x = 0, int y = 0,
-    int width = 0, int height = 0,
-    double fullWidth = 0.0, double fullHeight = 0.0 });
+    int x, int y,
+    int width, int height,
+    double fullWidth, double fullHeight,
+    bool backgroundFill,
+    bool allowAntialiasingIOS});
 }
 ```
 
@@ -417,10 +413,34 @@ class PdfPageImageTexture {
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
-  Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true});
+  Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true, bool allowAntialiasingIOS = true});
 }
 ```
 
-## Future plans
+## Highly Experimental Flutter Web Support
 
-- Supporting password protected PDF files (#1)
+The plugin now utilizes [PDF.js](https://mozilla.github.io/pdf.js/) to support Flutter Web (still very early stage of implementation).
+
+To use the Flutter Web support, you should add the following code just before `<script src="main.dart.js" type="application/javascript"></script>` inside `index.html`:
+
+```html
+  <!-- IMPORTANT: load pdfjs files -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    // set worker script source URL
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js";
+    // options vital to the plugin
+    pdfRenderOptions = {
+      // for correctly loading cmaps, we should specify
+      // https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/cmap/ or it in relative form.
+      cMapUrl: '../cmaps/',
+      // The cmaps are compressed in the case
+      cMapPacked: true,
+      // any other options for pdfjsLib.getDocument.
+      // params: {}
+    }
+  </script>
+```
+
+You can use any URL that specify `PDF.js` distribution URL.
+`cMapUrl` indicates cmap files base URL and `cMapPacked` determines whether the cmap files are compressed or not.
