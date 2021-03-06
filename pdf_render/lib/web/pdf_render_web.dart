@@ -97,8 +97,8 @@ class PdfRenderWebPlugin {
       'verMajor': 1,
       'verMinor': 7,
       'isEncrypted': false,
-      'allowsCopying': true,
-      'allowPrinting': true
+      'allowsCopying': false,
+      'allowsPrinting': false
     };
   }
 

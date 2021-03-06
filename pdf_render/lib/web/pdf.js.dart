@@ -11,20 +11,8 @@ import '../wrappers/html.dart';
 @JS('pdfjsLib.getDocument')
 external _PDFDocumentLoadingTask _pdfjsGetDocument(dynamic data);
 
-@JS('pdfjsLib.GlobalWorkerOptions')
-external _GlobalWorkerOptions _globalWorkerOptions;
-
 @JS('pdfRenderOptions')
 external Object _pdfRenderOptions;
-
-@JS()
-@anonymous
-class _GlobalWorkerOptions {
-  external Object get workerPort;
-  external set workerPort(Object port);
-  external String get workerSrc;
-  external set workerSrc(String src);
-}
 
 @JS()
 @anonymous

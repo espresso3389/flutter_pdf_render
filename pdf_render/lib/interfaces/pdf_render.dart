@@ -50,7 +50,7 @@ abstract class PdfDocument {
   static Future<PdfDocument?> openData(Uint8List data) => PdfRenderPlatform.instance.openData(data);
 
   /// Get page object. The first page is 1.
-  Future<PdfPage?> getPage(int pageNumber);
+  Future<PdfPage> getPage(int pageNumber);
 
   @override
   bool operator ==(dynamic other);
@@ -89,7 +89,7 @@ abstract class PdfPage {
   /// If [width], [height], [fullWidth], [fullHeight], and [dpi] are all 0, the page is rendered at 72 dpi.
   /// By default, [backgroundFill] is true and the page background is once filled with white before rendering page image but you can turn it off if needed.
   /// ![](./images/render-params.png)
-  Future<PdfPageImage?> render({
+  Future<PdfPageImage> render({
     int x = 0,
     int y = 0,
     int? width,
@@ -158,7 +158,7 @@ abstract class PdfPageImage {
   void dispose();
 
   /// Create cached [Image] for the page.
-  Future<ui.Image?> createImageIfNotAvailable();
+  Future<ui.Image> createImageIfNotAvailable();
 
   /// Get [Image] for the object if available; otherwise null.
   /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
@@ -170,11 +170,12 @@ abstract class PdfPageImage {
       {int x = 0, int y = 0, int? width, int? height, double? fullWidth, double? fullHeight}) async {
     final doc = await PdfDocument.openFile(filePath);
     if (doc == null) return null;
-    final page = await (doc.getPage(pageNumber) as FutureOr<PdfPage>);
-    final image =
-        await page.render(x: x, y: y, width: width, height: height, fullWidth: fullWidth, fullHeight: fullHeight);
-    doc.dispose();
-    return image;
+    try {
+      final page = await doc.getPage(pageNumber);
+      return await page.render(x: x, y: y, width: width, height: height, fullWidth: fullWidth, fullHeight: fullHeight);
+    } finally {
+      doc.dispose();
+    }
   }
 }
 
@@ -209,16 +210,17 @@ abstract class PdfPageImageTexture {
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
   /// Returns true if succeeded.
-  Future<bool> updateRect(
-      {int destX = 0,
-      int destY = 0,
-      int? width,
-      int? height,
-      int srcX = 0,
-      int srcY = 0,
-      int? texWidth,
-      int? texHeight,
-      double? fullWidth,
-      double? fullHeight,
-      bool backgroundFill = true});
+  Future<bool> updateRect({
+    int destX = 0,
+    int destY = 0,
+    int? width,
+    int? height,
+    int srcX = 0,
+    int srcY = 0,
+    int? texWidth,
+    int? texHeight,
+    double? fullWidth,
+    double? fullHeight,
+    bool backgroundFill = true,
+  });
 }

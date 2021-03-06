@@ -23,7 +23,6 @@ The following fragment is a simplest use of the widget:
 ```dart
   @override
   Widget build(BuildContext context) {
-    PdfViewerController controller;
     return new MaterialApp(
       home: new Scaffold(
         appBar: new AppBar(
@@ -42,7 +41,7 @@ that you can scroll the viewer to make certain page/area of the document visible
 ```dart
   @override
   Widget build(BuildContext context) {
-    PdfViewerController controller;
+    PdfViewerController? controller;
     return new MaterialApp(
       home: new Scaffold(
         appBar: new AppBar(
@@ -54,17 +53,22 @@ that you can scroll the viewer to make certain page/area of the document visible
             controller = c;
             c.goToPage(pageNumber: 3); // scrolling animation to page 3.
           }
-        )
+        ),
       ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: <Widget>[
-          // move to the first page.
-          FloatingActionButton(heroTag: 'firstPage', child: Icon(Icons.first_page), onPressed: () => controller?.goToPage(pageNumber: 1)),
-          // move to the last page.
-          FloatingActionButton(heroTag: 'lastPage', child: Icon(Icons.last_page), onPressed: () => controller?.goToPage(pageNumber: controller?.pageCount)),
-        ]
-      )
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            FloatingActionButton(
+              child: Icon(Icons.first_page),
+              onPressed: () => controller.ready?.goToPage(pageNumber: 1),
+            ),
+            FloatingActionButton(
+              child: Icon(Icons.last_page),
+              onPressed: () => controller.ready?.goToPage(pageNumber: controller.pageCount),
+            ),
+          ],
+        ),
+      ),
     );
   }
 ```
@@ -181,8 +185,7 @@ PdfPageView(
             // textureBuilder builds the actual page image
             child: textureBuilder()),
         // adding page number on the bottom of rendered page
-        Text('${index + 1}',
-            style: TextStyle(fontSize: 50))
+        Text('${index + 1}', style: TextStyle(fontSize: 50))
       ],
     );
   },
@@ -197,12 +200,10 @@ The function is defined as:
 
 ```dart
 typedef PdfPageTextureBuilder = Widget Function({
-  Size size,
-  PdfPagePlaceholderBuilder placeholderBuilder,
+  Size? size,
+  PdfPagePlaceholderBuilder? placeholderBuilder,
   bool backgroundFill,
-  double renderingPixelRatio,
-  bool dontUseTexture,
-  bool allowAntialiasingIOS
+  double? renderingPixelRatio
 });
 ```
 
@@ -235,25 +236,28 @@ import 'package:pdf_render/pdf_render.dart';
 ...
 
 /// Open the document using either openFile, openAsset, or openData.
-PdfDocument doc = await PdfDocument.openAsset('assets/hello.pdf');
+PdfDocument? doc = await PdfDocument.openAsset('assets/hello.pdf');
+if (doc == null) { /* error */ }
 
 // Get the number of pages in the PDF file
-int pageCount = doc.pageCount;
+int pageCount = doc!.pageCount;
 
 // The first page is 1
-PdfPage page = await doc.getPage(1);
+PdfPage page = await doc!.getPage(1);
+
 
 // For the render function's return, see explanation below
 PdfPageImage pageImage = await page.render();
 
-// Now, you can access pageImage.pixels for raw RGBA data
+// Now, you can access pageImage!.pixels for raw RGBA data
 // ...
 
 // Generating dart:ui.Image cache for later use by imageIfAvailable
 await pageImage.createImageIfNotAvailable();
 
 // PDFDocument must be disposed as soon as possible.
-doc.dispose();
+doc!.dispose();
+
 ```
 
 And then, you can use `PdfPageImage` to get the actual RGBA image in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html).
@@ -283,32 +287,39 @@ On `PdfDocument` class, there are three functions to open PDF from a real file, 
 
 ```dart
 // from an asset file
-PdfDocument docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
+PdfDocument? docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
-PdfDocument docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
+PdfDocument? docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List
-PdfDocument docFromData = await PdfDocument.openData(data);
+PdfDocument? docFromData = await PdfDocument.openData(data);
 ```
 
 ## PdfDocument members
 
 ```dart
 class PdfDocument {
-  final int docId; // For internal purpose
-  final int pageCount; // Number of pages in the document
-  final int verMajor; // PDF major version
-  final int verMinor; // PDF minor version
-  final bool isEncrypted; // Whether the file is encrypted or not
-  final bool allowsCopying; // Whether the file allows you to copy the texts
-  final bool allowsPrinting; // Whether the file allows you to print the document
+  /// File path, `asset:[ASSET_PATH]` or `memory:` depending on the content opened.
+  final String sourceName;
+  /// Number of pages in the PDF document.
+  final int pageCount;
+  /// PDF major version.
+  final int verMajor;
+  /// PDF minor version.
+  final int verMinor;
+  /// Determine whether the PDF file is encrypted or not.
+  final bool isEncrypted;
+  /// Determine whether the PDF file allows copying of the contents.
+  final bool allowsCopying;
+  /// Determine whether the PDF file allows printing of the pages.
+  final bool allowsPrinting;
 
   // Get a page by page number (page number starts at 1)
   Future<PdfPage> getPage(int pageNumber);
 
   // Dispose the instance.
-  void dispose();
+  Future<void> dispose();
 }
 ```
 
@@ -316,19 +327,22 @@ class PdfDocument {
 
 ```dart
 class PdfPage {
-  final int docId; // For internal purpose
+  final PdfDocument document; // For internal purpose
   final int pageNumber; // Page number (page number starts at 1)
-  final int rotationAngle; // Rotation angle; one of 0, 90, 180, 270
   final double width; // Page width in points; pixel size on 72-dpi
   final double height; // Page height in points; pixel size on 72-dpi
 
   // render sub-region of the PDF page.
   Future<PdfPageImage> render({
-    int x, int y,
-    int width, int height,
-    double fullWidth, double fullHeight,
-    bool backgroundFill,
-    bool allowAntialiasingIOS});
+    int x = 0,
+    int y = 0,
+    int? width,
+    int? height,
+    double? fullWidth,
+    double? fullHeight,
+    bool backgroundFill = true,
+    bool allowAntialiasingIOS = false
+  });
 }
 ```
 
@@ -379,7 +393,7 @@ class PdfPageImage {
 
   /// Get [Image] for the object if available; otherwise null.
   /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
-  Image get imageIfAvailable;
+  Image? get imageIfAvailable;
 }
 ```
 
@@ -401,7 +415,7 @@ class PdfPageImageTexture {
   int get hashCode;
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
-  static Future<PdfPageImageTexture> create({@required PdfDocument pdfDocument, @required int pageNumber});
+  static Future<PdfPageImageTexture> create({required PdfDocument pdfDocument, required int pageNumber});
 
   /// Release the object.
   Future<void> dispose();
@@ -409,7 +423,19 @@ class PdfPageImageTexture {
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
-  Future<void> updateRect({int destX = 0, int destY = 0, int width, int height, int srcX = 0, int srcY = 0, int texWidth, int texHeight, double fullWidth, double fullHeight, bool backgroundFill = true, bool allowAntialiasingIOS = true});
+  Future<bool> updateRect({
+    int destX = 0,
+    int destY = 0,
+    int? width,
+    int? height,
+    int srcX = 0,
+    int srcY = 0,
+    int? texWidth,
+    int? texHeight,
+    double? fullWidth,
+    double? fullHeight,
+    bool backgroundFill = true,
+  });
 }
 ```
 

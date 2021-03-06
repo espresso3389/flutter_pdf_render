@@ -160,7 +160,7 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
       "verMinor" to 7,
       "isEncrypted" to false,
       "allowsCopying" to false,
-      "allowPrinting" to false)
+      "allowsPrinting" to false)
   }
 
   private fun close(id: Int) {

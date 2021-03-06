@@ -31,14 +31,9 @@ typedef PdfPageBuilder = Widget Function(BuildContext context, PdfPageTextureBui
 /// [backgroundFill] specifies whether to fill background before rendering actual page content or not.
 /// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
 /// [renderingPixelRatio] specifies pixel density for rendering page image. If it is null, the value is obtained by calling `MediaQuery.of(context).devicePixelRatio`.
-/// Although the view uses Flutter's [Texture] to render the PDF content by default, you can disable it by setting [dontUseTexture] to true.
 /// Please note that on iOS Simulator, it always use non-[Texture] rendering pass.
 typedef PdfPageTextureBuilder = Widget Function(
-    {Size? size,
-    PdfPagePlaceholderBuilder? placeholderBuilder,
-    bool backgroundFill,
-    double? renderingPixelRatio,
-    bool dontUseTexture});
+    {Size? size, PdfPagePlaceholderBuilder? placeholderBuilder, bool backgroundFill, double? renderingPixelRatio});
 
 /// Creates page placeholder that is shown on page loading or even page load failure.
 typedef PdfPagePlaceholderBuilder = Widget Function(Size size, PdfPageStatus status);
@@ -280,19 +275,14 @@ class _PdfPageViewState extends State<PdfPageView> {
       {Size? size,
       PdfPagePlaceholderBuilder? placeholderBuilder,
       bool backgroundFill = true,
-      double? renderingPixelRatio,
-      bool dontUseTexture = false}) {
+      double? renderingPixelRatio}) {
     return LayoutBuilder(builder: (context, constraints) {
       final finalSize = size ?? _sizeFromConstraints(constraints, _pageSize);
       final finalPlaceholderBuilder = placeholderBuilder ??
           (size, status) =>
               Container(width: size.width, height: size.height, color: Color.fromARGB(255, 220, 220, 220));
       return FutureBuilder<bool>(
-          future: _buildTexture(
-              size: size,
-              backgroundFill: backgroundFill,
-              renderingPixelRatio: renderingPixelRatio,
-              dontUseTexture: dontUseTexture),
+          future: _buildTexture(size: size, backgroundFill: backgroundFill, renderingPixelRatio: renderingPixelRatio),
           initialData: false,
           builder: (context, snapshot) {
             if (snapshot.data != true) {
@@ -315,12 +305,7 @@ class _PdfPageViewState extends State<PdfPageView> {
     });
   }
 
-  Future<bool> _buildTexture({
-    required Size? size,
-    bool backgroundFill = true,
-    double? renderingPixelRatio,
-    bool dontUseTexture = false,
-  }) async {
+  Future<bool> _buildTexture({required Size? size, bool backgroundFill = true, double? renderingPixelRatio}) async {
     if (_doc == null ||
         widget.pageNumber == null ||
         widget.pageNumber! < 1 ||
@@ -331,30 +316,21 @@ class _PdfPageViewState extends State<PdfPageView> {
 
     final pixelRatio = renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
     final pixelSize = size! * pixelRatio;
-    if (dontUseTexture == true) {
-      _image = await _page!.render(
-          width: pixelSize.width.toInt(),
-          height: pixelSize.height.toInt(),
-          fullWidth: pixelSize.width,
-          fullHeight: pixelSize.height,
-          backgroundFill: backgroundFill);
-      await _image!.createImageIfNotAvailable();
-    } else {
-      if (_texture == null || _texture!.pdfDocument != _doc || _texture!.pageNumber != widget.pageNumber) {
-        _image?.dispose();
-        _image = null;
-        _texture?.dispose();
-        _texture = await PdfPageImageTexture.create(pdfDocument: _doc!, pageNumber: widget.pageNumber!);
-      }
-      await _texture!.updateRect(
-          width: pixelSize.width.toInt(),
-          height: pixelSize.height.toInt(),
-          texWidth: pixelSize.width.toInt(),
-          texHeight: pixelSize.height.toInt(),
-          fullWidth: pixelSize.width,
-          fullHeight: pixelSize.height,
-          backgroundFill: backgroundFill);
+    if (_texture == null || _texture!.pdfDocument != _doc || _texture!.pageNumber != widget.pageNumber) {
+      _image?.dispose();
+      _image = null;
+      _texture?.dispose();
+      _texture = await PdfPageImageTexture.create(pdfDocument: _doc!, pageNumber: widget.pageNumber!);
     }
+    await _texture!.updateRect(
+        width: pixelSize.width.toInt(),
+        height: pixelSize.height.toInt(),
+        texWidth: pixelSize.width.toInt(),
+        texHeight: pixelSize.height.toInt(),
+        fullWidth: pixelSize.width,
+        fullHeight: pixelSize.height,
+        backgroundFill: backgroundFill);
+
     return true;
   }
 }
@@ -379,67 +355,75 @@ class PdfViewerController extends TransformationController {
   }
 
   /// Whether the controller is ready or not.
-  bool get isReady => _state != null;
+  bool get isReady => _state?._pages != null;
+
+  /// Helper method to return null when the controller is not ready([isReady]).
+  /// It is useful if you want ot call methods like [goTo] with the property like the following fragment:
+  /// ```dart
+  /// controller.ready?.goToPage(pageNumber: 1);
+  /// ```
+  PdfViewerController? get ready => isReady ? this : null;
 
   /// Get total page count in the PDF document.
-  int? get pageCount => _state?._pages?.length;
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  int get pageCount => _state!._pages!.length;
 
-  /// Get page location.
-  Rect? getPageRect(int pageNumber) => _state == null
-      ? null
-      : _state!._pages!.cast<_PdfPageState?>().firstWhere((p) => p!.pageNumber == pageNumber, orElse: () => null)?.rect;
+  /// Get page location. If the page is out of view, it returns null.
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  Rect? getPageRect(int pageNumber) => _state!._pages![pageNumber - 1].rect;
 
   /// Calculate the matrix that corresponding to the page position.
-  /// [defValue] is the default value for invalid page number case.
-  /// Sometimes it's difficult to know whether the page number is valid for
-  /// the document before actually opening the document, especially
-  /// when you're handling a thing like a web URL with `#page=NNN` fragment
-  /// and such a default value is very useful in such case.
-  Matrix4? calculatePageFitMatrix({required int? pageNumber, double? padding, Matrix4? defValue}) {
-    if (pageNumber == null || pageNumber < 1 || pageNumber > pageCount!) {
-      return defValue ?? Matrix4.identity();
-    }
+  /// If the page is out of view, it returns null.
+  Matrix4? calculatePageFitMatrix({required int pageNumber, double? padding}) {
     final rect = getPageRect(pageNumber)?.inflate(padding ?? _state!._padding);
     if (rect == null) return null;
     final scale = _state!._lastViewSize!.width / rect.width;
     final left = max(0.0, min(rect.left, _state!._docSize!.width - _state!._lastViewSize!.width));
     final top = max(0.0, min(rect.top, _state!._docSize!.height - _state!._lastViewSize!.height));
     return Matrix4.compose(
-        math64.Vector3(-left, -top, 0), math64.Quaternion.identity(), math64.Vector3(scale, scale, 1));
+      math64.Vector3(-left, -top, 0),
+      math64.Quaternion.identity(),
+      math64.Vector3(scale, scale, 1),
+    );
   }
 
   /// Go to the destination specified by the matrix.
   /// To go to a specific page, use [goToPage] method or use [calculatePageFitMatrix] method to calculate the page location matrix.
+  /// If [destination] is null, the method does nothing.
   Future<void> goTo({Matrix4? destination, Duration duration = const Duration(milliseconds: 200)}) =>
       _state!._goTo(destination: destination, duration: duration);
 
+  /// Go to the specified page.
   Future<void> goToPage(
           {required int pageNumber, double? padding, Duration duration = const Duration(milliseconds: 500)}) =>
       goTo(destination: calculatePageFitMatrix(pageNumber: pageNumber, padding: padding), duration: duration);
 
   /// Current view rectangle.
-  Rect? get viewRect => _state == null
-      ? null
-      : Rect.fromLTWH(-value.row0[3], -value.row1[3], _state!._lastViewSize!.width, _state!._lastViewSize!.height);
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  Rect get viewRect =>
+      Rect.fromLTWH(-value.row0[3], -value.row1[3], _state!._lastViewSize!.width, _state!._lastViewSize!.height);
 
   /// Current view zoom ratio.
-  double? get zoomRatio => _state == null ? null : value.row0[0];
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  double get zoomRatio => value.row0[0];
 
   /// Get list of the page numbers of the pages visible inside the viewport.
-  /// The map keys are the page numbers. And each page number is associated to the page area (width x height) exposed to the viewport;
-  Map<int, double>? get visiblePages => _state?._visiblePages;
+  /// The map keys are the page numbers.
+  /// And each page number is associated to the page area (width x height) exposed to the viewport;
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  Map<int, double> get visiblePages => _state!._visiblePages;
 
   /// Get the current page number by obtaining the page that has the largest area from [visiblePages].
   /// If no pages are visible, it returns 1.
-  int? get currentPageNumber {
-    if (visiblePages == null) return null;
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  int get currentPageNumber {
     MapEntry<int, double>? max;
-    for (final v in visiblePages!.entries) {
+    for (final v in visiblePages.entries) {
       if (max == null || max.value < v.value) {
         max = v;
       }
     }
-    return max?.key;
+    return max?.key ?? 1;
   }
 }
 
@@ -537,7 +521,7 @@ class PdfViewer extends StatefulWidget {
 class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMixin {
   PdfDocument? _doc;
   List<_PdfPageState>? _pages;
-  PdfViewerController? _myController;
+  final _myController = PdfViewerController();
   Size? _lastViewSize;
   Timer? _realSizeUpdateTimer;
   Size? _docSize;
@@ -565,9 +549,11 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
       init();
     } else if (oldWidget.pageNumber != widget.pageNumber) {
       widget.onViewerControllerInitialized?.call(_controller);
-      final m = _controller!.calculatePageFitMatrix(pageNumber: widget.pageNumber);
-      if (m != null) {
-        _controller!.value = m;
+      if (widget.pageNumber != null) {
+        final m = _controller!.calculatePageFitMatrix(pageNumber: widget.pageNumber!);
+        if (m != null) {
+          _controller!.value = m;
+        }
       }
     }
   }
@@ -583,9 +569,6 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   void init() {
     _controller?.removeListener(_determinePagesToShow);
     _controller?._setViewerState(null);
-    if (widget.viewerController == null) {
-      _myController ??= PdfViewerController();
-    }
     load();
   }
 
@@ -595,7 +578,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     _releasePages();
     _controller?.removeListener(_determinePagesToShow);
     _controller?._setViewerState(null);
-    _myController?.dispose();
+    _myController.dispose();
     _animController.dispose();
     super.dispose();
   }
@@ -614,7 +597,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
     if (_doc != null) {
       final pages = <_PdfPageState>[];
-      final firstPage = await (_doc!.getPage(1) as FutureOr<PdfPage>);
+      final firstPage = await _doc!.getPage(1);
       final pageSize1 = Size(firstPage.width, firstPage.height);
       for (int i = 0; i < _doc!.pageCount; i++) {
         pages.add(_PdfPageState._(pageNumber: i + 1, pageSize: pageSize1));
@@ -697,7 +680,10 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
         if (mounted) {
           if (widget.pageNumber != null) {
-            _controller!.value = _controller!.calculatePageFitMatrix(pageNumber: widget.pageNumber)!;
+            final m = _controller!.calculatePageFitMatrix(pageNumber: widget.pageNumber!);
+            if (m != null) {
+              _controller!.value = m;
+            }
           }
           _forceUpdatePagePreviews = true;
           _determinePagesToShow();

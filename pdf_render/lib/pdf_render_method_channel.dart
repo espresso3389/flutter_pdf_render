@@ -12,23 +12,22 @@ import 'interfaces/pdf_render_platform_interface.dart';
 const MethodChannel _channel = const MethodChannel('pdf_render');
 
 class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
-  PdfDocument? _open(Object? obj, String sourceName) {
-    if (obj is Map<dynamic, dynamic>) {
-      final pageCount = obj['pageCount'] as int;
-      return PdfDocumentMethodChannel._(
-        sourceName: sourceName,
-        docId: obj['docId'] as int,
-        pageCount: pageCount,
-        verMajor: obj['verMajor'] as int,
-        verMinor: obj['verMinor'] as int,
-        isEncrypted: obj['isEncrypted'] as bool,
-        allowsCopying: obj['allowsCopying'] as bool,
-        allowsPrinting: obj['allowsPrinting'] as bool,
-        //isUnlocked: obj['isUnlocked'] as bool
-      );
-    } else {
+  PdfDocument? _open(Map<dynamic, dynamic>? obj, String sourceName) {
+    if (obj == null) {
       return null;
     }
+    final pageCount = obj['pageCount'] as int;
+    return PdfDocumentMethodChannel._(
+      sourceName: sourceName,
+      docId: obj['docId'] as int,
+      pageCount: pageCount,
+      verMajor: obj['verMajor'] as int,
+      verMinor: obj['verMinor'] as int,
+      isEncrypted: obj['isEncrypted'] as bool,
+      allowsCopying: obj['allowsCopying'] as bool,
+      allowsPrinting: obj['allowsPrinting'] as bool,
+      //isUnlocked: obj['isUnlocked'] as bool
+    );
   }
 
   /// Opening the specified file.
@@ -91,19 +90,20 @@ class PdfDocumentMethodChannel extends PdfDocument {
 
   /// Get page object. The first page is 1.
   @override
-  Future<PdfPage?> getPage(int pageNumber) async {
-    if (pageNumber < 1 || pageNumber > pageCount) return null;
+  Future<PdfPage> getPage(int pageNumber) async {
+    if (pageNumber < 1 || pageNumber > pageCount) {
+      throw RangeError.range(pageNumber, 1, pageCount);
+    }
     var page = _pages[pageNumber - 1];
     if (page == null) {
-      var obj = await _channel.invokeMethod('page', {"docId": docId, "pageNumber": pageNumber});
-      if (obj is Map<dynamic, dynamic>) {
-        page = _pages[pageNumber - 1] = PdfPageMethodChannel._(
-          document: this,
-          pageNumber: pageNumber,
-          width: obj['width'] as double,
-          height: obj['height'] as double,
-        );
-      }
+      var obj =
+          (await _channel.invokeMethod<Map<dynamic, dynamic>>('page', {"docId": docId, "pageNumber": pageNumber}))!;
+      page = _pages[pageNumber - 1] = PdfPageMethodChannel._(
+        document: this,
+        pageNumber: pageNumber,
+        width: obj['width'] as double,
+        height: obj['height'] as double,
+      );
     }
     return page;
   }
@@ -128,9 +128,9 @@ class PdfPageMethodChannel extends PdfPage {
       : super(document: document, pageNumber: pageNumber, width: width, height: height);
 
   @override
-  Future<PdfPageImage?> render({
-    int? x,
-    int? y,
+  Future<PdfPageImage> render({
+    int x = 0,
+    int y = 0,
     int? width,
     int? height,
     double? fullWidth,
@@ -213,9 +213,9 @@ class PdfPageImageMethodChannel extends PdfPageImage {
 
   /// Create cached [Image] for the page.
   @override
-  Future<ui.Image?> createImageIfNotAvailable() async {
+  Future<ui.Image> createImageIfNotAvailable() async {
     _imageCached ??= await _decodeRgba(width, height, _pixels);
-    return _imageCached;
+    return _imageCached!;
   }
 
   /// Get [Image] for the object if available; otherwise null.
@@ -226,9 +226,9 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   @override
   Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
 
-  static Future<PdfPageImage?> _render(
+  static Future<PdfPageImage> _render(
     PdfDocumentMethodChannel document,
-    int? pageNumber, {
+    int pageNumber, {
     int? x,
     int? y,
     int? width,
@@ -238,7 +238,7 @@ class PdfPageImageMethodChannel extends PdfPageImage {
     bool? backgroundFill,
     bool? allowAntialiasingIOS,
   }) async {
-    var obj = await _channel.invokeMethod('render', {
+    final obj = (await _channel.invokeMethod<Map<dynamic, dynamic>>('render', {
       'docId': document.docId,
       'pageNumber': pageNumber,
       'x': x,
@@ -249,38 +249,31 @@ class PdfPageImageMethodChannel extends PdfPageImage {
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill,
       'allowAntialiasingIOS': allowAntialiasingIOS,
-    });
+    }))!;
 
-    if (obj is Map<dynamic, dynamic>) {
-      final retWidth = obj['width'] as int;
-      final retHeight = obj['height'] as int;
-      Pointer<Uint8>? ptr;
-      var pixels = obj['data'] as Uint8List?;
-      if (pixels == null) {
-        final addr = obj['addr'] as int?;
-        final size = obj['size'] as int?;
-        if (addr != null && size != null) {
+    final retWidth = obj['width'] as int;
+    final retHeight = obj['height'] as int;
+    Pointer<Uint8>? ptr;
+    var pixels = obj['data'] as Uint8List? ??
+        () {
+          final addr = obj['addr'] as int;
+          final size = obj['size'] as int;
           ptr = Pointer<Uint8>.fromAddress(addr);
-          pixels = ptr.asTypedList(size);
-        } else {
-          return null;
-        }
-      }
+          return ptr!.asTypedList(size);
+        }();
 
-      return PdfPageImageMethodChannel._(
-          pageNumber: obj['pageNumber'] as int,
-          x: obj['x'] as int,
-          y: obj['y'] as int,
-          width: retWidth,
-          height: retHeight,
-          fullWidth: obj['fullWidth'] as double,
-          fullHeight: obj['fullHeight'] as double,
-          pageWidth: obj['pageWidth'] as double,
-          pageHeight: obj['pageHeight'] as double,
-          pixels: pixels,
-          buffer: ptr);
-    }
-    return null;
+    return PdfPageImageMethodChannel._(
+        pageNumber: obj['pageNumber'] as int,
+        x: obj['x'] as int,
+        y: obj['y'] as int,
+        width: retWidth,
+        height: retHeight,
+        fullWidth: obj['fullWidth'] as double,
+        fullHeight: obj['fullHeight'] as double,
+        pageWidth: obj['pageWidth'] as double,
+        pageHeight: obj['pageHeight'] as double,
+        pixels: pixels,
+        buffer: ptr);
   }
 
   static Future<PdfPageImage?> render(String filePath, int pageNumber,
@@ -294,7 +287,7 @@ class PdfPageImageMethodChannel extends PdfPageImage {
       bool allowAntialiasingIOS = false}) async {
     final doc = await PdfDocument.openFile(filePath);
     if (doc == null) return null;
-    final page = await (doc.getPage(pageNumber) as FutureOr<PdfPage>);
+    final page = await doc.getPage(pageNumber);
     final image = await page.render(
         x: x,
         y: y,
@@ -346,9 +339,7 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
       : super(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
 
   /// Release the object.
-  Future<void> dispose() async {
-    await _channel.invokeMethod('releaseTex', texId);
-  }
+  Future<void> dispose() => _channel.invokeMethod('releaseTex', texId);
 
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle
   /// ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
@@ -368,7 +359,7 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
       double? fullHeight,
       bool backgroundFill = true,
       bool allowAntialiasingIOS = true}) async {
-    final result = await (_channel.invokeMethod<int>('updateTex', {
+    final result = (await _channel.invokeMethod<int>('updateTex', {
       'docId': _doc.docId,
       'pageNumber': pageNumber,
       'texId': texId,
@@ -384,7 +375,7 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill,
       'allowAntialiasingIOS': allowAntialiasingIOS,
-    }) as FutureOr<int>);
+    }))!;
     if (result >= 0) {
       _texWidth = texWidth ?? _texWidth;
       _texHeight = texHeight ?? _texHeight;
