@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math64;
 
 import 'pdf_render.dart';
-import 'wrappers/pdf_texture.dart';
+import 'src/wrappers/pdf_texture.dart';
 
 /// Function definition to build widget tree for a PDF document.
 /// [pdfDocument] is the PDF document and it is valid until the corresponding

@@ -1,1 +1,1 @@
-export 'interfaces/pdf_render.dart';
+export 'src/interfaces/pdf_render.dart';
