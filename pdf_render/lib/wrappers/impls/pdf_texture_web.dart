@@ -32,6 +32,17 @@ class _PdfTextureState extends State<PdfTexture> {
   }
 
   @override
+  void didUpdateWidget(covariant PdfTexture oldWidget) {
+    if (oldWidget.textureId != widget.textureId) {
+      _WebTextureManager.instance.unregister(oldWidget.textureId, this);
+      _WebTextureManager.instance.register(widget.textureId, this);
+      _image = null;
+      _requestUpdate();
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return RawImage(
       image: _image,

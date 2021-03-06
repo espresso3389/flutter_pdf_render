@@ -9,27 +9,11 @@ import '../wrappers/html.dart' as html;
 import '../wrappers/js_util.dart' as js_util;
 import 'pdf.js.dart';
 
-//final pdfjsUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.js';
-//final pdfWorkerJsUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js';
-// globalWorkerOptions.workerSrc = pdfWorkerJsUrl;
-
 class PdfRenderWebPlugin {
   static void registerWith(Registrar registrar) {
     final channel = MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
     final plugin = PdfRenderWebPlugin._();
     channel.setMethodCallHandler(plugin.handleMethodCall);
-    /*
-    final body = html.querySelector('body')!;
-    final script = html.ScriptElement()
-      ..type = "text/javascript"
-      ..charset = "utf-8"
-      ..async = true
-      ..onLoad.listen((event) {
-        channel.setMethodCallHandler(plugin.handleMethodCall);
-      });
-    body.children.add(script);
-    script.src = pdfjsUrl;
-    */
   }
 
   PdfRenderWebPlugin._() {
@@ -118,7 +102,7 @@ class PdfRenderWebPlugin {
   }
 
   int _allocTex() {
-    return (++_texId) ^ 0x325741;
+    return ++_texId;
   }
 
   void _releaseTex(int id) {
@@ -143,7 +127,7 @@ class PdfRenderWebPlugin {
     if (oldData != null && oldData.width == width && oldData.height == height) {
       return oldData;
     }
-    final data = _textures[id] = RgbaData.alloc(width, height);
+    final data = _textures[id] = RgbaData.alloc(id: id, width: width, height: height);
     js_util.setProperty(html.window, 'pdf_render_texture_$id', data);
     return data;
   }
@@ -169,17 +153,14 @@ class PdfRenderWebPlugin {
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
     if (width == null || height == null || width <= 0 || height <= 0) return -7;
 
-    final srcX = args['srcX'] as int? ?? 0;
-    final offsetX = srcX.toDouble() + width - fullWidth;
-
-    final srcY = args['srcY'] as int? ?? 0;
-    final offsetY = srcY.toDouble() + height - fullHeight;
+    final offsetX = -(args['srcX'] as int? ?? 0).toDouble();
+    final offsetY = -(args['srcY'] as int? ?? 0).toDouble();
 
     final vp = page.getViewport(PdfjsViewportParams(
       scale: fullWidth / pw,
       offsetX: offsetX,
       offsetY: offsetY,
-      dontFlip: true,
+      dontFlip: false,
     ));
 
     final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
@@ -192,24 +173,27 @@ class PdfRenderWebPlugin {
       canvas.context2D.fillRect(0, 0, width, height);
     }
 
-    try {
-      await js_util
-          .promiseToFuture(page.render(PdfjsRenderContext(canvasContext: canvas.context2D, viewport: vp)).promise);
-    } catch (e) {
-      print('$e');
-    }
+    await js_util.promiseToFuture(page
+        .render(
+          PdfjsRenderContext(
+            canvasContext: canvas.context2D,
+            viewport: vp,
+          ),
+        )
+        .promise);
 
     final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
+
     final destStride = data.stride;
     final bpl = width * 4;
     int dp = data.getOffset(destX, destY);
-    int sp = 0;
+    int sp = bpl * (height - 1);
     for (int y = 0; y < height; y++) {
       for (int i = 0; i < bpl; i++) {
         data.data[dp + i] = src[sp + i];
       }
       dp += destStride;
-      sp += bpl;
+      sp -= bpl;
     }
 
     _eventStreamController.sink.add(id);
@@ -219,6 +203,7 @@ class PdfRenderWebPlugin {
 
 @immutable
 class RgbaData {
+  final int id;
   final int width;
   final int height;
   final Uint8List data;
@@ -226,10 +211,20 @@ class RgbaData {
   int get stride => width * 4;
   int getOffset(int x, int y) => (x + y * width) * 4;
 
-  RgbaData(this.width, this.height, this.data);
+  RgbaData(this.id, this.width, this.height, this.data);
 
-  factory RgbaData.alloc(int width, int height) => RgbaData(width, height, Uint8List(width * 4 * height));
+  factory RgbaData.alloc({
+    required int id,
+    required int width,
+    required int height,
+  }) =>
+      RgbaData(
+        id,
+        width,
+        height,
+        Uint8List(width * 4 * height),
+      );
 
   @override
-  String toString() => 'RgbaData($width x $height, data.length=${data.length})';
+  String toString() => 'RgbaData(id=$id, $width x $height)';
 }

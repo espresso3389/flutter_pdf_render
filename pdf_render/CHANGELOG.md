@@ -1,3 +1,7 @@
+## 1.0.1
+
+* Flutter Web support now works correctly.
+
 ## 1.0.0
 
 * Stable release for null-safety.
