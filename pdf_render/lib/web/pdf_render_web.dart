@@ -145,7 +145,7 @@ class PdfRenderWebPlugin {
     final pw = vp1.width;
     final ph = vp1.height;
     final fullWidth = args['fullWidth'] as double? ?? pw;
-    final fullHeight = args['fullHeight'] as double? ?? ph;
+    //final fullHeight = args['fullHeight'] as double? ?? ph;
     final destX = args['destX'] as int? ?? 0;
     final destY = args['destY'] as int? ?? 0;
     final width = args['width'] as int?;
