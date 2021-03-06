@@ -1,6 +1,7 @@
 ## 1.0.0-dev
 
 * Initial release that supports null-safety (Currently not compatible with Flutter stable).
+* BREAKING CHANGE: pdf_render_widget2 overwrites pdf_render_widget.
 * Alpha preview of Flutter Web support (I mean, not yet working correctly).
 
 # 0.69.0

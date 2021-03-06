@@ -4,19 +4,15 @@
 
 ## Widgets
 
-### Note on iOS Simulator
-
-The plugin uses Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) to realize fast rendering of PDF pages and it does not work correctly in iOS Simulator and the plugin will fallback to compatibility rendering mode.
-
-Please use the physical device to test the actual behavior.
-
 ### Importing Widgets Library
 
-Although 0.61.0 introduces new PDF rendering widgets, it also contains deprecated but backward compatible old widgets too. Anyway if you're new to the plugin, you had better use the new widgets with the following import:
+Firstly, you must add the following import:
 
 ```dart
-import 'package:pdf_render/pdf_render_widgets2.dart';
+import 'package:pdf_render/pdf_render_widgets.dart';
 ```
+
+_BREAKING CHANGE ON 1.0.0: Please note that 1.0.0 removes the old deprecated widgets and now has only `pdf_render_widgets.dart`; it is the rename of `pdf_render_widgets2.dart` in the older (0.X.Y) releases._
 
 ### PdfViewer
 
