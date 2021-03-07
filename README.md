@@ -1,8 +1,21 @@
-## Introduction
+# Introduction
 
 [pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21) and Web. It provides you with intermediate PDF rendering APIs and also easy-to-use Flutter Widgets.
 
-### Flutter Web Support
+![](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
+
+# Install
+
+Add this to your package's pubspec.yaml file and execute `flutter pub get`:
+
+```yaml
+dependencies:
+  pdf_render: ^1.0.3
+```
+
+## Web
+
+For Web, you should add `<script>` tags on your `index.html`:
 
 The plugin now utilizes [PDF.js](https://mozilla.github.io/pdf.js/) to support Flutter Web (still very early stage of implementation).
 
@@ -10,15 +23,12 @@ To use the Flutter Web support, you should add the following code just before `<
 
 ```html
   <!-- IMPORTANT: load pdfjs files -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.js" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/build/pdf.js" type="text/javascript"></script>
   <script type="text/javascript">
-    // set worker script source URL
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/build/pdf.worker.min.js";
-    // options vital to the plugin
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/build/pdf.worker.min.js";
     pdfRenderOptions = {
-      // for correctly loading cmaps, we should specify
-      // https://cdn.jsdelivr.net/npm/pdfjs-dist@2.5.207/cmap/ or it in relative form.
-      cMapUrl: '../cmaps/',
+      // where cmaps are downloaded from
+      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/cmaps/',
       // The cmaps are compressed in the case
       cMapPacked: true,
       // any other options for pdfjsLib.getDocument.
@@ -30,10 +40,13 @@ To use the Flutter Web support, you should add the following code just before `<
 You can use any URL that specify `PDF.js` distribution URL.
 `cMapUrl` indicates cmap files base URL and `cMapPacked` determines whether the cmap files are compressed or not.
 
+## iOS/Android
 
-## Widgets
+For iOS and Android, no additional task needed.
 
-### Importing Widgets Library
+# Widgets
+
+## Import Widgets Library
 
 Firstly, you must add the following import:
 
@@ -43,9 +56,9 @@ import 'package:pdf_render/pdf_render_widgets.dart';
 
 _BREAKING CHANGE ON 1.0.0: Please note that 1.0.0 removes the old deprecated widgets and now has only `pdf_render_widgets.dart`; it is the rename of `pdf_render_widgets2.dart` in the older (0.X.Y) releases._
 
-### PdfViewer
+## PdfViewer
 
-`PdfViewer` is an extensible PDF document viewer widget which supports pinch-zoom.
+[PdfViewer](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer-class.html) is an extensible PDF document viewer widget which supports pinch-zoom.
 
 The following fragment is a simplest use of the widget:
 
@@ -64,7 +77,7 @@ The following fragment is a simplest use of the widget:
   }
 ```
 
-`PdfViewerController` can be used to obtain number of pages inside the document and it also provide `goTo` and `goToPage` methods
+[PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) can be used to obtain number of pages inside the document and it also provide [goTo](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goTo.html) and [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) methods
 that you can scroll the viewer to make certain page/area of the document visible:
 
 ```dart
@@ -102,19 +115,19 @@ that you can scroll the viewer to make certain page/area of the document visible
   }
 ```
 
-`PdfViewerController` implementation is based on [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) and you can use almost all parameters of InteractiveViewer.
+[PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) implementation is based on [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) and you can use almost all parameters of InteractiveViewer.
 
-#### Page decoration
+### Page decoration
 
-Each page shown in `PdfViewerController` is by default has drop-shadow using [BoxDecoration](https://api.flutter.dev/flutter/painting/BoxDecoration-class.html). You can override the appearance by `pageDecoration` property.
+Each page shown in [PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) is by default has drop-shadow using [BoxDecoration](https://api.flutter.dev/flutter/painting/BoxDecoration-class.html). You can override the appearance by [pageDecoration](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/pageDecoration.html) property.
 
-#### Further page appearance customization
+### Further page appearance customization
 
-`buildPagePlaceholder` is used to customize the white blank page that is shown before loading the page contents.
+[buildPagePlaceholder](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/buildPagePlaceholder.html) is used to customize the white blank page that is shown before loading the page contents.
 
-`buildPageOverlay` is used to overlay something on every page.
+[buildPageOverlay](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/buildPageOverlay.html) is used to overlay something on every page.
 
-Both functions are defined as `BuildPageContentFunc`:
+Both functions are defined as [BuildPageContentFunc](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/BuildPageContentFunc.html):
 
 ```dart
 typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
@@ -122,9 +135,9 @@ typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNum
 
 The third parameter, `pageRect` is location of page in viewer's world coordinates.
 
-### Single page view
+## Single page view
 
-The following fragment illustrates the easiest way to render only one page of a PDF document using `PdfDocumentLoader`. It is suitable for showing PDF thumbnail.
+The following fragment illustrates the easiest way to render only one page of a PDF document using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html). It is suitable for showing PDF thumbnail.
 
 ```dart
   @override
@@ -147,11 +160,11 @@ The following fragment illustrates the easiest way to render only one page of a 
   }
 ```
 
-Of course, `PdfDocumentLoader` accepts one of `filePath`, `assetName`, or `data` to load PDF document from a file, or other sources.
+Of course, [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) accepts one of `filePath`, `assetName`, or `data` to load PDF document from a file, or other sources.
 
-### Multi-page view using ListView.builder
+## Multi-page view using ListView.builder
 
-Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multiple pages of a PDF document. In the following fragment, `ListView.builder` is utilized to realize scrollable PDF document viewer.
+Using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) in combination with [PdfPageView](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfPageView-class.html), you can show multiple pages of a PDF document. In the following fragment, `ListView.builder` is utilized to realize scrollable PDF document viewer.
 
 ```dart
   @override
@@ -186,9 +199,9 @@ Using `PdfDocumentLoader` in combination with `PdfPageView`, you can show multip
   }
 ```
 
-### Customizing page widget
+## Customizing page widget
 
-Both `PdfDocumentLoader` and `PdfPageView` accepts `pageBuilder` parameter if you want to customize the visual of each page. The following fragment illustrates that:
+Both [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) and [PdfPageView](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfPageView-class.html) accepts `pageBuilder` parameter if you want to customize the visual of each page. The following fragment illustrates that:
 
 ```dart
 PdfPageView(
@@ -221,9 +234,9 @@ PdfPageView(
 )
 ```
 
-### textureBuilder
+## textureBuilder
 
-`textureBuilder` (`PdfPageTextureBuilder`) generates the actual widget that directly corresponding to the page image. The actual widget generated may vary upon the situation. But you can of course customize the behavior of the function with its parameter.
+`textureBuilder` ([PdfPageTextureBuilder](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfPageTextureBuilder.html)) generates the actual widget that directly corresponding to the page image. The actual widget generated may vary upon the situation. But you can of course customize the behavior of the function with its parameter.
 
 The function is defined as:
 
@@ -255,9 +268,9 @@ enum PdfPageStatus {
 }
 ```
 
-## PDF rendering APIs
+# PDF rendering APIs
 
-The following fragment illustrates overall usage of `PdfDocument`:
+The following fragment illustrates overall usage of [PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfDocument-class.html):
 
 ```dart
 import 'package:pdf_render/pdf_render.dart';
@@ -289,7 +302,7 @@ doc!.dispose();
 
 ```
 
-And then, you can use `PdfPageImage` to get the actual RGBA image in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html).
+And then, you can use [PdfPageImage](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImage-class.html) to get the actual RGBA image in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html).
 
 To embed the image in the widget tree, you can use [RawImage](https://docs.flutter.io/flutter/widgets/RawImage-class.html):
 
@@ -308,11 +321,11 @@ Widget build(BuildContext context) {
 }
 ```
 
-If you just building widget tree, you had better use faster and efficient `PdfPageImageTexture`.
+If you just building widget tree, you had better use faster and efficient [PdfPageImageTexture](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImageTexture-class.html).
 
 ## PdfDocument.openXXX
 
-On `PdfDocument` class, there are three functions to open PDF from a real file, an asset file, or a memory data.
+On [PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfDocument-class.html) class, there are three functions to open PDF from a real file, an asset file, or a memory data.
 
 ```dart
 // from an asset file
@@ -326,6 +339,8 @@ PdfDocument? docFromData = await PdfDocument.openData(data);
 ```
 
 ## PdfDocument members
+
+[PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfDocument-class.html) class overview:
 
 ```dart
 class PdfDocument {
@@ -354,6 +369,8 @@ class PdfDocument {
 
 ## PdfPage members
 
+[PdfPage](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPage-class.html) class overview:
+
 ```dart
 class PdfPage {
   final PdfDocument document; // For internal purpose
@@ -375,7 +392,7 @@ class PdfPage {
 }
 ```
 
-`render` function extracts a sub-region `(x,y)` - `(x + width, y + height)` from scaled `fullWidth` x `fullHeight` PDF page image. All the coordinates are in pixels.
+[render](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPage/render.html) function extracts a sub-region `(x,y)` - `(x + width, y + height)` from scaled `fullWidth` x `fullHeight` PDF page image. All the coordinates are in pixels.
 
 The following fragment renders the page at 300 dpi:
 
@@ -393,6 +410,8 @@ var rendered = page.render(
 ```
 
 ## PdfPageImage members
+
+[PdfPageImage](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImage-class.html) class overview:
 
 ```dart
 class PdfPageImage {
@@ -426,13 +445,13 @@ class PdfPageImage {
 }
 ```
 
-`createImageIfNotAvailable` generates image cache in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html) and `imageIfAvailable` returns the cached image if available.
+[createImageIfNotAvailable](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImage/createImageIfNotAvailable.html) generates image cache in [dart:ui.Image](https://api.flutter.dev/flutter/dart-ui/Image-class.html) and [imageIfAvailable](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImage/imageIfAvailable.html) returns the cached image if available.
 
-If you just need RGBA byte array, you can use `pixels` for that purpose. The pixel at `(x,y)` is on `pixels[(x+y*width)*4]`. Anyway, it's highly discouraged to modify the contents directly though it would work correctly.
+If you just need RGBA byte array, you can use [pixels](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImage/pixels.html) for that purpose. The pixel at `(x,y)` is on `pixels[(x+y*width)*4]`. Anyway, it's highly discouraged to modify the contents directly though it would work correctly.
 
 ## PdfPageImageTexture members
 
-The class is used to interact with Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) class to realize faster and resource-saving rendering comparing to PdfPageImage/RawImage combination.
+[PdfPageImageTexture](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImageTexture-class.html) is to utilize Flutter's [Texture](https://api.flutter.dev/flutter/widgets/Texture-class.html) class to realize faster and resource-saving rendering comparing to [PdfPageImage](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfPageImage-class.html)/[RawImage](https://api.flutter.dev/flutter/widgets/RawImage-class.html) combination.
 
 ```dart
 class PdfPageImageTexture {
@@ -440,8 +459,11 @@ class PdfPageImageTexture {
   final int pageNumber;
   final int texId;
 
-  bool operator ==(Object other);
-  int get hashCode;
+  int? get texWidth;
+  int? get texHeight;
+  bool get hasUpdatedTexture;
+
+  PdfPageImageTexture({required this.pdfDocument, required this.pageNumber, required this.texId});
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
   static Future<PdfPageImageTexture> create({required PdfDocument pdfDocument, required int pageNumber});
@@ -467,3 +489,4 @@ class PdfPageImageTexture {
   });
 }
 ```
+

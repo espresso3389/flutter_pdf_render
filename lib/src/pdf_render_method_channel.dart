@@ -197,7 +197,7 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   @override
   Uint8List get pixels => _pixels;
 
-  /// Pointer to the inernal RGBA image buffer if available; the size is calculated by `width*height*4`.
+  /// Pointer to the internal RGBA image buffer if available; the size is calculated by `width*height*4`.
   @override
   Pointer<Uint8>? get buffer => _buffer;
 

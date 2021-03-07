@@ -336,7 +336,7 @@ class _PdfPageViewState extends State<PdfPageView> {
 }
 
 typedef LayoutPagesFunc = List<Rect> Function(Size contentViewSize, List<Size> pageSizes);
-typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect? pageRect);
+typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
 
 /// Controller for [PdfViewer].
 /// It is derived from [TransformationController] and basically compatible to [ValueNotifier<Matrix4>].
@@ -738,7 +738,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
                   builder: (context, value, child) => page.preview != null
                       ? Positioned.fill(child: PdfTexture(textureId: page.preview!.texId))
                       : widget.buildPagePlaceholder != null
-                          ? widget.buildPagePlaceholder!(context, page.pageNumber, page.rect)
+                          ? widget.buildPagePlaceholder!(context, page.pageNumber, page.rect!)
                           : Container()),
               ValueListenableBuilder<int>(
                   valueListenable: page._realSizeNotifier,
@@ -750,7 +750,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
                           height: page.realSizeOverlayRect!.height,
                           child: PdfTexture(textureId: page.realSize!.texId))
                       : Container()),
-              if (widget.buildPageOverlay != null) widget.buildPageOverlay!(context, page.pageNumber, page.rect),
+              if (widget.buildPageOverlay != null) widget.buildPageOverlay!(context, page.pageNumber, page.rect!),
             ]),
             decoration: widget.pageDecoration ??
                 BoxDecoration(

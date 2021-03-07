@@ -8,6 +8,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import '../wrappers/html.dart' as html;
 import '../wrappers/js_util.dart' as js_util;
 import 'pdf.js.dart';
+import '../utils/web_pointer.dart';
 
 class PdfRenderWebPlugin {
   static void registerWith(Registrar registrar) {
@@ -35,7 +36,10 @@ class PdfRenderWebPlugin {
   Future<dynamic> handleMethodCall(MethodCall call) async {
     switch (call.method) {
       case 'file':
-        throw Exception('`file` is not implemented yet.');
+        {
+          final doc = await pdfjsGetDocument(call.arguments as String);
+          return _setDoc(doc);
+        }
       case 'asset':
         {
           final assetPath = call.arguments as String;
@@ -55,6 +59,10 @@ class PdfRenderWebPlugin {
         return _getDoc(call.arguments as int);
       case 'page':
         return await _openPage(call.arguments);
+      case 'render':
+        return await _render(call.arguments);
+      case 'releaseBuffer':
+        return await _releaseBuffer(call.arguments);
       case 'allocTex':
         return _allocTex();
       case 'releaseTex':
@@ -132,8 +140,24 @@ class PdfRenderWebPlugin {
     return data;
   }
 
-  Future<int> _updateTex(dynamic args) async {
-    final id = args['texId'] as int;
+  Future<dynamic> _render(dynamic args) async {
+    return await _renderRaw(args, dontFlip: true, handleRawData: (src, width, height) {
+      return {
+        'addr': pinBufferByFakeAddress(src),
+        'size': src.length,
+        'width': width,
+        'height': height,
+      };
+    });
+  }
+
+  Future<void> _releaseBuffer(dynamic args) async => unpinBufferByFakeAddress(args as int);
+
+  Future<dynamic> _renderRaw(
+    dynamic args, {
+    required bool dontFlip,
+    required FutureOr<dynamic> Function(Uint8List src, int width, int height) handleRawData,
+  }) async {
     final docId = args['docId'] as int;
     final doc = _docs[docId];
     if (doc == null) return -3;
@@ -143,27 +167,20 @@ class PdfRenderWebPlugin {
 
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
     final pw = vp1.width;
-    final ph = vp1.height;
+    //final ph = vp1.height;
     final fullWidth = args['fullWidth'] as double? ?? pw;
     //final fullHeight = args['fullHeight'] as double? ?? ph;
-    final destX = args['destX'] as int? ?? 0;
-    final destY = args['destY'] as int? ?? 0;
     final width = args['width'] as int?;
     final height = args['height'] as int?;
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
     if (width == null || height == null || width <= 0 || height <= 0) return -7;
 
-    final offsetX = -(args['srcX'] as int? ?? 0).toDouble();
-    final offsetY = -(args['srcY'] as int? ?? 0).toDouble();
+    final offsetX = -(args['srcX'] as int? ?? args['x'] as int? ?? 0).toDouble();
+    final offsetY = -(args['srcY'] as int? ?? args['y'] as int? ?? 0).toDouble();
 
-    final vp = page.getViewport(PdfjsViewportParams(
-      scale: fullWidth / pw,
-      offsetX: offsetX,
-      offsetY: offsetY,
-      dontFlip: false,
-    ));
+    final vp = page.getViewport(
+        PdfjsViewportParams(scale: fullWidth / pw, offsetX: offsetX, offsetY: offsetY, dontFlip: dontFlip));
 
-    final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
     final canvas = html.document.createElement('canvas') as html.CanvasElement;
     canvas.width = width;
     canvas.height = height;
@@ -183,21 +200,33 @@ class PdfRenderWebPlugin {
         .promise);
 
     final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
+    return await handleRawData(src, width, height);
+  }
 
-    final destStride = data.stride;
-    final bpl = width * 4;
-    int dp = data.getOffset(destX, destY);
-    int sp = bpl * (height - 1);
-    for (int y = 0; y < height; y++) {
-      for (int i = 0; i < bpl; i++) {
-        data.data[dp + i] = src[sp + i];
-      }
-      dp += destStride;
-      sp -= bpl;
-    }
-
-    _eventStreamController.sink.add(id);
-    return 0;
+  Future<int> _updateTex(dynamic args) async {
+    return await _renderRaw(
+      args,
+      dontFlip: false,
+      handleRawData: (src, width, height) {
+        final id = args['texId'] as int;
+        final destX = args['destX'] as int? ?? 0;
+        final destY = args['destY'] as int? ?? 0;
+        final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
+        final destStride = data.stride;
+        final bpl = width * 4;
+        int dp = data.getOffset(destX, destY);
+        int sp = bpl * (height - 1);
+        for (int y = 0; y < height; y++) {
+          for (int i = 0; i < bpl; i++) {
+            data.data[dp + i] = src[sp + i];
+          }
+          dp += destStride;
+          sp -= bpl;
+        }
+        _eventStreamController.sink.add(id);
+        return 0;
+      },
+    );
   }
 }
 

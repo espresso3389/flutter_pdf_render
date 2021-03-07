@@ -1,3 +1,11 @@
+## 1.0.3
+
+* Update documentation.
+
+## 1.0.2
+
+* cMapUrl setting fix for Flutter Web.
+
 ## 1.0.1
 
 * Flutter Web support now works correctly.
