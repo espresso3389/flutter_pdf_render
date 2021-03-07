@@ -41,6 +41,7 @@ abstract class PdfDocument {
   Future<void> dispose();
 
   /// Opening the specified file.
+  /// For Web, [filePath] can be relative path from `index.html` or any arbitrary URL but it may be restricted by CORS.
   static Future<PdfDocument?> openFile(String filePath) => PdfRenderPlatform.instance.openFile(filePath);
 
   /// Opening the specified asset.

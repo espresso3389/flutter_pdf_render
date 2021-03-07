@@ -6,7 +6,7 @@
 
 # Install
 
-Add this to your package's pubspec.yaml file and execute `flutter pub get`:
+Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
@@ -277,7 +277,8 @@ import 'package:pdf_render/pdf_render.dart';
 
 ...
 
-/// Open the document using either openFile, openAsset, or openData.
+// Open the document using either openFile, openAsset, or openData.
+// For Web, file name can be relative path from index.html or any arbitrary URL but affected by CORS.
 PdfDocument? doc = await PdfDocument.openAsset('assets/hello.pdf');
 if (doc == null) { /* error */ }
 
@@ -332,6 +333,7 @@ On [PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfD
 PdfDocument? docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
+// For Web, file name can be relative path from index.html or any arbitrary URL but affected by CORS.
 PdfDocument? docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List

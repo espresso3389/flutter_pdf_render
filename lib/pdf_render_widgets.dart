@@ -48,7 +48,8 @@ enum PdfPageStatus {
 }
 
 class PdfDocumentLoader extends StatefulWidget {
-  // only one of [filePath], [assetName], or [data] have to be specified.
+  /// only one of [filePath], [assetName], or [data] have to be specified.
+  /// For Web, [filePath] can be relative path from `index.html` or any arbitrary URL but it may be restricted by CORS.
   final String? filePath;
   final String? assetName;
   final Uint8List? data;
