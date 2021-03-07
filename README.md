@@ -71,7 +71,9 @@ The following fragment is a simplest use of the widget:
           title: const Text('Pdf_render example app'),
         ),
         backgroundColor: Colors.grey,
-        body: PdfViewer(assetName: 'assets/hello.pdf', pageNumber: 2); // show the page-2
+        body: PdfViewer(
+          assetName: 'assets/hello.pdf',
+          pageNumber: 2); // show the page-2
       )
     );
   }
@@ -91,7 +93,8 @@ that you can scroll the viewer to make certain page/area of the document visible
         ),
         backgroundColor: Colors.grey,
         body: PdfViewer(
-          assetName: 'assets/hello.pdf', onViewerControllerInitialized: (PdfViewerController c) {
+          assetName: 'assets/hello.pdf',
+          onViewerControllerInitialized: (PdfViewerController c) {
             controller = c;
             c.goToPage(pageNumber: 3); // scrolling animation to page 3.
           }
@@ -130,7 +133,10 @@ Each page shown in [PdfViewerController](https://pub.dev/documentation/pdf_rende
 Both functions are defined as [BuildPageContentFunc](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/BuildPageContentFunc.html):
 
 ```dart
-typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
+typedef BuildPageContentFunc = Widget Function(
+  BuildContext context,
+  int pageNumber,
+  Rect pageRect);
 ```
 
 The third parameter, `pageRect` is location of page in viewer's world coordinates.
@@ -278,7 +284,8 @@ import 'package:pdf_render/pdf_render.dart';
 ...
 
 // Open the document using either openFile, openAsset, or openData.
-// For Web, file name can be relative path from index.html or any arbitrary URL but affected by CORS.
+// For Web, file name can be relative path from index.html or any arbitrary URL
+// but affected by CORS.
 PdfDocument? doc = await PdfDocument.openAsset('assets/hello.pdf');
 if (doc == null) { /* error */ }
 
@@ -333,7 +340,8 @@ On [PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfD
 PdfDocument? docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
-// For Web, file name can be relative path from index.html or any arbitrary URL but affected by CORS.
+// For Web, file name can be relative path from index.html or any arbitrary URL
+// but affected by CORS.
 PdfDocument? docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List
@@ -442,7 +450,8 @@ class PdfPageImage {
   Future<Image> createImageIfNotAvailable() async;
 
   /// Get [Image] for the object if available; otherwise null.
-  /// If you want to ensure that the [Image] is available, call [createImageIfNotAvailable].
+  /// If you want to ensure that the [Image] is available,
+  /// call [createImageIfNotAvailable].
   Image? get imageIfAvailable;
 }
 ```
