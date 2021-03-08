@@ -29,11 +29,13 @@ class _MyAppState extends State<MyApp> {
                   Text(controller.isReady ? 'Page #${controller.currentPageNumber}' : 'Page -')),
         ),
         backgroundColor: Colors.grey,
-        body: PdfViewer(
-          assetName: 'assets/hello.pdf',
-          padding: 10,
-          minScale: 1.0,
+        body: PdfViewer.openAsset(
+          'assets/hello.pdf',
           viewerController: controller,
+          params: PdfViewerParams(
+            padding: 10,
+            minScale: 1.0,
+          ),
         ),
         floatingActionButton: Column(
           mainAxisAlignment: MainAxisAlignment.end,

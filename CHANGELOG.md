@@ -1,3 +1,7 @@
+## 1.0.4
+
+* BRAEKING CHANGES: PdfViewer and PdfDocumentLoader now has openFile, openAsset, and openData factory methods. Existing code must be changed to use these methods. Further more, the parameters on PdfViewer is moved to PdfViewerParams.
+
 ## 1.0.3
 
 * Update documentation.

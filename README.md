@@ -1,6 +1,6 @@
 # Introduction
 
-[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21) and Web. It provides you with intermediate PDF rendering APIs and also easy-to-use Flutter Widgets.
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21), and Web. It provides you with intermediate PDF rendering APIs and also easy-to-use Flutter Widgets.
 
 ![](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
 
@@ -10,7 +10,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.0.3
+  pdf_render: ^1.0.4
 ```
 
 ## Web
@@ -71,15 +71,28 @@ The following fragment is a simplest use of the widget:
           title: const Text('Pdf_render example app'),
         ),
         backgroundColor: Colors.grey,
-        body: PdfViewer(
-          assetName: 'assets/hello.pdf',
-          pageNumber: 2); // show the page-2
+        // You can use either PdfViewer.openFile, PdfViewer.openAsset, or PdfViewer.openData
+        body: PdfViewer.openAsset(
+          'assets/hello.pdf',
+          params: PdfViewerParams(pageNumber: 2), // show the page-2
+        )
       )
     );
   }
 ```
 
-[PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) can be used to obtain number of pages inside the document and it also provide [goTo](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goTo.html) and [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) methods
+In the code above, the code uses [PdfViewer.openAsset](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/openAsset.html) to load a asset PDF file. There are also [PdfViewer.openFile](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/openFile.html) for local file and [PdfViewer.openData](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/openData.html) for `Uint8List` of PDF binary data.
+
+### PdfViewerParams
+
+[PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) contains parameters to customize [PdfViewer](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer-class.html).
+
+It also equips the parameters that are inherited from [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html). You can use almost all parameters of [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html).
+
+### PdfViewerController
+
+[PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) can be used to obtain number of pages in the PDF document.
+It also provide [goTo](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goTo.html) and [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) methods
 that you can scroll the viewer to make certain page/area of the document visible:
 
 ```dart
@@ -92,12 +105,15 @@ that you can scroll the viewer to make certain page/area of the document visible
           title: const Text('Pdf_render example app'),
         ),
         backgroundColor: Colors.grey,
-        body: PdfViewer(
-          assetName: 'assets/hello.pdf',
-          onViewerControllerInitialized: (PdfViewerController c) {
-            controller = c;
-            c.goToPage(pageNumber: 3); // scrolling animation to page 3.
-          }
+        body: PdfViewer.openAsset(
+          'assets/hello.pdf',
+          params: PdfViewerParams(
+            // called when the controller is fully initialized
+            onViewerControllerInitialized: (PdfViewerController c) {
+              controller = c;
+              controller.goToPage(pageNumber: 3); // scrolling animation to page 3.
+            }
+          )
         ),
       ),
         floatingActionButton: Column(
@@ -117,8 +133,6 @@ that you can scroll the viewer to make certain page/area of the document visible
     );
   }
 ```
-
-[PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) implementation is based on [InteractiveViewer](https://api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) and you can use almost all parameters of InteractiveViewer.
 
 ### Page decoration
 
@@ -155,8 +169,8 @@ The following fragment illustrates the easiest way to render only one page of a 
         ),
         backgroundColor: Colors.grey,
         body: Center(
-          child: PdfDocumentLoader(
-            assetName: 'assets/hello.pdf',
+          child: PdfDocumentLoader.openAsset(
+            'assets/hello.pdf',
             pageNumber: 1,
             pageBuilder: (context, textureBuilder, pageSize) => textureBuilder()
           )
@@ -172,6 +186,8 @@ Of course, [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/p
 
 Using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) in combination with [PdfPageView](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfPageView-class.html), you can show multiple pages of a PDF document. In the following fragment, `ListView.builder` is utilized to realize scrollable PDF document viewer.
 
+The most important role of [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) is to manage life time of [PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfDocument-class.html) and it disposes the document when the widget tree is going to be disposed.
+
 ```dart
   @override
   Widget build(BuildContext context) {
@@ -182,8 +198,8 @@ Using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_re
         ),
         backgroundColor: Colors.grey,
         body: Center(
-          child: PdfDocumentLoader(
-            assetName: 'assets/hello.pdf',
+          child: PdfDocumentLoader.openAsset(
+            'assets/hello.pdf',
             documentBuilder: (context, pdfDocument, pageCount) => LayoutBuilder(
               builder: (context, constraints) => ListView.builder(
                 itemCount: pageCount,
@@ -207,7 +223,9 @@ Using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_re
 
 ## Customizing page widget
 
-Both [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) and [PdfPageView](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfPageView-class.html) accepts `pageBuilder` parameter if you want to customize the visual of each page. The following fragment illustrates that:
+Both [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) and [PdfPageView](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfPageView-class.html) accepts `pageBuilder` parameter if you want to customize the visual of each page.
+
+The following fragment illustrates that:
 
 ```dart
 PdfPageView(
