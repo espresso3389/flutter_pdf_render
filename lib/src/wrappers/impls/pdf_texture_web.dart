@@ -18,6 +18,7 @@ class PdfTexture extends StatefulWidget {
 
 class _PdfTextureState extends State<PdfTexture> {
   ui.Image? _image;
+  bool _firstBuild = true;
 
   @override
   void initState() {
@@ -44,6 +45,10 @@ class _PdfTextureState extends State<PdfTexture> {
 
   @override
   Widget build(BuildContext context) {
+    if (_firstBuild) {
+      _firstBuild = false;
+      Future.delayed(Duration.zero, () => _requestUpdate());
+    }
     return RawImage(
       image: _image,
       alignment: Alignment.topLeft,
@@ -51,29 +56,21 @@ class _PdfTextureState extends State<PdfTexture> {
     );
   }
 
-  void _requestUpdate() async {
+  Future<void> _requestUpdate() async {
     final data = widget.data;
-    if (data == null) {
-      return;
+    if (data != null) {
+      final descriptor = ui.ImageDescriptor.raw(
+        await ui.ImmutableBuffer.fromUint8List(data.data),
+        width: data.width,
+        height: data.height,
+        pixelFormat: ui.PixelFormat.bgra8888,
+      );
+      final codec = await descriptor.instantiateCodec();
+      final frame = await codec.getNextFrame();
+      _image = frame.image;
+    } else {
+      _image = null;
     }
-    final descriptor = ui.ImageDescriptor.raw(
-      await ui.ImmutableBuffer.fromUint8List(data.data),
-      width: data.width,
-      height: data.height,
-      pixelFormat: ui.PixelFormat.bgra8888,
-    );
-    final codec = await descriptor.instantiateCodec();
-    final frame = await codec.getNextFrame();
-    _image = frame.image;
-    /*
-    // The following code seems OK but not working on Web.
-    // - [web] instantiateImageCodec (decodeImageFromPixels) not supported
-    //   https://github.com/flutter/flutter/issues/45190
-    final comp = Completer<ui.Image>();
-    ui.decodeImageFromPixels(data.data, data.width, data.height, ui.PixelFormat.bgra8888,
-        (image) => comp.complete(image));
-    _image = await comp.future;
-    */
     if (mounted) setState(() {});
   }
 }
@@ -94,6 +91,7 @@ class _WebTextureManager {
   }
 
   void register(int id, _PdfTextureState state) => _id2states.putIfAbsent(id, () => []).add(state);
+
   void unregister(int id, _PdfTextureState state) {
     final states = _id2states[id];
     if (states != null) {

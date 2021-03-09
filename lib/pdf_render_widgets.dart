@@ -248,7 +248,6 @@ class _PdfPageViewState extends State<PdfPageView> {
   PdfPage? _page;
   Size? _size;
   PdfPageImageTexture? _texture;
-  PdfPageImage? _image;
 
   @override
   void initState() {
@@ -302,8 +301,6 @@ class _PdfPageViewState extends State<PdfPageView> {
     _size = null;
     _texture?.dispose();
     _texture = null;
-    _image?.dispose();
-    _image = null;
   }
 
   @override
@@ -347,17 +344,16 @@ class _PdfPageViewState extends State<PdfPageView> {
               return finalPlaceholderBuilder(finalSize, PdfPageStatus.loading);
             }
 
-            if (_texture?.texId == null && _image?.imageIfAvailable == null) {
+            if (_texture?.texId == null) {
               // some loading error
               return finalPlaceholderBuilder(finalSize, PdfPageStatus.loadFailed);
             }
 
-            Widget contentWidget = _texture?.texId != null
-                ? SizedBox(
-                    width: finalSize.width, height: finalSize.height, child: PdfTexture(textureId: _texture!.texId))
-                : RawImage(image: _image?.imageIfAvailable);
-
-            return contentWidget;
+            return SizedBox(
+              width: finalSize.width,
+              height: finalSize.height,
+              child: PdfTexture(textureId: _texture!.texId),
+            );
           });
     });
   }
@@ -374,8 +370,6 @@ class _PdfPageViewState extends State<PdfPageView> {
     final pixelRatio = renderingPixelRatio ?? MediaQuery.of(context).devicePixelRatio;
     final pixelSize = size * pixelRatio;
     if (_texture == null || _texture!.pdfDocument != _doc || _texture!.pageNumber != widget.pageNumber) {
-      _image?.dispose();
-      _image = null;
       _texture?.dispose();
       _texture = await PdfPageImageTexture.create(pdfDocument: _doc!, pageNumber: widget.pageNumber!);
     }
@@ -1137,23 +1131,9 @@ class _PdfPageState {
 
   _PdfPageState._({required this.pageNumber, required this.pageSize});
 
-  Widget previewTexture() => _textureFor(preview, _previewNotifier);
-  void updatePreview() {
-    _previewNotifier.value++;
-  }
+  void updatePreview() => _previewNotifier.value++;
 
-  Widget realSizeTexture() => _textureFor(realSize, _realSizeNotifier);
-  void _updateRealSizeOverlay() {
-    _realSizeNotifier.value++;
-  }
-
-  /// Returns [Texture] widget wrapped by [ValueListenableBuilder], which does auto-refresh on texture content changes.
-  Widget _textureFor(PdfPageImageTexture? t, ValueNotifier<int> n) {
-    return ValueListenableBuilder<int>(
-      valueListenable: n,
-      builder: (context, value, child) => t != null ? PdfTexture(textureId: t.texId) : Container(),
-    );
-  }
+  void _updateRealSizeOverlay() => _realSizeNotifier.value++;
 
   /// Release allocated textures.
   /// It's always safe to call the method. If all the textures were already released, the method does nothing.

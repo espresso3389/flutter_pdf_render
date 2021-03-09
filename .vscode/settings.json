@@ -8,6 +8,7 @@
         "Rgba",
         "Schyler",
         "alloc",
+        "bgra",
         "cmap",
         "cmaps",
         "dont",
@@ -16,6 +17,7 @@
         "rects",
         "relayout",
         "scrollable",
+        "unregister",
         "vsync"
     ]
 }
