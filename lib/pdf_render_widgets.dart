@@ -412,6 +412,9 @@ class PdfViewerController extends TransformationController {
   }
 
   /// Whether the controller is ready or not.
+  /// If the controller is not ready, almost all methods on [PdfViewerController] won't work (throw some exception).
+  /// For certain operations, it may be easier to use [ready] method to get [PdfViewerController?] not to execute
+  /// methods unless it is ready.
   bool get isReady => _state?._pages != null;
 
   /// Helper method to return null when the controller is not ready([isReady]).
@@ -431,6 +434,7 @@ class PdfViewerController extends TransformationController {
 
   /// Calculate the matrix that corresponding to the page position.
   /// If the page is out of view, it returns null.
+  /// /// If the controller is not ready([isReady]), the property throws an exception.
   Matrix4? calculatePageFitMatrix({required int pageNumber, double? padding}) {
     final rect = getPageRect(pageNumber)?.inflate(padding ?? _state!._padding);
     if (rect == null) return null;
