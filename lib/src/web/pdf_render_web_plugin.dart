@@ -49,7 +49,7 @@ class PdfRenderWebPlugin {
         }
       case 'data':
         {
-          final doc = await pdfjsGetDocumentFromData(call.arguments as ByteBuffer);
+          final doc = await pdfjsGetDocumentFromData((call.arguments as Uint8List).buffer);
           return _setDoc(doc);
         }
       case 'close':
