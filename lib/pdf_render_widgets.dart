@@ -163,13 +163,13 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
     }
   }
 
-  Size _getPageSize(int? pageNumber) {
+  Size? _getPageSize(int? pageNumber) {
     Size? size;
     if (_cachedPageSizes != null && pageNumber! > 0 && pageNumber <= _cachedPageSizes!.length) {
       size = _cachedPageSizes![pageNumber - 1];
     }
     size ??= _lastPageSize;
-    return size!;
+    return size;
   }
 
   @override
