@@ -1,3 +1,7 @@
+## 1.0.7
+
+* Introducing onError handler on PdfViewer.openXXX and PdfDocumentLoader.openXXX.
+
 ## 1.0.6
 
 * Additional fix for #35 web - renders blank, with no console error
