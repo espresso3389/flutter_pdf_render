@@ -32,6 +32,7 @@ class _MyAppState extends State<MyApp> {
         body: PdfViewer.openAsset(
           'assets/hello.pdf',
           viewerController: controller,
+          onError: (err) => print(err),
           params: PdfViewerParams(
             padding: 10,
             minScale: 1.0,

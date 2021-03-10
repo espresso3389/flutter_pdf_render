@@ -51,6 +51,34 @@ enum PdfPageStatus {
   loadFailed,
 }
 
+/// Error handler.
+typedef OnError = void Function(dynamic);
+
+/// Exception-proof await/cache mechanism on [PdfDocument] Future.
+class _PdfDocumentAwaiter {
+  _PdfDocumentAwaiter(this._docFuture, {this.onError});
+
+  final FutureOr<PdfDocument?> _docFuture;
+  final OnError? onError;
+  PdfDocument? _cached;
+  bool _firstTime = true;
+
+  Future<PdfDocument?> getValue() async {
+    if (_firstTime) {
+      _firstTime = false;
+      try {
+        _cached = await _docFuture;
+        if (_cached == null) {
+          onError?.call(ArgumentError('Could not open document.'));
+        }
+      } catch (e) {
+        onError?.call(e);
+      }
+    }
+    return _cached;
+  }
+}
+
 /// [PdfDocumentLoader] is a [Widget] that used to load arbitrary PDF document and manages [PdfDocument] instance.
 class PdfDocumentLoader extends StatefulWidget {
   final FutureOr<PdfDocument?> doc;
@@ -77,12 +105,14 @@ class PdfDocumentLoader extends StatefulWidget {
   /// For additional parameters, see [PdfDocumentLoader].
   factory PdfDocumentLoader.openFile(
     String filePath, {
+    Key? key,
     PdfDocumentBuilder? documentBuilder,
     int? pageNumber,
     PdfPageBuilder? pageBuilder,
     Function(dynamic)? onError,
   }) =>
-      PdfDocumentLoader._(
+      PdfDocumentLoader(
+        key: key,
         doc: PdfDocument.openFile(filePath),
         documentBuilder: documentBuilder,
         pageNumber: pageNumber,
@@ -95,12 +125,14 @@ class PdfDocumentLoader extends StatefulWidget {
   /// For additional parameters, see [PdfDocumentLoader].
   factory PdfDocumentLoader.openAsset(
     String assetName, {
+    Key? key,
     PdfDocumentBuilder? documentBuilder,
     int? pageNumber,
     PdfPageBuilder? pageBuilder,
     Function(dynamic)? onError,
   }) =>
-      PdfDocumentLoader._(
+      PdfDocumentLoader(
+        key: key,
         doc: PdfDocument.openAsset(assetName),
         documentBuilder: documentBuilder,
         pageNumber: pageNumber,
@@ -113,12 +145,14 @@ class PdfDocumentLoader extends StatefulWidget {
   /// For additional parameters, see [PdfDocumentLoader].
   factory PdfDocumentLoader.openData(
     Uint8List data, {
+    Key? key,
     PdfDocumentBuilder? documentBuilder,
     int? pageNumber,
     PdfPageBuilder? pageBuilder,
     Function(dynamic)? onError,
   }) =>
-      PdfDocumentLoader._(
+      PdfDocumentLoader(
+        key: key,
         doc: PdfDocument.openData(data),
         documentBuilder: documentBuilder,
         pageNumber: pageNumber,
@@ -126,9 +160,10 @@ class PdfDocumentLoader extends StatefulWidget {
         onError: onError,
       );
 
-  /// Internal purpose only; use one of [PdfDocumentLoader.openFile], [PdfDocumentLoader.openAsset],
-  /// or [PdfDocumentLoader.openData].
-  PdfDocumentLoader._({
+  /// Use one of [PdfDocumentLoader.openFile], [PdfDocumentLoader.openAsset],
+  /// or [PdfDocumentLoader.openData] in normal case.
+  /// If you already have [PdfDocument], you can use the method.
+  PdfDocumentLoader({
     Key? key,
     required this.doc,
     this.documentBuilder,
@@ -139,6 +174,9 @@ class PdfDocumentLoader extends StatefulWidget {
 
   @override
   _PdfDocumentLoaderState createState() => _PdfDocumentLoaderState();
+
+  /// Error-safe wrapper on [doc].
+  late final _docCache = _PdfDocumentAwaiter(doc, onError: onError);
 }
 
 class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
@@ -179,7 +217,7 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
   }
 
   Future<void> _updateDoc() async {
-    final newDoc = await widget.doc;
+    final newDoc = await widget._docCache.getValue();
     if (newDoc != _doc) {
       _release();
       _init();
@@ -194,7 +232,10 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
 
   Future<void> _init() async {
     try {
-      _doc = await widget.doc;
+      _doc = await widget._docCache.getValue();
+      if (_doc == null) {
+        widget.onError?.call(ArgumentError('Cannot open the document'));
+      }
     } catch (e) {
       _doc = null;
       widget.onError?.call(e);
@@ -647,44 +688,59 @@ class PdfViewer extends StatefulWidget {
   /// Additional parameter to configure the viewer.
   final PdfViewerParams? params;
 
+  /// Error handler.
+  final OnError? onError;
+
+  /// Error-safe wrapper on [doc].
+  late final _docCache = _PdfDocumentAwaiter(doc, onError: onError);
+
+  Future<PdfDocument?> get _doc => _docCache.getValue();
+
   PdfViewer({
     Key? key,
     this.doc,
     this.viewerController,
     this.params,
+    this.onError,
   }) : super(key: key);
 
   factory PdfViewer.openFile(
     String filePath, {
     PdfViewerController? viewerController,
     PdfViewerParams? params,
+    OnError? onError,
   }) =>
       PdfViewer(
         doc: PdfDocument.openFile(filePath),
         viewerController: viewerController,
         params: params,
+        onError: onError,
       );
 
   factory PdfViewer.openAsset(
     String filePath, {
     PdfViewerController? viewerController,
     PdfViewerParams? params,
+    OnError? onError,
   }) =>
       PdfViewer(
         doc: PdfDocument.openAsset(filePath),
         viewerController: viewerController,
         params: params,
+        onError: onError,
       );
 
   factory PdfViewer.openData(
     Uint8List data, {
     PdfViewerController? viewerController,
     PdfViewerParams? params,
+    OnError? onError,
   }) =>
       PdfViewer(
         doc: PdfDocument.openData(data),
         viewerController: viewerController,
         params: params,
+        onError: onError,
       );
 
   @override
@@ -722,7 +778,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   }
 
   Future<void> checkUpdates(PdfViewer oldWidget) async {
-    if ((await widget.doc) != (await oldWidget.doc)) {
+    if ((await widget._doc) != (await oldWidget._doc)) {
       init();
     } else if (oldWidget.params?.pageNumber != widget.params?.pageNumber) {
       widget.params?.onViewerControllerInitialized?.call(_controller);
@@ -757,7 +813,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
   Future<void> load() async {
     _releasePages();
-    _doc = await widget.doc;
+    _doc = await widget._doc;
 
     if (_doc != null) {
       final pages = <_PdfPageState>[];
