@@ -1,5 +1,5 @@
-import Flutter
-import UIKit
+import Cocoa
+import FlutterMacOS
 import CoreGraphics
 
 class Doc {
@@ -29,6 +29,7 @@ extension CGPDFPage {
 
 enum PdfRenderError : Error {
     case invalidArgument(String)
+    case notSupported(String)
 }
 
 public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
@@ -45,7 +46,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "pdf_render", binaryMessenger: registrar.messenger())
+      name: "pdf_render", binaryMessenger: registrar.messenger)
     let instance = SwiftPdfRenderPlugin(registrar: registrar)
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
@@ -185,11 +186,14 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   }
 
   func openAssetDoc(name: String) throws -> CGPDFDocument? {
-    let key = registrar.lookupKey(forAsset: name)
-    guard let path = Bundle.main.path(forResource: key, ofType: "") else {
-      throw PdfRenderError.invalidArgument("Bundle.main.path(forResource: \(key)) failed")
-    }
-    return openFileDoc(pdfFilePath: path)
+//    let key = registrar.lookupKey(forAsset: name)
+//    guard let path = Bundle.main.path(forResource: key, ofType: "") else {
+//      throw PdfRenderError.invalidArgument("Bundle.main.path(forResource: \(key)) failed")
+//    }
+//    return openFileDoc(pdfFilePath: path)
+    // [macOS] add lookupKeyForAsset to FlutterPluginRegistrar
+    // https://github.com/flutter/flutter/issues/47681
+    throw PdfRenderError.notSupported("Flutter macos does not support loading asset from plugin")
   }
 
   func openFileDoc(pdfFilePath: String) -> CGPDFDocument? {
@@ -280,14 +284,14 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
 
   func allocTex() -> Int64 {
     let pageTex = PdfPageTexture(registrar: registrar)
-    let texId = registrar.textures().register(pageTex)
+    let texId = registrar.textures.register(pageTex)
     textures[texId] = pageTex
     pageTex.texId = texId
     return texId
   }
 
   func releaseTex(texId: Int64, result: @escaping FlutterResult) {
-    registrar.textures().unregisterTexture(texId)
+    registrar.textures.unregisterTexture(texId)
     textures[texId] = nil
     result(nil)
   }
@@ -468,7 +472,7 @@ class PdfPageTexture : NSObject {
                             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
 
     if backgroundFill {
-      context?.setFillColor(UIColor.white.cgColor)
+      context?.setFillColor(NSColor.white.cgColor)
       context?.fill(CGRect(x: 0, y: 0, width: w, height: h))
     }
 
@@ -481,7 +485,7 @@ class PdfPageTexture : NSObject {
     context?.flush()
 
     let _ = self.pixBuf.getAndSet(newValue: pixBuf)
-    registrar?.textures().textureFrameAvailable(texId)
+    registrar?.textures.textureFrameAvailable(texId)
   }
 }
 

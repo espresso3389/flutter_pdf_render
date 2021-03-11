@@ -37,6 +37,8 @@ flutter:
         pluginClass: PdfRenderPlugin
       ios:
         pluginClass: PdfRenderPlugin
+      macos:
+        pluginClass: SwiftPdfRenderPlugin
       web:
         pluginClass: PdfRenderWebPlugin
         fileName: src/web/pdf_render_web_plugin.dart
