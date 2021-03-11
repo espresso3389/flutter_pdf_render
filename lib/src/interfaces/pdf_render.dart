@@ -42,13 +42,13 @@ abstract class PdfDocument {
 
   /// Opening the specified file.
   /// For Web, [filePath] can be relative path from `index.html` or any arbitrary URL but it may be restricted by CORS.
-  static Future<PdfDocument?> openFile(String filePath) => PdfRenderPlatform.instance.openFile(filePath);
+  static Future<PdfDocument> openFile(String filePath) => PdfRenderPlatform.instance.openFile(filePath);
 
   /// Opening the specified asset.
-  static Future<PdfDocument?> openAsset(String name) => PdfRenderPlatform.instance.openAsset(name);
+  static Future<PdfDocument> openAsset(String name) => PdfRenderPlatform.instance.openAsset(name);
 
   /// Opening the PDF on memory.
-  static Future<PdfDocument?> openData(Uint8List data) => PdfRenderPlatform.instance.openData(data);
+  static Future<PdfDocument> openData(Uint8List data) => PdfRenderPlatform.instance.openData(data);
 
   /// Get page object. The first page is 1.
   Future<PdfPage> getPage(int pageNumber);
@@ -166,18 +166,6 @@ abstract class PdfPageImage {
   ui.Image? get imageIfAvailable;
 
   Future<ui.Image> createImageDetached();
-
-  static Future<PdfPageImage?> render(String filePath, int pageNumber,
-      {int x = 0, int y = 0, int? width, int? height, double? fullWidth, double? fullHeight}) async {
-    final doc = await PdfDocument.openFile(filePath);
-    if (doc == null) return null;
-    try {
-      final page = await doc.getPage(pageNumber);
-      return await page.render(x: x, y: y, width: width, height: height, fullWidth: fullWidth, fullHeight: fullHeight);
-    } finally {
-      doc.dispose();
-    }
-  }
 }
 
 /// Very limited support for Flutter's [Texture] based drawing.
@@ -201,7 +189,7 @@ abstract class PdfPageImageTexture {
   PdfPageImageTexture({required this.pdfDocument, required this.pageNumber, required this.texId});
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
-  static Future<PdfPageImageTexture> create({required PdfDocument pdfDocument, required int pageNumber}) =>
+  static Future<PdfPageImageTexture> create({required FutureOr<PdfDocument> pdfDocument, required int pageNumber}) =>
       PdfRenderPlatform.instance.createTexture(pdfDocument: pdfDocument, pageNumber: pageNumber);
 
   /// Release the object.

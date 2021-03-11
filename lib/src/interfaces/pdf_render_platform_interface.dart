@@ -28,14 +28,14 @@ abstract class PdfRenderPlatform extends PlatformInterface {
   }
 
   /// Opening the specified file.
-  Future<PdfDocument?> openFile(String filePath);
+  Future<PdfDocument> openFile(String filePath);
 
   /// Opening the specified asset.
-  Future<PdfDocument?> openAsset(String name);
+  Future<PdfDocument> openAsset(String name);
 
   /// Opening the PDF on memory.
-  Future<PdfDocument?> openData(Uint8List data);
+  Future<PdfDocument> openData(Uint8List data);
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
-  Future<PdfPageImageTexture> createTexture({required PdfDocument pdfDocument, required int pageNumber});
+  Future<PdfPageImageTexture> createTexture({required FutureOr<PdfDocument> pdfDocument, required int pageNumber});
 }

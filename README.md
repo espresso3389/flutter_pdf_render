@@ -10,7 +10,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.0.7
+  pdf_render: ^1.0.8
 ```
 
 ## Web
@@ -304,8 +304,7 @@ import 'package:pdf_render/pdf_render.dart';
 // Open the document using either openFile, openAsset, or openData.
 // For Web, file name can be relative path from index.html or any arbitrary URL
 // but affected by CORS.
-PdfDocument? doc = await PdfDocument.openAsset('assets/hello.pdf');
-if (doc == null) { /* error */ }
+PdfDocument doc = await PdfDocument.openAsset('assets/hello.pdf');
 
 // Get the number of pages in the PDF file
 int pageCount = doc!.pageCount;
@@ -355,15 +354,15 @@ On [PdfDocument](https://pub.dev/documentation/pdf_render/latest/pdf_render/PdfD
 
 ```dart
 // from an asset file
-PdfDocument? docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
+PdfDocument docFromAsset = await PdfDocument.openAsset('assets/hello.pdf');
 
 // from a file
 // For Web, file name can be relative path from index.html or any arbitrary URL
 // but affected by CORS.
-PdfDocument? docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
+PdfDocument docFromFile = await PdfDocument.openFile('/somewhere/in/real/file/system/file.pdf');
 
 // from PDF memory image on Uint8List
-PdfDocument? docFromData = await PdfDocument.openData(data);
+PdfDocument docFromData = await PdfDocument.openData(data);
 ```
 
 ## PdfDocument members

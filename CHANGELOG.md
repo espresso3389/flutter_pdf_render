@@ -1,3 +1,7 @@
+## 1.0.8
+
+* More null-safety updates on PdfDocument.openXXX functions; they were returning null on certain parameter errors but now they throw exception on such errors.
+
 ## 1.0.7
 
 * Introducing onError handler on PdfViewer.openXXX and PdfDocumentLoader.openXXX.

@@ -12,10 +12,7 @@ import 'interfaces/pdf_render_platform_interface.dart';
 const MethodChannel _channel = const MethodChannel('pdf_render');
 
 class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
-  PdfDocument? _open(Map<dynamic, dynamic>? obj, String sourceName) {
-    if (obj == null) {
-      return null;
-    }
+  PdfDocument _open(Map<dynamic, dynamic> obj, String sourceName) {
     final pageCount = obj['pageCount'] as int;
     return PdfDocumentMethodChannel._(
       sourceName: sourceName,
@@ -32,27 +29,28 @@ class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
 
   /// Opening the specified file.
   @override
-  Future<PdfDocument?> openFile(String filePath) async {
+  Future<PdfDocument> openFile(String filePath) async {
     return _open(await _channel.invokeMethod('file', filePath), filePath);
   }
 
   /// Opening the specified asset.
   @override
-  Future<PdfDocument?> openAsset(String name) async {
+  Future<PdfDocument> openAsset(String name) async {
     return _open(await _channel.invokeMethod('asset', name), 'asset:$name');
   }
 
   /// Opening the PDF on memory.
   @override
-  Future<PdfDocument?> openData(Uint8List data) async {
+  Future<PdfDocument> openData(Uint8List data) async {
     return _open(await _channel.invokeMethod('data', data), 'memory:');
   }
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
   @override
-  Future<PdfPageImageTexture> createTexture({required PdfDocument pdfDocument, required int pageNumber}) async {
+  Future<PdfPageImageTexture> createTexture(
+      {required FutureOr<PdfDocument> pdfDocument, required int pageNumber}) async {
     final texId = await _channel.invokeMethod<int>('allocTex');
-    return PdfPageImageTextureMethodChannel._(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId!);
+    return PdfPageImageTextureMethodChannel._(pdfDocument: await pdfDocument, pageNumber: pageNumber, texId: texId!);
   }
 }
 
@@ -274,31 +272,6 @@ class PdfPageImageMethodChannel extends PdfPageImage {
         pageHeight: obj['pageHeight'] as double,
         pixels: pixels,
         buffer: ptr);
-  }
-
-  static Future<PdfPageImage?> render(String filePath, int pageNumber,
-      {int x = 0,
-      int y = 0,
-      int? width,
-      int? height,
-      double? fullWidth,
-      double? fullHeight,
-      bool backgroundFill = true,
-      bool allowAntialiasingIOS = false}) async {
-    final doc = await PdfDocument.openFile(filePath);
-    if (doc == null) return null;
-    final page = await doc.getPage(pageNumber);
-    final image = await page.render(
-        x: x,
-        y: y,
-        width: width,
-        height: height,
-        fullWidth: fullWidth,
-        fullHeight: fullHeight,
-        backgroundFill: backgroundFill,
-        allowAntialiasingIOS: allowAntialiasingIOS);
-    doc.dispose();
-    return image;
   }
 
   /// Decode RGBA raw image from native code.
