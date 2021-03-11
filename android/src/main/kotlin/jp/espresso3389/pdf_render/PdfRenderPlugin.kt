@@ -48,89 +48,45 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
     try {
       when {
         call.method == "file" -> {
-          val pdfFilePath = call.arguments as? String
-          if (pdfFilePath == null) {
-            result.success(null)
-            return
-          }
-          result.success(registerNewDoc(openFileDoc(pdfFilePath)))
+          val pdfFilePath = call.arguments as String
+          result.success(registerNewDoc(openFileDoc(call.arguments as String)))
         }
         call.method == "asset" -> {
-          val pdfAssetName = call.arguments as? String
-          if (pdfAssetName == null) {
-            result.success(null)
-            return
-          }
-          result.success(registerNewDoc(openAssetDoc(pdfAssetName)))
+          result.success(registerNewDoc(openAssetDoc(call.arguments as String)))
         }
         call.method == "data" -> {
-          val data = call.arguments as? ByteArray
-          if (data == null) {
-            result.success(null)
-            return
-          }
-          result.success(registerNewDoc(openDataDoc(data)))
+          result.success(registerNewDoc(openDataDoc(call.arguments as ByteArray)))
         }
         call.method == "close" -> {
-          val id = call.arguments as? Int
-          if (id != null)
-            close(id)
+          close(call.arguments as Int)
           result.success(0)
         }
         call.method == "info" -> {
           val (renderer, id) = getDoc(call)
-          if (renderer == null) {
-            result.success(-1)
-            return
-          }
           result.success(getInfo(renderer, id))
         }
         call.method == "page" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(null)
-            return
-          }
-          result.success(openPage(args))
+          result.success(openPage(call.arguments as HashMap<String, Any>))
         }
         call.method == "render" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(-1)
-            return
-          }
-          render(args, result)
+          render(call.arguments as HashMap<String, Any>, result)
         }
         call.method == "releaseBuffer" -> {
-          val addr = call.arguments as? Long
-          if (addr != null)
-            releaseBuffer(addr)
+          releaseBuffer(call.arguments as Long)
           result.success(0)
         }
         call.method == "allocTex" -> {
           result.success(allocTex())
         }
         call.method == "releaseTex" -> {
-          val id = call.arguments as? Int
-          if (id != null)
-            releaseTex(id)
+          releaseTex(call.arguments as Int)
           result.success(0)
         }
         call.method == "resizeTex" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(-1)
-            return
-          }
-          result.success(resizeTex(args))
+          result.success(resizeTex(call.arguments as HashMap<String, Any>))
         }
         call.method == "updateTex" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(-1)
-            return
-          }
-          result.success(updateTex(args))
+          result.success(updateTex(call.arguments as HashMap<String, Any>))
         }
         else -> result.notImplemented()
       }
@@ -145,11 +101,9 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
     return getInfo(pdfRenderer, id)
   }
 
-  private fun getDoc(call: MethodCall): Pair<PdfRenderer?, Int> {
-    val id = call.arguments as? Int
-    if (id != null)
-      return Pair(documents[id], id)
-    return Pair(null, -1)
+  private fun getDoc(call: MethodCall): Pair<PdfRenderer, Int> {
+    val id = call.arguments as Int
+    return Pair(documents[id], id)
   }
 
   private fun getInfo(pdfRenderer: PdfRenderer, id: Int): HashMap<String, Any> {
@@ -219,13 +173,9 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
   }
 
   private fun renderOnByteBuffer(args: HashMap<String, Any>, createBuffer: (Int) -> ByteBuffer): HashMap<String, Any?>? {
-    val docId = args["docId"] as? Int
-    val renderer = if (docId != null) documents[docId] else null
-    val pageNumber = args["pageNumber"] as? Int
-    if (renderer == null || pageNumber == null || pageNumber < 1 || pageNumber > renderer.pageCount) {
-      return null
-    }
-
+    val docId = args["docId"] as Int
+    val renderer = documents[docId]
+    val pageNumber = args["pageNumber"] as Int
     renderer.openPage(pageNumber - 1).use {
       val x = args["x"] as? Int? ?: 0
       val y = args["y"] as? Int? ?: 0
@@ -290,13 +240,11 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
 
   private fun allocBuffer(size: Int): Pair<Long, ByteBuffer> {
     val addr = ByteBufferHelper.malloc(size.toLong())
-    //Log.i("allocBuffer", "size=$size -> addr=$addr")
     val bb = ByteBufferHelper.newDirectBuffer(addr, size.toLong())
     return addr to bb
   }
 
   private fun releaseBuffer(addr: Long) {
-    //Log.i("releaseBuffer", "addr=$addr")
     ByteBufferHelper.free(addr)
   }
 
@@ -314,25 +262,20 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
   }
 
   private fun resizeTex(args: HashMap<String, Any>): Int {
-    val texId = args["texId"] as? Int
-    val width = args["width"] as? Int
-    val height = args["height"] as? Int
-    if (texId == null || width == null || height == null) {
-      return -1
-    }
+    val texId = args["texId"] as Int
+    val width = args["width"] as Int
+    val height = args["height"] as Int
     val tex = textures[texId]
     tex?.surfaceTexture()?.setDefaultBufferSize(width, height)
     return 0
   }
 
   private fun updateTex(args: HashMap<String, Any>): Int {
-    val texId = args["texId"] as? Int ?: return -1
-    val tex = textures[texId] ?: return -2
-    val docId = args["docId"] as? Int ?: return -3
-    val renderer = documents[docId] ?: return -4
-    val pageNumber = args["pageNumber"] as? Int ?: return -5
-    if (pageNumber < 1 || pageNumber > renderer.pageCount)
-      return -6
+    val texId = args["texId"] as Int
+    val docId = args["docId"] as Int
+    val pageNumber = args["pageNumber"] as Int
+    val tex = textures[texId]
+    val renderer = documents[docId]
 
     renderer.openPage(pageNumber - 1). use {page ->
       val fullWidth = args["fullWidth"] as? Double ?: page.width.toDouble()
