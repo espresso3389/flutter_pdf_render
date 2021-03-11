@@ -27,6 +27,10 @@ extension CGPDFPage {
   }
 }
 
+enum PdfRenderError : Error {
+    case invalidArgument(String)
+}
+
 public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   static let invalid = NSNumber(value: -1)
   let dispQueue = DispatchQueue(label: "pdf_render")
@@ -47,114 +51,110 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    if call.method == "file"
-    {
-      guard let pdfFilePath = call.arguments as! String? else {
-        result(nil)
-        return
+    do {
+      if call.method == "file"
+      {
+        guard let pdfFilePath = call.arguments as! String? else {
+          throw PdfRenderError.invalidArgument("Expect pdfFilePath as String")
+        }
+        result(try registerNewDoc(openFileDoc(pdfFilePath: pdfFilePath)))
       }
-      result(registerNewDoc(openFileDoc(pdfFilePath: pdfFilePath)))
-    }
-    else if call.method == "asset"
-    {
-      guard let name = call.arguments as! String? else {
-        result(nil)
-        return
+      else if call.method == "asset"
+      {
+        guard let name = call.arguments as! String? else {
+          throw PdfRenderError.invalidArgument("Expect assetName as String")
+        }
+        result(try registerNewDoc(openAssetDoc(name: name)))
       }
-      result(registerNewDoc(openAssetDoc(name: name)))
-    }
-    else if call.method == "data" {
-      guard let data = call.arguments as! FlutterStandardTypedData? else {
-        result(nil)
-        return
+      else if call.method == "data" {
+        guard let data = call.arguments as! FlutterStandardTypedData? else {
+          throw PdfRenderError.invalidArgument("Expect byte array")
+        }
+        result(try registerNewDoc(openDataDoc(data: data.data)))
       }
-      result(registerNewDoc(openDataDoc(data: data.data)))
-    }
-    else if call.method == "close"
-    {
-      if  let id = call.arguments as! NSNumber? {
-        close(docId: id.intValue)
+      else if call.method == "close"
+      {
+        if  let id = call.arguments as! NSNumber? {
+          close(docId: id.intValue)
+        }
+        result(NSNumber(value: 0))
       }
-      result(NSNumber(value: 0))
-    }
-    else if call.method == "info"
-    {
-      guard let docId = call.arguments as! NSNumber? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "info"
+      {
+        guard let docId = call.arguments as! NSNumber? else {
+          throw PdfRenderError.invalidArgument("Expect docId as NSNumber")
+        }
+        result(try getInfo(docId: docId.intValue))
       }
-      result(getInfo(docId: docId.intValue))
-    }
-    else if call.method == "page"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(nil)
-        return
+      else if call.method == "page"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        result(openPage(args: args))
       }
-      result(openPage(args: args))
-    }
-    else if call.method == "render"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "render"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        try render(args: args, result: result)
       }
-      render(args: args, result: result)
-    }
-    else if call.method == "releaseBuffer"
-    {
-      guard let address = call.arguments as! NSNumber? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
-      }
+      else if call.method == "releaseBuffer"
+      {
+        guard let address = call.arguments as! NSNumber? else {
+          throw PdfRenderError.invalidArgument("Expect address as NSNumber")
+        }
 
-        releaseBuffer(address: address.intValue, result: result)
-    }
-    else if call.method == "allocTex"
-    {
-      result(allocTex())
-    }
-    else if call.method == "releaseTex"
-    {
-      guard let texId = call.arguments as! NSNumber? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+          releaseBuffer(address: address.intValue, result: result)
       }
-      releaseTex(texId: texId.int64Value, result: result)
-    }
-    else if call.method == "resizeTex"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "allocTex"
+      {
+        result(allocTex())
       }
-      resizeTex(args: args, result: result)
-    }
-    else if call.method == "updateTex"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "releaseTex"
+      {
+        guard let texId = call.arguments as! NSNumber? else {
+          throw PdfRenderError.invalidArgument("Expect textureId as NSNumber")
+        }
+        releaseTex(texId: texId.int64Value, result: result)
       }
-      updateTex(args: args, result: result)
-    }
-    else {
-      result(FlutterMethodNotImplemented)
+      else if call.method == "resizeTex"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        try resizeTex(args: args, result: result)
+      }
+      else if call.method == "updateTex"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        try updateTex(args: args, result: result)
+      }
+      else {
+        result(FlutterMethodNotImplemented)
+      }
+    } catch {
+      result(FlutterError(code: "exception", message: "Internal error", details: "\(error)"))
     }
   }
 
-  func registerNewDoc(_ doc: CGPDFDocument?) -> NSDictionary? {
-    guard doc != nil else { return nil }
+  func registerNewDoc(_ doc: CGPDFDocument?) throws -> NSDictionary?{
+    guard doc != nil else {
+      throw PdfRenderError.invalidArgument("CGPDFDocument is nil")
+    }
     let id = SwiftPdfRenderPlugin.newId
     SwiftPdfRenderPlugin.newId = SwiftPdfRenderPlugin.newId + 1
     if SwiftPdfRenderPlugin.newId == SwiftPdfRenderPlugin.invalid.intValue { SwiftPdfRenderPlugin.newId = 0 }
     docMap[id] = Doc(doc: doc!)
-    return getInfo(docId: id)
+    return try getInfo(docId: id)
   }
 
-  func getInfo(docId: Int) -> NSDictionary? {
+  func getInfo(docId: Int) throws -> NSDictionary? {
     guard let doc = docMap[docId]?.doc else {
-      return nil
+      throw PdfRenderError.invalidArgument("No PdfDocument for \(docId)")
     }
     var verMajor: Int32 = 0
     var verMinor: Int32 = 0
@@ -177,15 +177,17 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     docMap[docId] = nil
   }
 
-  func openDataDoc(data: Data) -> CGPDFDocument? {
-    guard let datProv = CGDataProvider(data: data as CFData) else { return nil }
+  func openDataDoc(data: Data) throws -> CGPDFDocument? {
+    guard let datProv = CGDataProvider(data: data as CFData) else {
+      throw PdfRenderError.invalidArgument("CGDataProvider initialization failed")
+    }
     return CGPDFDocument(datProv)
   }
 
-  func openAssetDoc(name: String) -> CGPDFDocument? {
+  func openAssetDoc(name: String) throws -> CGPDFDocument? {
     let key = registrar.lookupKey(forAsset: name)
     guard let path = Bundle.main.path(forResource: key, ofType: "") else {
-      return nil
+      throw PdfRenderError.invalidArgument("Bundle.main.path(forResource: \(key)) failed")
     }
     return openFileDoc(pdfFilePath: path)
   }
@@ -220,20 +222,17 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     docMap[id] = nil
   }
 
-  func render(args: NSDictionary, result: @escaping FlutterResult) {
+  func render(args: NSDictionary, result: @escaping FlutterResult) throws {
     let docId = args["docId"] as! Int
     guard let doc = docMap[docId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No PdfDocument for \(docId)")
     }
     let pageNumber = args["pageNumber"] as! Int
     guard pageNumber >= 1 && pageNumber <= doc.pages.count else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page number (\(pageNumber)) out of range [1 \(doc.pages.count)]")
     }
     guard let page = doc.pages[pageNumber - 1] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page load failed: pageNumber=\(pageNumber)")
     }
 
     let x = args["x"] as? Int ?? 0
@@ -264,9 +263,12 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
           "size": NSNumber(value: data.size)
         ]
       }
+      if dict == nil {
+        result(FlutterError(code: "exception", message: "Internal error", details: "renderPdfPageRgba failed"))
+      }
       DispatchQueue.main.async {
         // FIXME: Should we use FlutterBasicMessageChannel<ByteData>?
-        result(dict != nil ? (dict! as NSDictionary) : nil)
+        result(dict! as NSDictionary)
       }
     }
   }
@@ -290,36 +292,31 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     result(nil)
   }
 
-  func resizeTex(args: NSDictionary, result: @escaping FlutterResult) {
+  func resizeTex(args: NSDictionary, result: @escaping FlutterResult) throws {
     let texId = args["texId"] as! Int64
     guard let pageTex = textures[texId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No texture of texId=\(texId)")
     }
     let w = args["width"] as! Int
     let h = args["height"] as! Int
     pageTex.resize(width: w, height: h)
   }
 
-  func updateTex(args: NSDictionary, result: @escaping FlutterResult) {
+  func updateTex(args: NSDictionary, result: @escaping FlutterResult) throws {
     let texId = args["texId"] as! Int64
     guard let pageTex = textures[texId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No texture of texId=\(texId)")
     }
     let docId = args["docId"] as! Int
     guard let doc = docMap[docId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No document instance of docId=\(docId)")
     }
     let pageNumber = args["pageNumber"] as! Int
     guard pageNumber >= 1 && pageNumber <= doc.pages.count else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page number (\(pageNumber)) out of range [1 \(doc.pages.count)]")
     }
     guard let page = doc.pages[pageNumber - 1] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page load failed: pageNumber=\(pageNumber)")
     }
 
     let destX = args["destX"] as? Int ?? 0
