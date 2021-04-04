@@ -34,20 +34,17 @@ class _MyAppState extends State<MyApp> {
         backgroundColor: Colors.grey,
         body: Platform.isMacOS
             // Networking sample using flutter_cache_manager
-            ? FutureBuilder<File>(
-                future: DefaultCacheManager().getSingleFile(
-                    'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'),
-                builder: (context, snapshot) => snapshot.hasData
-                    ? PdfViewer.openFile(
-                        snapshot.data!.path,
-                        viewerController: controller,
-                        onError: (err) => print(err),
-                        params: PdfViewerParams(
-                          padding: 10,
-                          minScale: 1.0,
-                        ),
-                      )
-                    : Container(),
+            ? PdfViewer.openFutureFile(
+                // Accepting function that returns Future<String> of PDF file path
+                () async => (await DefaultCacheManager().getSingleFile(
+                        'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'))
+                    .path,
+                viewerController: controller,
+                onError: (err) => print(err),
+                params: PdfViewerParams(
+                  padding: 10,
+                  minScale: 1.0,
+                ),
               )
             : PdfViewer.openAsset(
                 'assets/hello.pdf',
