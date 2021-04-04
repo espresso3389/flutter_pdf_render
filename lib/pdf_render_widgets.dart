@@ -718,13 +718,13 @@ class PdfViewer extends StatefulWidget {
       );
 
   factory PdfViewer.openAsset(
-    String filePath, {
+    String assetPath, {
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
   }) =>
       PdfViewer(
-        doc: PdfDocument.openAsset(filePath),
+        doc: PdfDocument.openAsset(assetPath),
         viewerController: viewerController,
         params: params,
         onError: onError,
@@ -741,6 +741,38 @@ class PdfViewer extends StatefulWidget {
         viewerController: viewerController,
         params: params,
         onError: onError,
+      );
+
+  static Widget openFutureFile(
+    Future<String> Function() getFilePath, {
+    PdfViewerController? viewerController,
+    PdfViewerParams? params,
+    OnError? onError,
+  }) =>
+      FutureBuilder<String>(
+        future: getFilePath(),
+        builder: (context, snapshot) => PdfViewer(
+          doc: snapshot.hasData ? PdfDocument.openFile(snapshot.data!) : null,
+          viewerController: viewerController,
+          params: params,
+          onError: onError,
+        ),
+      );
+
+  static Widget openFutureData(
+    Future<Uint8List> Function() getData, {
+    PdfViewerController? viewerController,
+    PdfViewerParams? params,
+    OnError? onError,
+  }) =>
+      FutureBuilder<Uint8List>(
+        future: getData(),
+        builder: (context, snapshot) => PdfViewer(
+          doc: snapshot.hasData ? PdfDocument.openData(snapshot.data!) : null,
+          viewerController: viewerController,
+          params: params,
+          onError: onError,
+        ),
       );
 
   @override
