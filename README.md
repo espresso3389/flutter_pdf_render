@@ -2,6 +2,25 @@
 
 [pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21), and Web. It provides you with intermediate PDF rendering APIs and also easy-to-use Flutter Widgets.
 
+## Easiest sample
+
+The following fragment illustrates the easiest way to show a PDF file in assets:
+
+```dart
+  @override
+  Widget build(BuildContext context) {
+    return new MaterialApp(
+      home: new Scaffold(
+        appBar: new AppBar(
+          title: const Text('Easiest PDF sample'),
+        ),
+        backgroundColor: Colors.grey,
+        body: PdfViewer.openAsset('assets/hello.pdf')
+      )
+    );
+  }
+```
+
 ![](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
 
 # Install
@@ -10,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.0.8
+  pdf_render: ^1.0.9
 ```
 
 ## Web
@@ -43,6 +62,31 @@ You can use any URL that specify `PDF.js` distribution URL.
 ## iOS/Android
 
 For iOS and Android, no additional task needed.
+
+## macOS
+
+For macOS, there are two notable issues:
+
+- Asset access is not working yet; see [Flutter issue #47681: [macOS] add lookupKeyForAsset to FlutterPluginRegistrar](https://github.com/flutter/flutter/issues/47681)
+- Flutter app restrict its capability by enabling sandbox by default. You can change the behavior by editing either `Runner/Release.entitlements` or `Runner/DebugProfile.entitlements` depending on your configuration.
+
+The easiest option to access files on your disk, set `com.apple.security.app-sandbox` to `false` on your entitlements file though it is not recommended for releasing apps.
+
+Another option is to use `com.apple.security.files.user-selected.read-only` along with [file_selector_macos](https://pub.dev/packages/file_selector_macos). The option is better in security than the previous option.
+
+Anyway, the example code for the plugin illustrates how to download and preview internet hosted PDF file. It uses 
+`com.apple.security.network.client` along with [flutter_cache_manager](https://pub.dev/packages/flutter_cache_manager):
+
+```xml
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+```
+
+For the actual implementation, see [Missing network support?](#missing-network-support) and [the example code](https://github.com/espresso3389/flutter_pdf_render/blob/master/example/lib/main.dart).
 
 # Widgets
 
@@ -81,7 +125,21 @@ The following fragment is a simplest use of the widget:
   }
 ```
 
-In the code above, the code uses [PdfViewer.openAsset](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/openAsset.html) to load a asset PDF file. There are also [PdfViewer.openFile](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/openFile.html) for local file and [PdfViewer.openData](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/openData.html) for `Uint8List` of PDF binary data.
+In the code above, the code uses [PdfViewer.openAsset](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/PdfViewer.openAsset.html) to load a asset PDF file. There are also [PdfViewer.openFile](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/PdfViewer.openFile.html) for local file and [PdfViewer.openData](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/PdfViewer.openData.html) for `Uint8List` of PDF binary data.
+
+### Missing network support?
+
+A frequent feature request is something like `PdfViewer.openUri`. The plugin does not have it but it's easy to implement it with [flutter_cache_manager](https://pub.dev/packages/flutter_cache_manager):
+
+```dart
+FutureBuilder<File>(
+  future: DefaultCacheManager().getSingleFile(
+    'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'),
+  builder: (context, snapshot) => snapshot.hasData
+    ? PdfViewer.openFile(snapshot.data!.path)
+    : Container( /* placeholder */),
+)
+```
 
 ### PdfViewerParams
 
@@ -136,13 +194,13 @@ that you can scroll the viewer to make certain page/area of the document visible
 
 ### Page decoration
 
-Each page shown in [PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) is by default has drop-shadow using [BoxDecoration](https://api.flutter.dev/flutter/painting/BoxDecoration-class.html). You can override the appearance by [pageDecoration](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/pageDecoration.html) property.
+Each page shown in [PdfViewer](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer-class.html) is by default has drop-shadow using [BoxDecoration](https://api.flutter.dev/flutter/painting/BoxDecoration-class.html). You can override the appearance by [PdfViewerParams.pageDecoration](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/pageDecoration.html) property.
 
 ### Further page appearance customization
 
-[buildPagePlaceholder](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/buildPagePlaceholder.html) is used to customize the white blank page that is shown before loading the page contents.
+[PdfViewerParams.buildPagePlaceholder](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/buildPagePlaceholder.html) is used to customize the white blank page that is shown before loading the page contents.
 
-[buildPageOverlay](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer/buildPageOverlay.html) is used to overlay something on every page.
+[PdfViewerParams.buildPageOverlay](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/buildPageOverlay.html) is used to overlay something on every page.
 
 Both functions are defined as [BuildPageContentFunc](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/BuildPageContentFunc.html):
 
@@ -157,7 +215,7 @@ The third parameter, `pageRect` is location of page in viewer's world coordinate
 
 ## Single page view
 
-The following fragment illustrates the easiest way to render only one page of a PDF document using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html). It is suitable for showing PDF thumbnail.
+The following fragment illustrates the easiest way to render only one page of a PDF document using [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) widget. It is suitable for showing PDF thumbnail.
 
 ```dart
   @override
@@ -180,7 +238,11 @@ The following fragment illustrates the easiest way to render only one page of a 
   }
 ```
 
-Of course, [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) accepts one of `filePath`, `assetName`, or `data` to load PDF document from a file, or other sources.
+Of course, [PdfDocumentLoader](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader-class.html) has the following factory functions:
+
+- [PdfDocumentLoader.openAsset](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader/PdfDocumentLoader.openAsset.html)
+- [PdfDocumentLoader.openFile](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader/PdfDocumentLoader.openFile.html)
+- [PdfDocumentLoader.openData](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfDocumentLoader/PdfDocumentLoader.openData.html)
 
 ## Multi-page view using ListView.builder
 

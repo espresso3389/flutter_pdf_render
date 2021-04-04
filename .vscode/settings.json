@@ -2,6 +2,7 @@
     "cSpell.words": [
         "ARGB",
         "Antialiasing",
+        "Cupertino",
         "LTRB",
         "LTWH",
         "Pdfjs",
@@ -20,6 +21,8 @@
         "reentrantly",
         "relayout",
         "scrollable",
+        "sqlite",
+        "unawaited",
         "unregister",
         "vsync"
     ]
