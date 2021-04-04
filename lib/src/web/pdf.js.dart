@@ -125,12 +125,12 @@ class PdfjsRenderContext {
   external set renderInteractiveForms(bool renderInteractiveForms);
   external List<int>? get transform;
   external set transform(List<int>? transform);
-  external dynamic? get imageLayer;
-  external set imageLayer(dynamic? imageLayer);
-  external dynamic? get canvasFactory;
-  external set canvasFactory(dynamic? canvasFactory);
-  external dynamic? get background;
-  external set background(dynamic? background);
+  external dynamic get imageLayer;
+  external set imageLayer(dynamic imageLayer);
+  external dynamic get canvasFactory;
+  external set canvasFactory(dynamic canvasFactory);
+  external dynamic get background;
+  external set background(dynamic background);
   external factory PdfjsRenderContext(
       {required CanvasRenderingContext2D canvasContext,
       required PdfjsViewport viewport,
@@ -138,9 +138,9 @@ class PdfjsRenderContext {
       bool enableWebGL = false,
       bool renderInteractiveForms = false,
       List<double>? transform,
-      dynamic? imageLayer,
-      dynamic? canvasFactory,
-      dynamic? background});
+      dynamic imageLayer,
+      dynamic canvasFactory,
+      dynamic background});
 }
 
 @anonymous
