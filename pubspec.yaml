@@ -42,6 +42,8 @@ flutter:
       web:
         pluginClass: PdfRenderWebPlugin
         fileName: src/web/pdf_render_web_plugin.dart
+      windows:
+        pluginClass: PdfRenderPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

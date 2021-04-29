@@ -82,3 +82,5 @@
 example/.flutter-plugins-dependencies
 example/ios/Flutter/Flutter.podspec
 example/ios/Flutter/.last_build_id
+
+example/windows/build/
