@@ -1019,7 +1019,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   static final _extraBufferAroundView = 400.0;
 
   void _determinePagesToShow() {
-    if (_lastViewSize == null) return;
+    if (_lastViewSize == null || _pages == null) return;
     final m = _controller!.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize!.width, _lastViewSize!.height);
@@ -1068,6 +1068,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   }
 
   Future<void> _updatePageState() async {
+    if (_pages == null) return;
     _forceUpdatePagePreviews = false;
     for (final page in _pages!) {
       if (page.rect == null) continue;
