@@ -1125,10 +1125,14 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
   void _needRealSizeOverlayUpdate() {
     _cancelLastRealSizeUpdate();
+    // Using Timer as cancellable version of [Future.delayed]
     _realSizeUpdateTimer = Timer(_realSizeOverlayUpdateBufferDuration, () => _updateRealSizeOverlay());
   }
 
   Future<void> _updateRealSizeOverlay() async {
+    if (_pages == null) {
+      return;
+    }
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final m = _controller!.value;
     final r = m.row0[0];
