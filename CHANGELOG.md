@@ -1,3 +1,7 @@
+## 1.0.10
+
+* More null-check codes for possible runtime exceptions on dispose (#42).
+
 ## 1.0.9
 
 * Now supports macOS.

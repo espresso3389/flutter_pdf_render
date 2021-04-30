@@ -29,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.0.9
+  pdf_render: ^1.0.10
 ```
 
 ## Web
@@ -97,8 +97,6 @@ Firstly, you must add the following import:
 ```dart
 import 'package:pdf_render/pdf_render_widgets.dart';
 ```
-
-_BREAKING CHANGE ON 1.0.0: Please note that 1.0.0 removes the old deprecated widgets and now has only `pdf_render_widgets.dart`; it is the rename of `pdf_render_widgets2.dart` in the older (0.X.Y) releases._
 
 ## PdfViewer
 
