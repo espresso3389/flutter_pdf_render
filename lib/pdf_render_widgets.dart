@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math64;
 
@@ -1133,16 +1134,28 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     if (_pages == null) {
       return;
     }
+    const FULL_PURGE_DIST_THRESHOLD = 33;
+    const PARTIAL_REMOVAL_DIST_THRESHOLD = 8;
+
     final dpr = MediaQuery.of(context).devicePixelRatio;
     final m = _controller!.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3], _lastViewSize!.width, _lastViewSize!.height);
+    final distBase = max(_lastViewSize!.height, _lastViewSize!.width);
     for (final page in _pages!) {
       if (page.rect == null || page.status != _PdfPageLoadingStatus.pageLoaded) continue;
       final pageRectZoomed =
           Rect.fromLTRB(page.rect!.left * r, page.rect!.top * r, page.rect!.right * r, page.rect!.bottom * r);
       final part = pageRectZoomed.intersect(exposed);
-      if (part.isEmpty) continue;
+      if (part.isEmpty) {
+        final dist = (exposed.center - pageRectZoomed.center).distance;
+        if (dist > distBase * FULL_PURGE_DIST_THRESHOLD) {
+          page.releaseTextures();
+        } else if (dist > distBase * PARTIAL_REMOVAL_DIST_THRESHOLD) {
+          page.releaseRealSize();
+        }
+        continue;
+      }
       final fw = pageRectZoomed.width * dpr;
       final fh = pageRectZoomed.height * dpr;
       if (page.preview?.hasUpdatedTexture == true && fw <= page.preview!.texWidth! && fh <= page.preview!.texHeight!) {
@@ -1228,15 +1241,19 @@ class _PdfPageState {
 
   void _updateRealSizeOverlay() => _realSizeNotifier.value++;
 
+  bool releaseRealSize() {
+    realSize?.dispose();
+    realSize = null;
+    return true;
+  }
+
   /// Release allocated textures.
   /// It's always safe to call the method. If all the textures were already released, the method does nothing.
   /// Returns true if textures are really released; otherwise if the method does nothing and returns false.
   bool releaseTextures() {
-    if (preview == null) return false;
-    preview!.dispose();
-    realSize?.dispose();
+    preview?.dispose();
     preview = null;
-    realSize = null;
+    releaseRealSize();
     status = _PdfPageLoadingStatus.initialized;
     return true;
   }
