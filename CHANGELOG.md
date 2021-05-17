@@ -1,3 +1,9 @@
+## 1.0.11
+
+* Implements page memory purging (#44)
+* Unified code for iOS/macOS
+* Better error handling code for iOS/macOS (#44)
+
 ## 1.0.10
 
 * More null-check codes for possible runtime exceptions on dispose (#42).
