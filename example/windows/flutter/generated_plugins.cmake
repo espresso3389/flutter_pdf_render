@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  pdf_render
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

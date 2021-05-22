@@ -1,20 +1,18 @@
 import 'dart:typed_data';
 
-import '../utils/ffi_wrapper.dart' as ffi;
+import '../utils/ffi_wrapper.dart';
 import 'package:ffi/ffi.dart';
 
-final _module = ffi.DynamicLibrary.open('sobar.dll');
+final _module = DynamicLibrary.open('sobar.dll');
 
-final _nullString = ffi.Pointer<Utf8>.fromAddress(0);
+final _nullString = Pointer<Utf8>.fromAddress(0);
 
-final sbr_Initialize =
-    _module.lookup<ffi.NativeFunction<ffi.Void Function()>>('sbr_Initialize').asFunction<void Function()>();
-final sbr_Finalize =
-    _module.lookup<ffi.NativeFunction<ffi.Void Function()>>('sbr_Finalize').asFunction<void Function()>();
+final sbr_Initialize = _module.lookup<NativeFunction<Void Function()>>('sbr_Initialize').asFunction<void Function()>();
+final sbr_Finalize = _module.lookup<NativeFunction<Void Function()>>('sbr_Finalize').asFunction<void Function()>();
 
 final _sbr_PdfDocumentOpenFile = _module
-    .lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>)>>('sbr_PdfDocumentOpenFile')
-    .asFunction<int Function(ffi.Pointer<Utf8>, ffi.Pointer<Utf8>)>();
+    .lookup<NativeFunction<IntPtr Function(Pointer<Utf8>, Pointer<Utf8>)>>('sbr_PdfDocumentOpenFile')
+    .asFunction<int Function(Pointer<Utf8>, Pointer<Utf8>)>();
 
 sbr_PdfDocument? sbr_PdfDocumentOpenFile(String fileName, String? password) {
   final fileNamePtr = fileName.toNativeUtf8();
@@ -22,78 +20,68 @@ sbr_PdfDocument? sbr_PdfDocumentOpenFile(String fileName, String? password) {
   final ret = _sbr_PdfDocumentOpenFile(fileNamePtr, passwordPtr);
   malloc.free(fileNamePtr);
   malloc.free(passwordPtr);
-  return sbr_PdfDocument._fromInt(ret);
+  return sbr_PdfDocument._fromInt(ret, name: fileName);
 }
 
 final _sbr_PdfDocumentOpenMemory = _module
-    .lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.Pointer<ffi.Uint8>, ffi.Uint32, ffi.Pointer<Utf8>)>>(
-        'sbr_PdfDocumentOpenMemory')
-    .asFunction<int Function(ffi.Pointer<ffi.Uint8>, int, ffi.Pointer<Utf8>)>();
+    .lookup<NativeFunction<IntPtr Function(Pointer<Uint8>, Uint32, Pointer<Utf8>)>>('sbr_PdfDocumentOpenMemory')
+    .asFunction<int Function(Pointer<Uint8>, int, Pointer<Utf8>)>();
 
-sbr_PdfDocument? sbr_PdfDocumentOpenMemory(ffi.Pointer<ffi.Uint8> buffer, int size, String? password) {
+sbr_PdfDocument? sbr_PdfDocumentOpenMemory(Pointer<Uint8> buffer, int size, String? password) {
   final passwordPtr = password?.toNativeUtf8() ?? _nullString;
   final ret = _sbr_PdfDocumentOpenMemory(buffer, size, passwordPtr);
   malloc.free(passwordPtr);
-  return sbr_PdfDocument._fromInt(ret);
+  return sbr_PdfDocument._fromInt(ret, name: 'memory-${buffer.address}');
 }
 
-typedef _sbr_ContextReadCallback = ffi.Uint32 Function(ffi.IntPtr, ffi.Pointer<ffi.Uint8>, ffi.Uint32, ffi.Uint32);
-typedef _sbr_ContextReleaseCallback = ffi.Void Function(ffi.IntPtr);
+typedef _sbr_ContextReadCallback = Uint32 Function(IntPtr, Pointer<Uint8>, Uint32, Uint32);
+typedef _sbr_ContextReleaseCallback = Void Function(IntPtr);
 
 final _sbr_PdfDocumentOpenCustom = _module
     .lookup<
-        ffi.NativeFunction<
-            ffi.IntPtr Function(
-                ffi.IntPtr,
-                ffi.Uint32,
-                ffi.Pointer<ffi.NativeFunction<_sbr_ContextReadCallback>>,
-                ffi.Pointer<ffi.NativeFunction<_sbr_ContextReleaseCallback>>,
-                ffi.Pointer<Utf8>)>>('sbr_PdfDocumentOpenCustom')
+        NativeFunction<
+            IntPtr Function(IntPtr, Uint32, Pointer<NativeFunction<_sbr_ContextReadCallback>>,
+                Pointer<NativeFunction<_sbr_ContextReleaseCallback>>, Pointer<Utf8>)>>('sbr_PdfDocumentOpenCustom')
     .asFunction<
-        int Function(int, int, ffi.Pointer<ffi.NativeFunction<_sbr_ContextReadCallback>>,
-            ffi.Pointer<ffi.NativeFunction<_sbr_ContextReleaseCallback>>, ffi.Pointer<Utf8>)>();
+        int Function(int, int, Pointer<NativeFunction<_sbr_ContextReadCallback>>,
+            Pointer<NativeFunction<_sbr_ContextReleaseCallback>>, Pointer<Utf8>)>();
 
 sbr_PdfDocument? sbr_PdfDocumentOpenCustom(
     int context,
     int size,
-    int Function(int context, ffi.Pointer<ffi.Uint8> buffer, int offset, int length) read,
+    int Function(int context, Pointer<Uint8> buffer, int offset, int length) read,
     void Function(int context) release,
     String? password) {
-  final ffi.Pointer<ffi.NativeFunction<_sbr_ContextReadCallback>> readPtr = ffi.Pointer.fromFunction(read, -1);
-  final ffi.Pointer<ffi.NativeFunction<_sbr_ContextReleaseCallback>> releasePtr = ffi.Pointer.fromFunction(release);
+  final Pointer<NativeFunction<_sbr_ContextReadCallback>> readPtr = Pointer.fromFunction(read, -1);
+  final Pointer<NativeFunction<_sbr_ContextReleaseCallback>> releasePtr = Pointer.fromFunction(release);
   final passwordPtr = password?.toNativeUtf8() ?? _nullString;
   final ret = _sbr_PdfDocumentOpenCustom(context, size, readPtr, releasePtr, passwordPtr);
   malloc.free(passwordPtr);
-  return sbr_PdfDocument._fromInt(ret);
+  return sbr_PdfDocument._fromInt(ret, name: 'custom');
 }
 
-final sbr_PdfDocumentClose = _module
-    .lookup<ffi.NativeFunction<ffi.Void Function(ffi.IntPtr)>>('sbr_PdfDocumentClose')
-    .asFunction<void Function(int)>();
+final sbr_PdfDocumentClose =
+    _module.lookup<NativeFunction<Void Function(IntPtr)>>('sbr_PdfDocumentClose').asFunction<void Function(int)>();
 
 final sbr_PdfDocumentGetPageCount = _module
-    .lookup<ffi.NativeFunction<ffi.Uint32 Function(ffi.IntPtr)>>('sbr_PdfDocumentGetPageCount')
+    .lookup<NativeFunction<Uint32 Function(IntPtr)>>('sbr_PdfDocumentGetPageCount')
     .asFunction<int Function(int)>();
 
 final sbr_PdfDocumentLoadPage = _module
-    .lookup<ffi.NativeFunction<ffi.IntPtr Function(ffi.IntPtr, ffi.Uint32)>>('sbr_PdfDocumentLoadPage')
+    .lookup<NativeFunction<IntPtr Function(IntPtr, Uint32)>>('sbr_PdfDocumentLoadPage')
     .asFunction<int Function(int, int)>();
 
-final sbr_PdfPageClose = _module
-    .lookup<ffi.NativeFunction<ffi.Void Function(ffi.IntPtr)>>('sbr_PdfPageClose')
-    .asFunction<void Function(int)>();
+final sbr_PdfPageClose =
+    _module.lookup<NativeFunction<Void Function(IntPtr)>>('sbr_PdfPageClose').asFunction<void Function(int)>();
 
-final sbr_PdfPageGetWidth = _module
-    .lookup<ffi.NativeFunction<ffi.Double Function(ffi.IntPtr)>>('sbr_PdfPageGetWidth')
-    .asFunction<double Function(int)>();
+final sbr_PdfPageGetWidth =
+    _module.lookup<NativeFunction<Double Function(IntPtr)>>('sbr_PdfPageGetWidth').asFunction<double Function(int)>();
 
-final sbr_PdfPageGetHeight = _module
-    .lookup<ffi.NativeFunction<ffi.Double Function(ffi.IntPtr)>>('sbr_PdfPageGetHeight')
-    .asFunction<double Function(int)>();
+final sbr_PdfPageGetHeight =
+    _module.lookup<NativeFunction<Double Function(IntPtr)>>('sbr_PdfPageGetHeight').asFunction<double Function(int)>();
 
-final sbr_PdfPageGetRotation = _module
-    .lookup<ffi.NativeFunction<ffi.Uint32 Function(ffi.IntPtr)>>('sbr_PdfPageGetRotation')
-    .asFunction<int Function(int)>();
+final sbr_PdfPageGetRotation =
+    _module.lookup<NativeFunction<Uint32 Function(IntPtr)>>('sbr_PdfPageGetRotation').asFunction<int Function(int)>();
 
 enum sbr_PixelFormat {
   invalid,
@@ -115,7 +103,7 @@ const _pf2int = {
 
 final _int2pf = _pf2int.reverseMap();
 
-typedef _sbr_PdfBitmapOnReleaseCallback = ffi.Void Function(ffi.IntPtr context);
+typedef _sbr_PdfBitmapOnReleaseCallback = Void Function(IntPtr context);
 
 enum sbr_RotateClockwise {
   cw0, // normal
@@ -196,10 +184,8 @@ const _flag2int = {
 };
 
 final _sbr_PdfPageRender = _module
-    .lookup<
-        ffi.NativeFunction<
-            ffi.Uint32 Function(ffi.IntPtr, ffi.IntPtr, ffi.Uint32, ffi.Uint32, ffi.Uint32, ffi.Uint32, ffi.Uint32,
-                ffi.Uint32)>>('sbr_PdfPageRender')
+    .lookup<NativeFunction<Uint32 Function(IntPtr, IntPtr, Uint32, Uint32, Uint32, Uint32, Uint32, Uint32)>>(
+        'sbr_PdfPageRender')
     .asFunction<int Function(int, int, int, int, int, int, int, int)>();
 
 int sbr_PdfPageRender(int page, int bmp, int x, int y, int width, int height, sbr_RotateClockwise rotate,
@@ -209,44 +195,42 @@ int sbr_PdfPageRender(int page, int bmp, int x, int y, int width, int height, sb
 
 final _sbr_PdfBitmapCreate = _module
     .lookup<
-        ffi.NativeFunction<
-            ffi.IntPtr Function(ffi.Uint32, ffi.Uint32, ffi.Uint32, ffi.Int32, ffi.Pointer<ffi.Uint8>,
-                ffi.Pointer<ffi.NativeFunction<_sbr_PdfBitmapOnReleaseCallback>>, ffi.IntPtr)>>('sbr_PdfBitmapCreate')
+        NativeFunction<
+            IntPtr Function(Uint32, Uint32, Uint32, Int32, Pointer<Uint8>,
+                Pointer<NativeFunction<_sbr_PdfBitmapOnReleaseCallback>>, IntPtr)>>('sbr_PdfBitmapCreate')
     .asFunction<
-        int Function(int, int, int, int, ffi.Pointer<ffi.Uint8>,
-            ffi.Pointer<ffi.NativeFunction<_sbr_PdfBitmapOnReleaseCallback>>, int)>();
+        int Function(
+            int, int, int, int, Pointer<Uint8>, Pointer<NativeFunction<_sbr_PdfBitmapOnReleaseCallback>>, int)>();
 
-final sbr_PdfBitmapRelease = _module
-    .lookup<ffi.NativeFunction<ffi.Void Function(ffi.IntPtr)>>('sbr_PdfBitmapRelease')
-    .asFunction<void Function(int)>();
+final sbr_PdfBitmapRelease =
+    _module.lookup<NativeFunction<Void Function(IntPtr)>>('sbr_PdfBitmapRelease').asFunction<void Function(int)>();
 
 final _sbr_PdfBitmapGetPixelFormat = _module
-    .lookup<ffi.NativeFunction<ffi.Uint32 Function(ffi.IntPtr)>>('sbr_PdfBitmapGetPixelFormat')
+    .lookup<NativeFunction<Uint32 Function(IntPtr)>>('sbr_PdfBitmapGetPixelFormat')
     .asFunction<int Function(int)>();
 
 final sbr_PdfBitmapGetScan0Pointer = _module
-    .lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint8> Function(ffi.IntPtr)>>('sbr_PdfBitmapGetScan0Pointer')
-    .asFunction<ffi.Pointer<ffi.Uint8> Function(int)>();
+    .lookup<NativeFunction<Pointer<Uint8> Function(IntPtr)>>('sbr_PdfBitmapGetScan0Pointer')
+    .asFunction<Pointer<Uint8> Function(int)>();
 
-final sbr_PdfBitmapGetStride = _module
-    .lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.IntPtr)>>('sbr_PdfBitmapGetStride')
-    .asFunction<int Function(int)>();
+final sbr_PdfBitmapGetStride =
+    _module.lookup<NativeFunction<Int32 Function(IntPtr)>>('sbr_PdfBitmapGetStride').asFunction<int Function(int)>();
 
-final sbr_PdfBitmapGetWidth = _module
-    .lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.IntPtr)>>('sbr_PdfBitmapGetWidth')
-    .asFunction<int Function(int)>();
+final sbr_PdfBitmapGetWidth =
+    _module.lookup<NativeFunction<Int32 Function(IntPtr)>>('sbr_PdfBitmapGetWidth').asFunction<int Function(int)>();
 
-final sbr_PdfBitmapGetHeight = _module
-    .lookup<ffi.NativeFunction<ffi.Int32 Function(ffi.IntPtr)>>('sbr_PdfBitmapGetHeight')
-    .asFunction<int Function(int)>();
+final sbr_PdfBitmapGetHeight =
+    _module.lookup<NativeFunction<Int32 Function(IntPtr)>>('sbr_PdfBitmapGetHeight').asFunction<int Function(int)>();
 
 class sbr_PdfDocument {
+  final String name;
   final int handle;
-  const sbr_PdfDocument._(this.handle);
-  static sbr_PdfDocument? _fromInt(int handle) => handle == 0 ? null : sbr_PdfDocument._(handle);
+  const sbr_PdfDocument._(this.handle, this.name);
+  static sbr_PdfDocument? _fromInt(int handle, {required String name}) =>
+      handle == 0 ? null : sbr_PdfDocument._(handle, name);
 
-  static sbr_PdfDocument? openFile(String fileName, String? password) => sbr_PdfDocumentOpenFile(fileName, password);
-  static sbr_PdfDocument? openData(Uint8List data, String? password) {
+  static sbr_PdfDocument? openFile(String fileName, {String? password}) => sbr_PdfDocumentOpenFile(fileName, password);
+  static sbr_PdfDocument? openData(Uint8List data, {String? password}) {
     return sbr_PdfDocumentOpenCustom(0, data.length, (context, buffer, offset, length) {
       for (int i = 0; i < length; i++) {
         buffer[i] = data[offset + i];
@@ -299,15 +283,14 @@ class sbr_PdfBitmap {
   const sbr_PdfBitmap._(this.handle);
   static sbr_PdfBitmap? _fromInt(int handle) => handle == 0 ? null : sbr_PdfBitmap._(handle);
 
-  static sbr_PdfBitmap? allocate(int width, int height, sbr_PixelFormat format) =>
-      sbr_PdfBitmap._fromInt(_sbr_PdfBitmapCreate(
-          width, height, _pf2int[format]!, 0, ffi.Pointer.fromAddress(0), ffi.Pointer.fromAddress(0), 0));
+  static sbr_PdfBitmap? allocate(int width, int height, sbr_PixelFormat format) => sbr_PdfBitmap._fromInt(
+      _sbr_PdfBitmapCreate(width, height, _pf2int[format]!, 0, Pointer.fromAddress(0), Pointer.fromAddress(0), 0));
 
   void dispose() => sbr_PdfBitmapRelease(handle);
 
   sbr_PixelFormat get pixelFormat => _int2pf[_sbr_PdfBitmapGetPixelFormat(handle)]!;
 
-  ffi.Pointer<ffi.Uint8> get scan0 => sbr_PdfBitmapGetScan0Pointer(handle);
+  Pointer<Uint8> get scan0 => sbr_PdfBitmapGetScan0Pointer(handle);
 
   int get width => sbr_PdfBitmapGetWidth(handle);
 
