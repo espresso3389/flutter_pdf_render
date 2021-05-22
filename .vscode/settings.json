@@ -16,6 +16,8 @@
         "endtemplate",
         "jsify",
         "listenables",
+        "malloc",
+        "nullptr",
         "pubspec",
         "rects",
         "reentrantly",
