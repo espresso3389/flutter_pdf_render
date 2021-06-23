@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb; // for checking whether running on Web or not
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:pdf_render/pdf_render_widgets.dart';
@@ -32,7 +33,7 @@ class _MyAppState extends State<MyApp> {
                   Text(controller.isReady ? 'Page #${controller.currentPageNumber}' : 'Page -')),
         ),
         backgroundColor: Colors.grey,
-        body: Platform.isMacOS
+        body: !kIsWeb && Platform.isMacOS
             // Networking sample using flutter_cache_manager
             ? PdfViewer.openFutureFile(
                 // Accepting function that returns Future<String> of PDF file path
