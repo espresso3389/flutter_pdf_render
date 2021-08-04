@@ -1,3 +1,7 @@
+## 1.0.12
+
+* Fix #50 Hot Reload throws error on Change Notifier
+
 ## 1.0.11
 
 * Implements page memory purging (#44)
