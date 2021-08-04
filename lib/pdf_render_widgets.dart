@@ -443,7 +443,7 @@ class PdfViewerController extends TransformationController {
   /// Associate a [_PdfViewerState] to the controller.
   void _setViewerState(_PdfViewerState? state) {
     _state = state;
-    this.notifyListeners();
+    if (_state != null) this.notifyListeners();
   }
 
   /// Whether the controller is ready or not.
@@ -704,6 +704,7 @@ class PdfViewer extends StatefulWidget {
     this.onError,
   }) : super(key: key);
 
+  /// Open a file.
   factory PdfViewer.openFile(
     String filePath, {
     PdfViewerController? viewerController,
@@ -717,6 +718,7 @@ class PdfViewer extends StatefulWidget {
         onError: onError,
       );
 
+  /// Open an asset.
   factory PdfViewer.openAsset(
     String assetPath, {
     PdfViewerController? viewerController,
@@ -730,6 +732,7 @@ class PdfViewer extends StatefulWidget {
         onError: onError,
       );
 
+  /// Open PDF data on byte array.
   factory PdfViewer.openData(
     Uint8List data, {
     PdfViewerController? viewerController,
@@ -748,15 +751,19 @@ class PdfViewer extends StatefulWidget {
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
+    Widget Function(BuildContext)? loadingBannerBuilder,
+    PdfDocument? docFallback,
   }) =>
       FutureBuilder<String>(
         future: getFilePath(),
-        builder: (context, snapshot) => PdfViewer(
-          doc: snapshot.hasData ? PdfDocument.openFile(snapshot.data!) : null,
-          viewerController: viewerController,
-          params: params,
-          onError: onError,
-        ),
+        builder: (context, snapshot) => loadingBannerBuilder != null && !snapshot.hasData
+            ? Builder(builder: loadingBannerBuilder)
+            : PdfViewer(
+                doc: snapshot.hasData ? PdfDocument.openFile(snapshot.data!) : Future.value(docFallback),
+                viewerController: viewerController,
+                params: params,
+                onError: onError,
+              ),
       );
 
   static Widget openFutureData(
@@ -764,15 +771,19 @@ class PdfViewer extends StatefulWidget {
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
+    Widget Function(BuildContext)? loadingBannerBuilder,
+    PdfDocument? docFallback,
   }) =>
       FutureBuilder<Uint8List>(
         future: getData(),
-        builder: (context, snapshot) => PdfViewer(
-          doc: snapshot.hasData ? PdfDocument.openData(snapshot.data!) : null,
-          viewerController: viewerController,
-          params: params,
-          onError: onError,
-        ),
+        builder: (context, snapshot) => loadingBannerBuilder != null && !snapshot.hasData
+            ? Builder(builder: loadingBannerBuilder)
+            : PdfViewer(
+                doc: snapshot.hasData ? PdfDocument.openData(snapshot.data!) : Future.value(docFallback),
+                viewerController: viewerController,
+                params: params,
+                onError: onError,
+              ),
       );
 
   @override
@@ -782,6 +793,7 @@ class PdfViewer extends StatefulWidget {
 class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMixin {
   PdfDocument? _doc;
   List<_PdfPageState>? _pages;
+  final _pendedPageDisposes = <_PdfPageState>[];
   final _myController = PdfViewerController();
   Size? _lastViewSize;
   Timer? _realSizeUpdateTimer;
@@ -800,18 +812,18 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _animController = AnimationController(vsync: this, duration: Duration(milliseconds: 200));
-    init();
+    _init();
   }
 
   @override
   void didUpdateWidget(PdfViewer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    checkUpdates(oldWidget);
+    _checkUpdates(oldWidget);
   }
 
-  Future<void> checkUpdates(PdfViewer oldWidget) async {
+  Future<void> _checkUpdates(PdfViewer oldWidget) async {
     if ((await widget._doc) != (await oldWidget._doc)) {
-      init();
+      _init();
     } else if (oldWidget.params?.pageNumber != widget.params?.pageNumber) {
       widget.params?.onViewerControllerInitialized?.call(_controller);
       if (widget.params?.pageNumber != null) {
@@ -826,16 +838,17 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     }
   }
 
-  void init() {
+  void _init() {
     _controller?.removeListener(_determinePagesToShow);
     _controller?._setViewerState(null);
-    load();
+    _load();
   }
 
   @override
   void dispose() {
     _cancelLastRealSizeUpdate();
     _releasePages();
+    _handlePendedPageDisposes();
     _controller?.removeListener(_determinePagesToShow);
     _controller?._setViewerState(null);
     _myController.dispose();
@@ -843,7 +856,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  Future<void> load() async {
+  Future<void> _load() async {
     _releasePages();
     _doc = await widget._doc;
 
@@ -866,13 +879,22 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   void _releasePages() {
     if (_pages == null) return;
     for (final p in _pages!) {
-      p.dispose();
+      p.releaseTextures();
     }
+    _pendedPageDisposes.addAll(_pages!);
     _pages = null;
+  }
+
+  void _handlePendedPageDisposes() {
+    for (final p in _pendedPageDisposes) {
+      p.releaseTextures();
+    }
+    _pendedPageDisposes.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    Future.microtask(_handlePendedPageDisposes);
     return LayoutBuilder(
       builder: (context, constraints) {
         final viewSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -1201,7 +1223,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   }
 }
 
-enum _PdfPageLoadingStatus { notInitialized, initializing, initialized, pageLoading, pageLoaded }
+enum _PdfPageLoadingStatus { notInitialized, initializing, initialized, pageLoading, pageLoaded, disposed }
 
 /// Internal page control structure.
 class _PdfPageState {
@@ -1236,9 +1258,13 @@ class _PdfPageState {
 
   _PdfPageState._({required this.pageNumber, required this.pageSize});
 
-  void updatePreview() => _previewNotifier.value++;
+  void updatePreview() {
+    if (status != _PdfPageLoadingStatus.disposed) _previewNotifier.value++;
+  }
 
-  void _updateRealSizeOverlay() => _realSizeNotifier.value++;
+  void _updateRealSizeOverlay() {
+    if (status != _PdfPageLoadingStatus.disposed) _realSizeNotifier.value++;
+  }
 
   bool releaseRealSize() {
     realSize?.dispose();
@@ -1249,16 +1275,18 @@ class _PdfPageState {
   /// Release allocated textures.
   /// It's always safe to call the method. If all the textures were already released, the method does nothing.
   /// Returns true if textures are really released; otherwise if the method does nothing and returns false.
-  bool releaseTextures() {
+  bool releaseTextures() => _releaseTextures(_PdfPageLoadingStatus.initialized);
+
+  bool _releaseTextures(_PdfPageLoadingStatus newStatus) {
     preview?.dispose();
     preview = null;
     releaseRealSize();
-    status = _PdfPageLoadingStatus.initialized;
+    status = newStatus;
     return true;
   }
 
   void dispose() {
-    releaseTextures();
+    _releaseTextures(_PdfPageLoadingStatus.disposed);
     _previewNotifier.dispose();
     _realSizeNotifier.dispose();
   }
