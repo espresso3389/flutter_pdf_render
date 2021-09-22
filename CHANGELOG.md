@@ -1,3 +1,7 @@
+## 1.0.13
+
+* Merged PR #54 "device_info replace by device_info_plus" by lsaudon
+
 ## 1.0.12
 
 * Fix #50 Hot Reload throws error on Change Notifier
