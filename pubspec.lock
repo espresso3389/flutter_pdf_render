@@ -7,7 +7,7 @@ packages:
       name: async
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.8.2"
+    version: "2.8.1"
   boolean_selector:
     dependency: transitive
     description:
@@ -21,7 +21,7 @@ packages:
       name: characters
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.2.0"
+    version: "1.1.0"
   charcode:
     dependency: transitive
     description:
@@ -43,48 +43,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.15.0"
-  device_info_plus:
-    dependency: "direct main"
-    description:
-      name: device_info_plus
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.1.0"
-  device_info_plus_linux:
-    dependency: transitive
-    description:
-      name: device_info_plus_linux
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.1.0"
-  device_info_plus_macos:
-    dependency: transitive
-    description:
-      name: device_info_plus_macos
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.1.0"
-  device_info_plus_platform_interface:
-    dependency: transitive
-    description:
-      name: device_info_plus_platform_interface
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.1.0"
-  device_info_plus_web:
-    dependency: transitive
-    description:
-      name: device_info_plus_web
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.1.0"
-  device_info_plus_windows:
-    dependency: transitive
-    description:
-      name: device_info_plus_windows
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.1.0"
   fake_async:
     dependency: transitive
     description:
@@ -92,20 +50,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.2.0"
-  ffi:
-    dependency: transitive
-    description:
-      name: ffi
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "1.1.2"
-  file:
-    dependency: transitive
-    description:
-      name: file
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "6.1.2"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -134,7 +78,7 @@ packages:
       name: matcher
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.12.11"
+    version: "0.12.10"
   meta:
     dependency: transitive
     description:
@@ -202,7 +146,7 @@ packages:
       name: test_api
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.4.3"
+    version: "0.4.2"
   typed_data:
     dependency: transitive
     description:
@@ -217,13 +161,6 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "2.1.0"
-  win32:
-    dependency: transitive
-    description:
-      name: win32
-      url: "https://pub.dartlang.org"
-    source: hosted
-    version: "2.2.9"
 sdks:
-  dart: ">=2.13.0 <3.0.0"
+  dart: ">=2.12.0 <3.0.0"
   flutter: ">=1.20.0"
