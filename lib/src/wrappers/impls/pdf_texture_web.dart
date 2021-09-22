@@ -9,11 +9,13 @@ import '../../web/pdf_render_web_plugin.dart';
 
 class PdfTexture extends StatefulWidget {
   final int textureId;
-  PdfTexture({required this.textureId, Key? key}) : super(key: key);
+  const PdfTexture({required this.textureId, Key? key}) : super(key: key);
   @override
   _PdfTextureState createState() => _PdfTextureState();
 
-  RgbaData? get data => js_util.getProperty(html.window, 'pdf_render_texture_$textureId') as RgbaData?;
+  RgbaData? get data =>
+      js_util.getProperty(html.window, 'pdf_render_texture_$textureId')
+          as RgbaData?;
 }
 
 class _PdfTextureState extends State<PdfTexture> {
@@ -79,8 +81,9 @@ class _PdfTextureState extends State<PdfTexture> {
 class _WebTextureManager {
   static final instance = _WebTextureManager._();
 
-  final _id2states = Map<int, List<_PdfTextureState>>();
-  final _events = EventChannel('jp.espresso3389.pdf_render/web_texture_events');
+  final _id2states = <int, List<_PdfTextureState>>{};
+  final _events =
+      const EventChannel('jp.espresso3389.pdf_render/web_texture_events');
 
   _WebTextureManager._() {
     _events.receiveBroadcastStream().listen((event) {
@@ -90,7 +93,8 @@ class _WebTextureManager {
     });
   }
 
-  void register(int id, _PdfTextureState state) => _id2states.putIfAbsent(id, () => []).add(state);
+  void register(int id, _PdfTextureState state) =>
+      _id2states.putIfAbsent(id, () => []).add(state);
 
   void unregister(int id, _PdfTextureState state) {
     final states = _id2states[id];

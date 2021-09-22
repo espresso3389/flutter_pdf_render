@@ -12,7 +12,8 @@ import '../utils/web_pointer.dart';
 
 class PdfRenderWebPlugin {
   static void registerWith(Registrar registrar) {
-    final channel = MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
+    final channel =
+        MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
     final plugin = PdfRenderWebPlugin._();
     channel.setMethodCallHandler(plugin.handleMethodCall);
   }
@@ -27,10 +28,11 @@ class PdfRenderWebPlugin {
   }
 
   final _eventStreamController = StreamController<int>();
-  final _eventChannel = PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
-  final _docs = Map<int, PdfjsDocument>();
+  final _eventChannel =
+      const PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
+  final _docs = <int, PdfjsDocument>{};
   int _lastDocId = -1;
-  final _textures = Map<int, RgbaData>();
+  final _textures = <int, RgbaData>{};
   int _texId = -1;
 
   Future<dynamic> handleMethodCall(MethodCall call) async {
@@ -49,7 +51,8 @@ class PdfRenderWebPlugin {
         }
       case 'data':
         {
-          final doc = await pdfjsGetDocumentFromData((call.arguments as Uint8List).buffer);
+          final doc = await pdfjsGetDocumentFromData(
+              (call.arguments as Uint8List).buffer);
           return _setDoc(doc);
         }
       case 'close':
@@ -99,7 +102,8 @@ class PdfRenderWebPlugin {
     final doc = _docs[docId]!;
     final pageNumber = args['pageNumber'] as int;
     if (pageNumber < 1 || pageNumber > doc.numPages) return null;
-    final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
+    final page =
+        await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
     return {
       'docId': docId,
@@ -135,13 +139,15 @@ class PdfRenderWebPlugin {
     if (oldData != null && oldData.width == width && oldData.height == height) {
       return oldData;
     }
-    final data = _textures[id] = RgbaData.alloc(id: id, width: width, height: height);
+    final data =
+        _textures[id] = RgbaData.alloc(id: id, width: width, height: height);
     js_util.setProperty(html.window, 'pdf_render_texture_$id', data);
     return data;
   }
 
   Future<dynamic> _render(dynamic args) async {
-    return await _renderRaw(args, dontFlip: true, handleRawData: (src, width, height) {
+    return await _renderRaw(args, dontFlip: true,
+        handleRawData: (src, width, height) {
       return {
         'addr': pinBufferByFakeAddress(src),
         'size': src.length,
@@ -151,19 +157,22 @@ class PdfRenderWebPlugin {
     });
   }
 
-  Future<void> _releaseBuffer(dynamic args) async => unpinBufferByFakeAddress(args as int);
+  Future<void> _releaseBuffer(dynamic args) async =>
+      unpinBufferByFakeAddress(args as int);
 
   Future<dynamic> _renderRaw(
     dynamic args, {
     required bool dontFlip,
-    required FutureOr<dynamic> Function(Uint8List src, int width, int height) handleRawData,
+    required FutureOr<dynamic> Function(Uint8List src, int width, int height)
+        handleRawData,
   }) async {
     final docId = args['docId'] as int;
     final doc = _docs[docId];
     if (doc == null) return -3;
     final pageNumber = args['pageNumber'] as int;
     if (pageNumber < 1 || pageNumber > doc.numPages) return -6;
-    final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
+    final page =
+        await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
 
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
     final pw = vp1.width;
@@ -175,11 +184,16 @@ class PdfRenderWebPlugin {
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
     if (width == null || height == null || width <= 0 || height <= 0) return -7;
 
-    final offsetX = -(args['srcX'] as int? ?? args['x'] as int? ?? 0).toDouble();
-    final offsetY = -(args['srcY'] as int? ?? args['y'] as int? ?? 0).toDouble();
+    final offsetX =
+        -(args['srcX'] as int? ?? args['x'] as int? ?? 0).toDouble();
+    final offsetY =
+        -(args['srcY'] as int? ?? args['y'] as int? ?? 0).toDouble();
 
-    final vp = page.getViewport(
-        PdfjsViewportParams(scale: fullWidth / pw, offsetX: offsetX, offsetY: offsetY, dontFlip: dontFlip));
+    final vp = page.getViewport(PdfjsViewportParams(
+        scale: fullWidth / pw,
+        offsetX: offsetX,
+        offsetY: offsetY,
+        dontFlip: dontFlip));
 
     final canvas = html.document.createElement('canvas') as html.CanvasElement;
     canvas.width = width;
@@ -199,7 +213,11 @@ class PdfRenderWebPlugin {
         )
         .promise);
 
-    final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
+    final src = canvas.context2D
+        .getImageData(0, 0, width, height)
+        .data
+        .buffer
+        .asUint8List();
     return await handleRawData(src, width, height);
   }
 
@@ -211,7 +229,8 @@ class PdfRenderWebPlugin {
         final id = args['texId'] as int;
         final destX = args['destX'] as int? ?? 0;
         final destY = args['destY'] as int? ?? 0;
-        final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
+        final data = _updateTexSize(
+            id, args['texWidth'] as int, args['texHeight'] as int);
         final destStride = data.stride;
         final bpl = width * 4;
         int dp = data.getOffset(destX, destY);
@@ -240,7 +259,7 @@ class RgbaData {
   int get stride => width * 4;
   int getOffset(int x, int y) => (x + y * width) * 4;
 
-  RgbaData(this.id, this.width, this.height, this.data);
+  const RgbaData(this.id, this.width, this.height, this.data);
 
   factory RgbaData.alloc({
     required int id,
