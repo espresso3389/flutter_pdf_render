@@ -58,19 +58,16 @@ typedef OnError = void Function(dynamic);
 class _PdfDocumentAwaiter {
   _PdfDocumentAwaiter(this._docFuture, {this.onError});
 
-  final FutureOr<PdfDocument?> _docFuture;
+  final FutureOr<PdfDocument> _docFuture;
   final OnError? onError;
-  PdfDocument? _cached;
+  late PdfDocument _cached;
   bool _firstTime = true;
 
-  Future<PdfDocument?> getValue() async {
+  Future<PdfDocument> getValue() async {
     if (_firstTime) {
       _firstTime = false;
       try {
         _cached = await _docFuture;
-        if (_cached == null) {
-          onError?.call(ArgumentError('Could not open document.'));
-        }
       } catch (e) {
         onError?.call(e);
       }
@@ -81,7 +78,7 @@ class _PdfDocumentAwaiter {
 
 /// [PdfDocumentLoader] is a [Widget] that used to load arbitrary PDF document and manages [PdfDocument] instance.
 class PdfDocumentLoader extends StatefulWidget {
-  final FutureOr<PdfDocument?> doc;
+  final FutureOr<PdfDocument> doc;
 
   /// Function to build widget tree corresponding to PDF document.
   final PdfDocumentBuilder? documentBuilder;
@@ -680,7 +677,7 @@ class PdfViewerParams {
 /// A PDF viewer implementation with user interactive zooming support.
 class PdfViewer extends StatefulWidget {
   /// PDF document instance.
-  final FutureOr<PdfDocument?> doc;
+  final FutureOr<PdfDocument> doc;
 
   /// Controller for the viewer. If none is specified, the viewer initializes one internally.
   final PdfViewerController? viewerController;
@@ -698,7 +695,7 @@ class PdfViewer extends StatefulWidget {
 
   PdfViewer({
     Key? key,
-    this.doc,
+    required this.doc,
     this.viewerController,
     this.params,
     this.onError,
@@ -1108,7 +1105,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         page.status = _PdfPageLoadingStatus.initializing;
         page.pdfPage = await _doc!.getPage(page.pageNumber);
         final prevPageSize = page.pageSize;
-        page.pageSize = Size(page.pdfPage!.width, page.pdfPage!.height);
+        page.pageSize = Size(page.pdfPage.width, page.pdfPage.height);
         page.status = _PdfPageLoadingStatus.initialized;
         if (prevPageSize != page.pageSize && mounted) {
           _relayout(_lastViewSize);
@@ -1118,16 +1115,17 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
       if (page.status == _PdfPageLoadingStatus.initialized) {
         page.status = _PdfPageLoadingStatus.pageLoading;
         page.preview =
-            await PdfPageImageTexture.create(pdfDocument: page.pdfPage!.document, pageNumber: page.pageNumber);
-        final w = page.pdfPage!.width; // * 2;
-        final h = page.pdfPage!.height; // * 2;
+            await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
+        final w = page.pdfPage.width; // * 2;
+        final h = page.pdfPage.height; // * 2;
         await page.preview!.updateRect(
-            width: w.toInt(),
-            height: h.toInt(),
-            texWidth: w.toInt(),
-            texHeight: h.toInt(),
-            fullWidth: w,
-            fullHeight: h);
+          width: w.toInt(),
+          height: h.toInt(),
+          texWidth: w.toInt(),
+          texHeight: h.toInt(),
+          fullWidth: w,
+          fullHeight: h,
+        );
         page.status = _PdfPageLoadingStatus.pageLoaded;
         page.updatePreview();
       }
@@ -1187,7 +1185,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         final offset = part.topLeft - pageRectZoomed.topLeft;
         page.realSizeOverlayRect = Rect.fromLTWH(offset.dx / r, offset.dy / r, part.width / r, part.height / r);
         page.realSize ??=
-            await PdfPageImageTexture.create(pdfDocument: page.pdfPage!.document, pageNumber: page.pageNumber);
+            await PdfPageImageTexture.create(pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
         final w = (part.width * dpr).toInt();
         final h = (part.height * dpr).toInt();
         await page.realSize!.updateRect(
@@ -1230,11 +1228,11 @@ class _PdfPageState {
   /// Page number (started at 1).
   final int pageNumber;
 
+  /// [PdfPage] corresponding to the page if available.
+  late final PdfPage pdfPage;
+
   /// Where the page is layed out if available. It can be null to not show in the view.
   Rect? rect;
-
-  /// [PdfPage] corresponding to the page if available.
-  PdfPage? pdfPage;
 
   /// Size at 72-dpi. During the initialization, the size may be just a copy of the size of the first page.
   Size pageSize;
