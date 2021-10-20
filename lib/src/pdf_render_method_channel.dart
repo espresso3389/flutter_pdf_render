@@ -9,7 +9,7 @@ import 'utils/ffi_wrapper.dart';
 import 'interfaces/pdf_render.dart';
 import 'interfaces/pdf_render_platform_interface.dart';
 
-const MethodChannel _channel = const MethodChannel('pdf_render');
+const MethodChannel _channel = MethodChannel('pdf_render');
 
 class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
   PdfDocument _open(Map<dynamic, dynamic> obj, String sourceName) {
@@ -48,9 +48,11 @@ class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
   @override
   Future<PdfPageImageTexture> createTexture(
-      {required FutureOr<PdfDocument> pdfDocument, required int pageNumber}) async {
+      {required FutureOr<PdfDocument> pdfDocument,
+      required int pageNumber}) async {
     final texId = await _channel.invokeMethod<int>('allocTex');
-    return PdfPageImageTextureMethodChannel._(pdfDocument: await pdfDocument, pageNumber: pageNumber, texId: texId!);
+    return PdfPageImageTextureMethodChannel._(
+        pdfDocument: await pdfDocument, pageNumber: pageNumber, texId: texId!);
   }
 }
 
@@ -63,15 +65,14 @@ class PdfDocumentMethodChannel extends PdfDocument {
 
   PdfDocumentMethodChannel._({
     required String sourceName,
-    required int docId,
+    required this.docId,
     required int pageCount,
     required int verMajor,
     required int verMinor,
     required bool isEncrypted,
     required bool allowsCopying,
     required bool allowsPrinting,
-  })   : docId = docId,
-        _pages = List<PdfPage?>.filled(pageCount, null),
+  })  : _pages = List<PdfPage?>.filled(pageCount, null),
         super(
             sourceName: sourceName,
             pageCount: pageCount,
@@ -94,8 +95,8 @@ class PdfDocumentMethodChannel extends PdfDocument {
     }
     var page = _pages[pageNumber - 1];
     if (page == null) {
-      var obj =
-          (await _channel.invokeMethod<Map<dynamic, dynamic>>('page', {"docId": docId, "pageNumber": pageNumber}))!;
+      var obj = (await _channel.invokeMethod<Map<dynamic, dynamic>>(
+          'page', {"docId": docId, "pageNumber": pageNumber}))!;
       page = _pages[pageNumber - 1] = PdfPageMethodChannel._(
         document: this,
         pageNumber: pageNumber,
@@ -107,7 +108,8 @@ class PdfDocumentMethodChannel extends PdfDocument {
   }
 
   @override
-  bool operator ==(dynamic other) => other is PdfDocumentMethodChannel && other.docId == docId;
+  bool operator ==(dynamic other) =>
+      other is PdfDocumentMethodChannel && other.docId == docId;
 
   @override
   int get hashCode => docId;
@@ -123,7 +125,11 @@ class PdfPageMethodChannel extends PdfPage {
       required int pageNumber,
       required double width,
       required double height})
-      : super(document: document, pageNumber: pageNumber, width: width, height: height);
+      : super(
+            document: document,
+            pageNumber: pageNumber,
+            width: width,
+            height: height);
 
   @override
   Future<PdfPageImage> render({
@@ -152,7 +158,9 @@ class PdfPageMethodChannel extends PdfPage {
 
   @override
   bool operator ==(dynamic other) =>
-      other is PdfPageMethodChannel && other.document == document && other.pageNumber == pageNumber;
+      other is PdfPageMethodChannel &&
+      other.document == document &&
+      other.pageNumber == pageNumber;
 
   @override
   int get hashCode => document.hashCode ^ pageNumber;
@@ -162,7 +170,7 @@ class PdfPageMethodChannel extends PdfPage {
 }
 
 class PdfPageImageMethodChannel extends PdfPageImage {
-  Uint8List _pixels;
+  final Uint8List _pixels;
   Pointer<Uint8>? _buffer;
   ui.Image? _imageCached;
 
@@ -222,7 +230,8 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   ui.Image? get imageIfAvailable => _imageCached;
 
   @override
-  Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
+  Future<ui.Image> createImageDetached() async =>
+      await _decodeRgba(width, height, _pixels);
 
   static Future<PdfPageImage> _render(
     PdfDocumentMethodChannel document,
@@ -277,7 +286,8 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   /// Decode RGBA raw image from native code.
   static Future<ui.Image> _decodeRgba(int width, int height, Uint8List pixels) {
     final comp = Completer<ui.Image>();
-    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888, (image) => comp.complete(image));
+    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888,
+        (image) => comp.complete(image));
     return comp.future;
   }
 }
@@ -308,10 +318,14 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   @override
   int get hashCode => _doc.docId ^ pageNumber;
 
-  PdfPageImageTextureMethodChannel._({required PdfDocument pdfDocument, required int pageNumber, required int texId})
+  PdfPageImageTextureMethodChannel._(
+      {required PdfDocument pdfDocument,
+      required int pageNumber,
+      required int texId})
       : super(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
 
   /// Release the object.
+  @override
   Future<void> dispose() => _channel.invokeMethod('releaseTex', texId);
 
   /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle
@@ -319,6 +333,7 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
   /// The method can also resize the texture if you specify [texWidth] and [texHeight].
   /// Returns true if succeeded.
+  @override
   Future<bool> updateRect(
       {int destX = 0,
       int destY = 0,
