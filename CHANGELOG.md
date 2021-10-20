@@ -1,3 +1,7 @@
+## 1.0.15
+
+* Merge PR #55 Add flutter_lints
+
 ## 1.0.14
 
 * Remove device_info_plus from dependencies.
