@@ -1,3 +1,7 @@
+## 1.0.14
+
+* Remove device_info_plus from dependencies.
+
 ## 1.0.13
 
 * Merged PR #54 "device_info replace by device_info_plus" by lsaudon
