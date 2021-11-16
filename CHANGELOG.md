@@ -1,3 +1,7 @@
+## 1.0.16
+
+* Fix a warning on AndroidManifest.xml.
+
 ## 1.0.15
 
 * Merge PR #55 Add flutter_lints
