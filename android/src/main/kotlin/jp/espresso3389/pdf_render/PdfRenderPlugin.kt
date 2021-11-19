@@ -275,6 +275,8 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
     val docId = args["docId"] as Int
     val pageNumber = args["pageNumber"] as Int
     val tex = textures[texId]
+    if (tex == null) return -8
+
     val renderer = documents[docId]
 
     renderer.openPage(pageNumber - 1). use {page ->
@@ -306,7 +308,7 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
         tex.surfaceTexture()?.setDefaultBufferSize(texWidth, texHeight)
 
       Surface(tex.surfaceTexture()).use {
-        val canvas = it.lockCanvas(Rect(destX, destY, width, height))
+        val canvas = it.lockCanvas(Rect(destX, destY, width, height));
 
         canvas.drawBitmap(bmp, destX.toFloat(), destY.toFloat(), null)
         bmp.recycle()
