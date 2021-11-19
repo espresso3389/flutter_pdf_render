@@ -1,3 +1,7 @@
+## 1.0.17
+
+* Additional null check on updateTex (Android); possible fix for #59 and #61.
+
 ## 1.0.16
 
 * Fix a warning on AndroidManifest.xml.
