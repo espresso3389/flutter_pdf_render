@@ -52,6 +52,9 @@
       // any other options for pdfjsLib.getDocument.
       // params: {}
     }
+    // To workaround the recent breaking change on Flutter Web, you can set workaround_for_flutter_93615 to true:
+    // For more info, see
+    //window.workaround_for_flutter_93615 = true;
   </script>
   <script src="main.dart.js" type="application/javascript"></script>
 </body>
