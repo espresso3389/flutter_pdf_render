@@ -1,3 +1,7 @@
+## 1.0.18
+
+* Add workaround for recent Flutter Web breaking change (#60).
+
 ## 1.0.17
 
 * Additional null check on updateTex (Android); possible fix for #59 and #61.
