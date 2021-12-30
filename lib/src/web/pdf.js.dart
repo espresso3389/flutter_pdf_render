@@ -119,8 +119,6 @@ class PdfjsRenderContext {
 
   /// `display` or `print`
   external set intent(String intent);
-  external bool get enableWebGL;
-  external set enableWebGL(bool enableWebGL);
   external bool get renderInteractiveForms;
   external set renderInteractiveForms(bool renderInteractiveForms);
   external List<int>? get transform;
@@ -135,7 +133,6 @@ class PdfjsRenderContext {
       {required CanvasRenderingContext2D canvasContext,
       required PdfjsViewport viewport,
       String intent = 'display',
-      bool enableWebGL = false,
       bool renderInteractiveForms = false,
       List<double>? transform,
       dynamic imageLayer,

@@ -196,7 +196,6 @@ class PdfRenderWebPlugin {
           PdfjsRenderContext(
             canvasContext: canvas.context2D,
             viewport: vp,
-            enableWebGL: true,
           ),
         )
         .promise);
