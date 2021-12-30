@@ -20,12 +20,15 @@ dependencies:
     # the parent directory to use the current plugin's version.
     path: ../
   # For macOS, it does not open asset files; the example uses network for loading PDF file
-  flutter_cache_manager: ^3.1.2
+  flutter_cache_manager: ^3.3.0
 
 dev_dependencies:
   flutter_lints: ^1.0.4
   flutter_test:
     sdk: flutter
+
+dependency_overrides:
+  platform: 3.1.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
