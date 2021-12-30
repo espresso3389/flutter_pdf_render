@@ -1,3 +1,7 @@
+## 1.0.19
+
+* Add more error handling codes.
+
 ## 1.0.18
 
 * Add workaround for recent Flutter Web breaking change (#60).
