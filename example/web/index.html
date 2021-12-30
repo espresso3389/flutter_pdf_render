@@ -41,19 +41,19 @@
     }
   </script>
   <!-- IMPORTANT: load pdfjs files -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/build/pdf.js" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js" type="text/javascript"></script>
   <script type="text/javascript">
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/build/pdf.worker.min.js";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.worker.min.js";
     pdfRenderOptions = {
       // where cmaps are downloaded from
-      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/cmaps/',
+      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/cmaps/',
       // The cmaps are compressed in the case
       cMapPacked: true,
       // any other options for pdfjsLib.getDocument.
       // params: {}
     }
     // To workaround the recent breaking change on Flutter Web, you can set workaround_for_flutter_93615 to true:
-    // For more info, see
+    // For more info, see https://pub.dev/packages/pdf_render/versions/1.0.18#rendering-breakage-on-recent-flutter-web
     //window.workaround_for_flutter_93615 = true;
   </script>
   <script src="main.dart.js" type="application/javascript"></script>

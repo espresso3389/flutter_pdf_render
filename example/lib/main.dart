@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart'
-    show kIsWeb; // for checking whether running on Web or not
+import 'package:flutter/foundation.dart' show kIsWeb; // for checking whether running on Web or not
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:pdf_render/pdf_render_widgets.dart';
@@ -32,9 +31,8 @@ class _MyAppState extends State<MyApp> {
           title: ValueListenableBuilder<Object>(
               // The controller is compatible with ValueListenable<Matrix4> and you can receive notifications on scrolling and zooming of the view.
               valueListenable: controller,
-              builder: (context, _, child) => Text(controller.isReady
-                  ? 'Page #${controller.currentPageNumber}'
-                  : 'Page -')),
+              builder: (context, _, child) =>
+                  Text(controller.isReady ? 'Page #${controller.currentPageNumber}' : 'Page -')),
         ),
         backgroundColor: Colors.grey,
         body: !kIsWeb && Platform.isMacOS
@@ -69,8 +67,7 @@ class _MyAppState extends State<MyApp> {
             ),
             FloatingActionButton(
               child: const Icon(Icons.last_page),
-              onPressed: () =>
-                  controller.ready?.goToPage(pageNumber: controller.pageCount),
+              onPressed: () => controller.ready?.goToPage(pageNumber: controller.pageCount),
             ),
           ],
         ),

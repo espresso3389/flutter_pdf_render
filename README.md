@@ -42,12 +42,12 @@ To use the Flutter Web support, you should add the following code just before `<
 
 ```html
   <!-- IMPORTANT: load pdfjs files -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/build/pdf.js" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js" type="text/javascript"></script>
   <script type="text/javascript">
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/build/pdf.worker.min.js";
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.worker.min.js";
     pdfRenderOptions = {
       // where cmaps are downloaded from
-      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.6.347/cmaps/',
+      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/cmaps/',
       // The cmaps are compressed in the case
       cMapPacked: true,
       // any other options for pdfjsLib.getDocument.

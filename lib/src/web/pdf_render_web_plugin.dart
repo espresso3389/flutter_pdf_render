@@ -154,16 +154,20 @@ class PdfRenderWebPlugin {
 
   Future<void> _releaseBuffer(dynamic args) async => unpinBufferByFakeAddress(args as int);
 
-  Future<dynamic> _renderRaw(
+  Future<T> _renderRaw<T>(
     dynamic args, {
     required bool dontFlip,
-    required FutureOr<dynamic> Function(Uint8List src, int width, int height) handleRawData,
+    required FutureOr<T> Function(Uint8List src, int width, int height) handleRawData,
   }) async {
     final docId = args['docId'] as int;
     final doc = _docs[docId];
-    if (doc == null) return -3;
+    if (doc == null) {
+      throw Exception('PDF document is not loaded.');
+    }
     final pageNumber = args['pageNumber'] as int;
-    if (pageNumber < 1 || pageNumber > doc.numPages) return -6;
+    if (pageNumber < 1 || pageNumber > doc.numPages) {
+      throw Exception('PDF page number out of range.');
+    }
     final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
 
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
@@ -174,7 +178,9 @@ class PdfRenderWebPlugin {
     final width = args['width'] as int?;
     final height = args['height'] as int?;
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
-    if (width == null || height == null || width <= 0 || height <= 0) return -7;
+    if (width == null || height == null || width <= 0 || height <= 0) {
+      throw Exception('Invalid PDF page rendering rectangle ($width x $height)');
+    }
 
     final offsetX = -(args['srcX'] as int? ?? args['x'] as int? ?? 0).toDouble();
     final offsetY = -(args['srcY'] as int? ?? args['y'] as int? ?? 0).toDouble();
