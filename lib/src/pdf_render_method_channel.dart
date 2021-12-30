@@ -48,11 +48,9 @@ class PdfRenderPlatformMethodChannel extends PdfRenderPlatform {
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
   @override
   Future<PdfPageImageTexture> createTexture(
-      {required FutureOr<PdfDocument> pdfDocument,
-      required int pageNumber}) async {
+      {required FutureOr<PdfDocument> pdfDocument, required int pageNumber}) async {
     final texId = await _channel.invokeMethod<int>('allocTex');
-    return PdfPageImageTextureMethodChannel._(
-        pdfDocument: await pdfDocument, pageNumber: pageNumber, texId: texId!);
+    return PdfPageImageTextureMethodChannel._(pdfDocument: await pdfDocument, pageNumber: pageNumber, texId: texId!);
   }
 }
 
@@ -91,12 +89,12 @@ class PdfDocumentMethodChannel extends PdfDocument {
   @override
   Future<PdfPage> getPage(int pageNumber) async {
     if (pageNumber < 1 || pageNumber > pageCount) {
-      throw RangeError.range(pageNumber, 1, pageCount);
+      throw RangeError.range(pageNumber, 1, pageCount, 'pageNumber');
     }
     var page = _pages[pageNumber - 1];
     if (page == null) {
-      var obj = (await _channel.invokeMethod<Map<dynamic, dynamic>>(
-          'page', {"docId": docId, "pageNumber": pageNumber}))!;
+      var obj =
+          (await _channel.invokeMethod<Map<dynamic, dynamic>>('page', {"docId": docId, "pageNumber": pageNumber}))!;
       page = _pages[pageNumber - 1] = PdfPageMethodChannel._(
         document: this,
         pageNumber: pageNumber,
@@ -108,8 +106,7 @@ class PdfDocumentMethodChannel extends PdfDocument {
   }
 
   @override
-  bool operator ==(dynamic other) =>
-      other is PdfDocumentMethodChannel && other.docId == docId;
+  bool operator ==(dynamic other) => other is PdfDocumentMethodChannel && other.docId == docId;
 
   @override
   int get hashCode => docId;
@@ -125,11 +122,7 @@ class PdfPageMethodChannel extends PdfPage {
       required int pageNumber,
       required double width,
       required double height})
-      : super(
-            document: document,
-            pageNumber: pageNumber,
-            width: width,
-            height: height);
+      : super(document: document, pageNumber: pageNumber, width: width, height: height);
 
   @override
   Future<PdfPageImage> render({
@@ -158,9 +151,7 @@ class PdfPageMethodChannel extends PdfPage {
 
   @override
   bool operator ==(dynamic other) =>
-      other is PdfPageMethodChannel &&
-      other.document == document &&
-      other.pageNumber == pageNumber;
+      other is PdfPageMethodChannel && other.document == document && other.pageNumber == pageNumber;
 
   @override
   int get hashCode => document.hashCode ^ pageNumber;
@@ -230,8 +221,7 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   ui.Image? get imageIfAvailable => _imageCached;
 
   @override
-  Future<ui.Image> createImageDetached() async =>
-      await _decodeRgba(width, height, _pixels);
+  Future<ui.Image> createImageDetached() async => await _decodeRgba(width, height, _pixels);
 
   static Future<PdfPageImage> _render(
     PdfDocumentMethodChannel document,
@@ -286,8 +276,7 @@ class PdfPageImageMethodChannel extends PdfPageImage {
   /// Decode RGBA raw image from native code.
   static Future<ui.Image> _decodeRgba(int width, int height, Uint8List pixels) {
     final comp = Completer<ui.Image>();
-    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888,
-        (image) => comp.complete(image));
+    ui.decodeImageFromPixels(pixels, width, height, ui.PixelFormat.rgba8888, (image) => comp.complete(image));
     return comp.future;
   }
 }
@@ -318,10 +307,7 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   @override
   int get hashCode => _doc.docId ^ pageNumber;
 
-  PdfPageImageTextureMethodChannel._(
-      {required PdfDocument pdfDocument,
-      required int pageNumber,
-      required int texId})
+  PdfPageImageTextureMethodChannel._({required PdfDocument pdfDocument, required int pageNumber, required int texId})
       : super(pdfDocument: pdfDocument, pageNumber: pageNumber, texId: texId);
 
   /// Release the object.

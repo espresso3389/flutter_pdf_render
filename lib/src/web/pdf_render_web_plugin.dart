@@ -73,7 +73,7 @@ class PdfRenderWebPlugin {
       case 'updateTex':
         return await _updateTex(call.arguments);
       default:
-        throw Exception('`${call.method}` is not supported.');
+        throw UnsupportedError('`${call.method}` is not supported.');
     }
   }
 
@@ -96,18 +96,22 @@ class PdfRenderWebPlugin {
   }
 
   dynamic _openPage(dynamic args) async {
-    final docId = args['docId'] as int;
-    final doc = _docs[docId]!;
-    final pageNumber = args['pageNumber'] as int;
-    if (pageNumber < 1 || pageNumber > doc.numPages) return null;
-    final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
-    final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
-    return {
-      'docId': docId,
-      'pageNumber': pageNumber,
-      'width': vp1.width,
-      'height': vp1.height,
-    };
+    try {
+      final docId = args['docId'] as int;
+      final doc = _docs[docId]!;
+      final pageNumber = args['pageNumber'] as int;
+      if (pageNumber < 1 || pageNumber > doc.numPages) return null;
+      final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
+      final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
+      return {
+        'docId': docId,
+        'pageNumber': pageNumber,
+        'width': vp1.width,
+        'height': vp1.height,
+      };
+    } catch (e) {
+      return null;
+    }
   }
 
   int _allocTex() {
@@ -166,7 +170,7 @@ class PdfRenderWebPlugin {
     }
     final pageNumber = args['pageNumber'] as int;
     if (pageNumber < 1 || pageNumber > doc.numPages) {
-      throw Exception('PDF page number out of range.');
+      throw RangeError.range(pageNumber, 1, doc.numPages, 'pageNumber');
     }
     final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
 
