@@ -718,11 +718,13 @@ class PdfViewer extends StatefulWidget {
   /// Open a file.
   factory PdfViewer.openFile(
     String filePath, {
+    Key? key,
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
   }) =>
       PdfViewer(
+        key: key,
         doc: PdfDocument.openFile(filePath),
         viewerController: viewerController,
         params: params,
@@ -732,11 +734,13 @@ class PdfViewer extends StatefulWidget {
   /// Open an asset.
   factory PdfViewer.openAsset(
     String assetPath, {
+    Key? key,
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
   }) =>
       PdfViewer(
+        key: key,
         doc: PdfDocument.openAsset(assetPath),
         viewerController: viewerController,
         params: params,
@@ -746,19 +750,23 @@ class PdfViewer extends StatefulWidget {
   /// Open PDF data on byte array.
   factory PdfViewer.openData(
     Uint8List data, {
+    Key? key,
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
   }) =>
       PdfViewer(
+        key: key,
         doc: PdfDocument.openData(data),
         viewerController: viewerController,
         params: params,
         onError: onError,
       );
 
+  /// Open PDF from the filename returned by async function.
   static Widget openFutureFile(
     Future<String> Function() getFilePath, {
+    Key? key,
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
@@ -766,6 +774,7 @@ class PdfViewer extends StatefulWidget {
     PdfDocument? docFallback,
   }) =>
       FutureBuilder<String>(
+        key: key,
         future: getFilePath(),
         builder: (context, snapshot) => loadingBannerBuilder != null && !snapshot.hasData
             ? Builder(builder: loadingBannerBuilder)
@@ -777,8 +786,10 @@ class PdfViewer extends StatefulWidget {
               ),
       );
 
+  /// Open PDF data on byte array returned by async function.
   static Widget openFutureData(
     Future<Uint8List> Function() getData, {
+    Key? key,
     PdfViewerController? viewerController,
     PdfViewerParams? params,
     OnError? onError,
@@ -786,6 +797,7 @@ class PdfViewer extends StatefulWidget {
     PdfDocument? docFallback,
   }) =>
       FutureBuilder<Uint8List>(
+        key: key,
         future: getData(),
         builder: (context, snapshot) => loadingBannerBuilder != null && !snapshot.hasData
             ? Builder(builder: loadingBannerBuilder)
@@ -984,32 +996,31 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
 
   /// Default page layout logic that layouts pages vertically or horizontally.
   void _relayoutDefault(Size viewSize) {
-      if (widget.params?.scrollDirection == Axis.horizontal) {
-        final maxHeight = _pages!.fold<double>(0.0, (maxHeight, page) => max(maxHeight, page.pageSize.height));
-        final ratio = (viewSize.height - _padding * 2) / maxHeight;
-        var left = _padding;
-        for (int i = 0; i < _pages!.length; i++) {
-          final page = _pages![i];
-          final w = page.pageSize.width * ratio;
-          final h = page.pageSize.height * ratio;
-          page.rect = Rect.fromLTWH(left, _padding, w, h);
-          left += w + _padding;
-        }
-        _docSize = Size(left, viewSize.height);
+    if (widget.params?.scrollDirection == Axis.horizontal) {
+      final maxHeight = _pages!.fold<double>(0.0, (maxHeight, page) => max(maxHeight, page.pageSize.height));
+      final ratio = (viewSize.height - _padding * 2) / maxHeight;
+      var left = _padding;
+      for (int i = 0; i < _pages!.length; i++) {
+        final page = _pages![i];
+        final w = page.pageSize.width * ratio;
+        final h = page.pageSize.height * ratio;
+        page.rect = Rect.fromLTWH(left, _padding, w, h);
+        left += w + _padding;
       }
-      else {
-        final maxWidth = _pages!.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
-        final ratio = (viewSize.width - _padding * 2) / maxWidth;
-        var top = _padding;
-        for (int i = 0; i < _pages!.length; i++) {
-          final page = _pages![i];
-          final w = page.pageSize.width * ratio;
-          final h = page.pageSize.height * ratio;
-          page.rect = Rect.fromLTWH(_padding, top, w, h);
-          top += h + _padding;
-        }
-        _docSize = Size(viewSize.width, top);
+      _docSize = Size(left, viewSize.height);
+    } else {
+      final maxWidth = _pages!.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
+      final ratio = (viewSize.width - _padding * 2) / maxWidth;
+      var top = _padding;
+      for (int i = 0; i < _pages!.length; i++) {
+        final page = _pages![i];
+        final w = page.pageSize.width * ratio;
+        final h = page.pageSize.height * ratio;
+        page.rect = Rect.fromLTWH(_padding, top, w, h);
+        top += h + _padding;
       }
+      _docSize = Size(viewSize.width, top);
+    }
   }
 
   Iterable<Widget> iterateLaidOutPages(Size viewSize) sync* {
