@@ -549,6 +549,9 @@ class PdfViewerParams {
   /// Custom page decoration such as drop-shadow.
   final BoxDecoration? pageDecoration;
 
+  /// Scrolling direction.
+  final Axis scrollDirection;
+
   /// See [InteractiveViewer] for more info.
   final bool alignPanAxis;
 
@@ -587,6 +590,7 @@ class PdfViewerParams {
     this.buildPagePlaceholder,
     this.buildPageOverlay,
     this.pageDecoration,
+    this.scrollDirection = Axis.vertical,
     this.alignPanAxis = false,
     this.boundaryMargin = EdgeInsets.zero,
     this.maxScale = 20,
@@ -606,6 +610,7 @@ class PdfViewerParams {
     BuildPageContentFunc? buildPagePlaceholder,
     BuildPageContentFunc? buildPageOverlay,
     BoxDecoration? pageDecoration,
+    Axis? scrollDirection,
     bool? alignPanAxis,
     EdgeInsets? boundaryMargin,
     bool? panEnabled,
@@ -624,6 +629,7 @@ class PdfViewerParams {
         buildPagePlaceholder: buildPagePlaceholder ?? this.buildPagePlaceholder,
         buildPageOverlay: buildPageOverlay ?? this.buildPageOverlay,
         pageDecoration: pageDecoration ?? this.pageDecoration,
+        scrollDirection: scrollDirection ?? this.scrollDirection,
         alignPanAxis: alignPanAxis ?? this.alignPanAxis,
         boundaryMargin: boundaryMargin ?? this.boundaryMargin,
         panEnabled: panEnabled ?? this.panEnabled,
@@ -647,6 +653,7 @@ class PdfViewerParams {
         other.buildPagePlaceholder == buildPagePlaceholder &&
         other.buildPageOverlay == buildPageOverlay &&
         other.pageDecoration == pageDecoration &&
+        other.scrollDirection == scrollDirection &&
         other.alignPanAxis == alignPanAxis &&
         other.boundaryMargin == boundaryMargin &&
         other.panEnabled == panEnabled &&
@@ -667,6 +674,7 @@ class PdfViewerParams {
         buildPagePlaceholder.hashCode ^
         buildPageOverlay.hashCode ^
         pageDecoration.hashCode ^
+        scrollDirection.hashCode ^
         alignPanAxis.hashCode ^
         boundaryMargin.hashCode ^
         panEnabled.hashCode ^
@@ -974,19 +982,34 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     _determinePagesToShow();
   }
 
-  /// Default page layout logic that layouts pages vertically.
+  /// Default page layout logic that layouts pages vertically or horizontally.
   void _relayoutDefault(Size viewSize) {
-    final maxWidth = _pages!.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
-    final ratio = (viewSize.width - _padding * 2) / maxWidth;
-    var top = _padding;
-    for (int i = 0; i < _pages!.length; i++) {
-      final page = _pages![i];
-      final w = page.pageSize.width * ratio;
-      final h = page.pageSize.height * ratio;
-      page.rect = Rect.fromLTWH(_padding, top, w, h);
-      top += h + _padding;
-    }
-    _docSize = Size(viewSize.width, top);
+      if (widget.params?.scrollDirection == Axis.horizontal) {
+        final maxHeight = _pages!.fold<double>(0.0, (maxHeight, page) => max(maxHeight, page.pageSize.height));
+        final ratio = (viewSize.height - _padding * 2) / maxHeight;
+        var left = _padding;
+        for (int i = 0; i < _pages!.length; i++) {
+          final page = _pages![i];
+          final w = page.pageSize.width * ratio;
+          final h = page.pageSize.height * ratio;
+          page.rect = Rect.fromLTWH(left, _padding, w, h);
+          left += w + _padding;
+        }
+        _docSize = Size(left, viewSize.height);
+      }
+      else {
+        final maxWidth = _pages!.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
+        final ratio = (viewSize.width - _padding * 2) / maxWidth;
+        var top = _padding;
+        for (int i = 0; i < _pages!.length; i++) {
+          final page = _pages![i];
+          final w = page.pageSize.width * ratio;
+          final h = page.pageSize.height * ratio;
+          page.rect = Rect.fromLTWH(_padding, top, w, h);
+          top += h + _padding;
+        }
+        _docSize = Size(viewSize.width, top);
+      }
   }
 
   Iterable<Widget> iterateLaidOutPages(Size viewSize) sync* {
