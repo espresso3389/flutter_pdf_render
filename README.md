@@ -1,6 +1,6 @@
 # Introduction
 
-[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21), and Web. It provides you with intermediate PDF rendering APIs and also easy-to-use Flutter Widgets.
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21), and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
 
 ## Easiest sample
 
@@ -36,26 +36,30 @@ dependencies:
 
 For Web, you should add `<script>` tags on your `index.html`:
 
-The plugin now utilizes [PDF.js](https://mozilla.github.io/pdf.js/) to support Flutter Web (still very early stage of implementation).
+The plugin utilizes [PDF.js](https://mozilla.github.io/pdf.js/) to support Flutter Web.
 
 To use the Flutter Web support, you should add the following code just before `<script src="main.dart.js" type="application/javascript"></script>` inside `index.html`:
 
 ```html
-  <!-- IMPORTANT: load pdfjs files -->
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js" type="text/javascript"></script>
-  <script type="text/javascript">
-    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.worker.min.js";
-    pdfRenderOptions = {
-      // where cmaps are downloaded from
-      cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/cmaps/',
-      // The cmaps are compressed in the case
-      cMapPacked: true,
-      // any other options for pdfjsLib.getDocument.
-      // params: {}
-    }
-    // To workaround the recent breaking change on Flutter Web, you can set workaround_for_flutter_93615 to true:
-    //window.workaround_for_flutter_93615 = true;
-  </script>
+<!-- IMPORTANT: load pdfjs files -->
+<script
+  src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js"
+  type="text/javascript"
+></script>
+<script type="text/javascript">
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.worker.min.js";
+  pdfRenderOptions = {
+    // where cmaps are downloaded from
+    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/cmaps/",
+    // The cmaps are compressed in the case
+    cMapPacked: true,
+    // any other options for pdfjsLib.getDocument.
+    // params: {}
+  };
+  // To workaround the recent breaking change on Flutter Web, you can set workaround_for_flutter_93615 to true:
+  //window.workaround_for_flutter_93615 = true;
+</script>
 ```
 
 You can use any URL that specify `PDF.js` distribution URL.
@@ -72,6 +76,7 @@ window.workaround_for_flutter_93615 = true;
 ```
 
 For more info, see the following issues:
+
 - [espresso3389/flutter_pdf_render: Web: PDF rendering distorted since Flutter Master 2.6.0-12.0.pre.674 #60](https://github.com/espresso3389/flutter_pdf_render/issues/60)
 - [flutter/flutter: [Web] Regression in Master - PDF display distorted due to change in BMP Encoder #93615](https://github.com/flutter/flutter/issues/93615)
 
@@ -84,14 +89,18 @@ For iOS and Android, no additional task needed.
 For macOS, there are two notable issues:
 
 - Asset access is not working yet; see [Flutter issue #47681: [macOS] add lookupKeyForAsset to FlutterPluginRegistrar](https://github.com/flutter/flutter/issues/47681)
-- Flutter app restrict its capability by enabling sandbox by default. You can change the behavior by editing either `Runner/Release.entitlements` or `Runner/DebugProfile.entitlements` depending on your configuration.
+- Flutter app restrict its capability by enabling [App Sandbox](https://developer.apple.com/documentation/security/app_sandbox) by default. You can change the behavior by editing your app's entitlements files depending on your configuration. See [the discussion below](#deal-with-app-sandbox).
+  - [`macos/Runner/Release.entitlements`](https://github.com/espresso3389/flutter_pdf_render/blob/master/example/macos/Runner/Release.entitlements)
+  - [`macos/Runner/DebugProfile.entitlements`](https://github.com/espresso3389/flutter_pdf_render/blob/master/example/macos/Runner/DebugProfile.entitlements)
 
-The easiest option to access files on your disk, set `com.apple.security.app-sandbox` to `false` on your entitlements file though it is not recommended for releasing apps.
+### Deal with App Sandbox
 
-Another option is to use `com.apple.security.files.user-selected.read-only` along with [file_selector_macos](https://pub.dev/packages/file_selector_macos). The option is better in security than the previous option.
+The easiest option to access files on your disk, set [`com.apple.security.app-sandbox`](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_app-sandbox) to `false` on your entitlements file though it is not recommended for releasing apps because it completely disables [App Sandbox](https://developer.apple.com/documentation/security/app_sandbox).
 
-Anyway, the example code for the plugin illustrates how to download and preview internet hosted PDF file. It uses 
-`com.apple.security.network.client` along with [flutter_cache_manager](https://pub.dev/packages/flutter_cache_manager):
+Another option is to use [`com.apple.security.files.user-selected.read-only`](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_files_user-selected_read-only) along with [file_selector_macos](https://pub.dev/packages/file_selector_macos). The option is better in security than the previous option.
+
+Anyway, the example code for the plugin illustrates how to download and preview internet hosted PDF file. It uses
+[`com.apple.security.network.client`](https://developer.apple.com/documentation/bundleresources/entitlements/com_apple_security_network_client) along with [flutter_cache_manager](https://pub.dev/packages/flutter_cache_manager):
 
 ```xml
 <dict>
@@ -593,4 +602,3 @@ class PdfPageImageTexture {
   });
 }
 ```
-
