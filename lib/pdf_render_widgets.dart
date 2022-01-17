@@ -60,19 +60,17 @@ class _PdfDocumentAwaiter {
 
   final FutureOr<PdfDocument> _docFuture;
   final OnError? onError;
-  late PdfDocument _cached;
-  bool _firstTime = true;
+  PdfDocument? _cached;
 
   Future<PdfDocument> getValue() async {
-    if (_firstTime) {
-      _firstTime = false;
+    if (_cached == null) {
       try {
         _cached = await _docFuture;
       } catch (e) {
         onError?.call(e);
       }
     }
-    return _cached;
+    return _cached!;
   }
 }
 
@@ -193,7 +191,9 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
   void _setPageSize(int pageNumber, Size? size) {
     _lastPageSize = size;
     if (pageNumber > 0 && pageNumber <= _doc!.pageCount) {
-      _cachedPageSizes ??= List<Size?>.filled(_doc!.pageCount, null);
+      if (_cachedPageSizes == null || _cachedPageSizes?.length != _doc!.pageCount) {
+        _cachedPageSizes = List<Size?>.filled(_doc!.pageCount, null);
+      }
       _cachedPageSizes![pageNumber - 1] = size;
     }
   }
