@@ -1,3 +1,9 @@
+## 1.0.20
+
+* PdfViewerParams introduces scrollDirection to support horizontal scroll (#69).
+* targetSdkVersion 31 for example code
+* Gradle/Kotlin version updates
+
 ## 1.0.19
 
 * Add more error handling codes.

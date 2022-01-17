@@ -56,7 +56,7 @@ class _MyAppState extends State<MyApp> {
                 params: const PdfViewerParams(
                   padding: 10,
                   minScale: 1.0,
-                  // scrollDirection: Axis.horizontal,
+                  scrollDirection: Axis.horizontal,
                 ),
               ),
         floatingActionButton: Column(
