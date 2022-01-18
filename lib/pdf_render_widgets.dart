@@ -583,8 +583,8 @@ class PdfViewerParams {
   /// See [InteractiveViewer] for more info.
   final GestureScaleUpdateCallback? onInteractionUpdate;
 
-  /// Callback that is called on viewer initialization to notify the actual [PdfViewerController] used by the viewer
-  /// regardless of specifying [viewerController].
+  /// Callback that is called on viewer initialization.
+  /// It is called on every document load.
   final OnPdfViewerControllerInitialized? onViewerControllerInitialized;
 
   /// Initializes the parameters.
@@ -884,17 +884,9 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
   Future<void> _checkUpdates(PdfViewer oldWidget) async {
     if ((await widget._doc) != (await oldWidget._doc)) {
       _init();
-    } else if (oldWidget.params?.pageNumber != widget.params?.pageNumber) {
+    } else {
       widget.params?.onViewerControllerInitialized?.call(_controller);
-      if (widget.params?.pageNumber != null) {
-        final m = _controller!.calculatePageFitMatrix(
-          pageNumber: widget.params!.pageNumber!,
-          padding: widget.params!.padding,
-        );
-        if (m != null) {
-          _controller!.value = m;
-        }
-      }
+      _moveToInitialPositionIfSpecified(oldPageNumber: oldWidget.params?.pageNumber);
     }
   }
 
@@ -1015,12 +1007,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         widget.params?.onViewerControllerInitialized?.call(_controller);
 
         if (mounted) {
-          if (widget.params?.pageNumber != null) {
-            final m = _controller!.calculatePageFitMatrix(pageNumber: widget.params!.pageNumber!);
-            if (m != null) {
-              _controller!.value = m;
-            }
-          }
+          _moveToInitialPositionIfSpecified();
           _forceUpdatePagePreviews = true;
           _determinePagesToShow();
         }
@@ -1029,6 +1016,24 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     }
 
     _determinePagesToShow();
+  }
+
+  void _moveToInitialPositionIfSpecified({int? oldPageNumber}) {
+    Matrix4? m;
+
+    // if the pageNumber is explicitly specified and changed from the previous one,
+    // move to that page.
+    final newPageNumber = widget.params?.pageNumber;
+    if (oldPageNumber != newPageNumber && newPageNumber != null) {
+      m = _controller!.calculatePageFitMatrix(
+        pageNumber: newPageNumber,
+        padding: widget.params!.padding,
+      );
+    }
+
+    if (m != null) {
+      _controller!.value = m;
+    }
   }
 
   /// Default page layout logic that layouts pages vertically or horizontally.
