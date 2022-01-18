@@ -197,7 +197,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.20"
+    version: "1.0.21"
   pedantic:
     dependency: transitive
     description:

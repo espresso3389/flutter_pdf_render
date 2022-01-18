@@ -1,3 +1,7 @@
+## 1.0.21
+
+* Minor updates.
+
 ## 1.0.20
 
 * PdfViewerParams introduces scrollDirection to support horizontal scroll (#69).
