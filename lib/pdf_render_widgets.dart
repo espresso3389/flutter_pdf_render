@@ -33,8 +33,10 @@ typedef PdfPageBuilder = Widget Function(BuildContext context, PdfPageTextureBui
 /// Anyway, please note that the size is in screen coordinates; not the actual pixel size of
 /// the image. In other words, the function correctly deals with the screen pixel density automatically.
 /// [backgroundFill] specifies whether to fill background before rendering actual page content or not.
-/// The page content may not have background fill and if the flag is false, it may be rendered with transparent background.
-/// [renderingPixelRatio] specifies pixel density for rendering page image. If it is null, the value is obtained by calling `MediaQuery.of(context).devicePixelRatio`.
+/// The page content may not have background fill and if the flag is false, it may be rendered with transparent
+/// background.
+/// [renderingPixelRatio] specifies pixel density for rendering page image. If it is null, the value is obtained by
+/// calling `MediaQuery.of(context).devicePixelRatio`.
 /// Please note that on iOS Simulator, it always use non-[Texture] rendering pass.
 typedef PdfPageTextureBuilder = Widget Function(
     {Size? size, PdfPagePlaceholderBuilder? placeholderBuilder, bool backgroundFill, double? renderingPixelRatio});
@@ -263,7 +265,8 @@ class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
 
 /// Widget to render a page of PDF document. Normally used in combination with [PdfDocumentLoader].
 class PdfPageView extends StatefulWidget {
-  /// [PdfDocument] to render. If it is null, the actual document is obtained by locating ancestor [PdfDocumentLoader] widget.
+  /// [PdfDocument] to render. If it is null, the actual document is obtained by locating ancestor [PdfDocumentLoader]
+  /// widget.
   final PdfDocument? pdfDocument;
 
   /// Page number of the page to render if only one page should be shown.
@@ -487,7 +490,8 @@ class PdfViewerController extends TransformationController {
   }
 
   /// Go to the destination specified by the matrix.
-  /// To go to a specific page, use [goToPage] method or use [calculatePageFitMatrix] method to calculate the page location matrix.
+  /// To go to a specific page, use [goToPage] method or use [calculatePageFitMatrix] method to calculate the page
+  /// location matrix.
   /// If [destination] is null, the method does nothing.
   Future<void> goTo({Matrix4? destination, Duration duration = const Duration(milliseconds: 200)}) =>
       _state!._goTo(destination: destination, duration: duration);
@@ -579,7 +583,8 @@ class PdfViewerParams {
   /// See [InteractiveViewer] for more info.
   final GestureScaleUpdateCallback? onInteractionUpdate;
 
-  /// Callback that is called on viewer initialization to notify the actual [PdfViewerController] used by the viewer regardless of specifying [viewerController].
+  /// Callback that is called on viewer initialization to notify the actual [PdfViewerController] used by the viewer
+  /// regardless of specifying [viewerController].
   final OnPdfViewerControllerInitialized? onViewerControllerInitialized;
 
   /// Initializes the parameters.
@@ -773,17 +778,15 @@ class PdfViewer extends StatefulWidget {
     Widget Function(BuildContext)? loadingBannerBuilder,
     PdfDocument? docFallback,
   }) =>
-      FutureBuilder<String>(
+      openFuture(
+        getFilePath,
+        PdfDocument.openFile,
         key: key,
-        future: getFilePath(),
-        builder: (context, snapshot) => loadingBannerBuilder != null && !snapshot.hasData
-            ? Builder(builder: loadingBannerBuilder)
-            : PdfViewer(
-                doc: snapshot.hasData ? PdfDocument.openFile(snapshot.data!) : Future.value(docFallback),
-                viewerController: viewerController,
-                params: params,
-                onError: onError,
-              ),
+        viewerController: viewerController,
+        params: params,
+        onError: onError,
+        loadingBannerBuilder: loadingBannerBuilder,
+        docFallback: docFallback,
       );
 
   /// Open PDF data on byte array returned by async function.
@@ -796,17 +799,51 @@ class PdfViewer extends StatefulWidget {
     Widget Function(BuildContext)? loadingBannerBuilder,
     PdfDocument? docFallback,
   }) =>
-      FutureBuilder<Uint8List>(
+      openFuture(
+        getData,
+        PdfDocument.openData,
         key: key,
-        future: getData(),
-        builder: (context, snapshot) => loadingBannerBuilder != null && !snapshot.hasData
-            ? Builder(builder: loadingBannerBuilder)
-            : PdfViewer(
-                doc: snapshot.hasData ? PdfDocument.openData(snapshot.data!) : Future.value(docFallback),
-                viewerController: viewerController,
-                params: params,
-                onError: onError,
-              ),
+        viewerController: viewerController,
+        params: params,
+        onError: onError,
+        loadingBannerBuilder: loadingBannerBuilder,
+        docFallback: docFallback,
+      );
+
+  /// Open PDF using async function.
+  static Widget openFuture<T>(
+    Future<T> Function() getFuture,
+    Future<PdfDocument> Function(T) futureToDocument, {
+    Key? key,
+    PdfViewerController? viewerController,
+    PdfViewerParams? params,
+    OnError? onError,
+    Widget Function(BuildContext)? loadingBannerBuilder,
+    PdfDocument? docFallback,
+  }) =>
+      FutureBuilder<T>(
+        key: key,
+        future: getFuture(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return PdfViewer(
+              doc: futureToDocument(snapshot.data!),
+              viewerController: viewerController,
+              params: params,
+              onError: onError,
+            );
+          } else if (loadingBannerBuilder != null) {
+            return Builder(builder: loadingBannerBuilder);
+          } else if (docFallback != null) {
+            return PdfViewer(
+              doc: Future.value(docFallback),
+              viewerController: viewerController,
+              params: params,
+              onError: onError,
+            );
+          }
+          return Container(); // ultimate fallback
+        },
       );
 
   @override

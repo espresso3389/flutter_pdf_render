@@ -151,7 +151,19 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  func registerNewDoc(_ doc: CGPDFDocument?) throws -> NSDictionary?{
+#if os(iOS)
+  static func isMetalAvailable() -> Bool {
+    let device = MTLCreateSystemDefaultDevice()
+    return device != nil ? true : false
+  }
+#elseif os(macOS)
+  static func isMetalAvailable() -> Bool {
+    let devices = MTLCopyAllDevices()
+    return devices.count > 0
+  }
+#endif
+
+  func registerNewDoc(_ doc: CGPDFDocument?) throws -> NSDictionary? {
     guard doc != nil else {
       throw PdfRenderError.invalidArgument("CGPDFDocument is nil")
     }
