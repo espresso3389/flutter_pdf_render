@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math64;
@@ -436,6 +437,19 @@ class _PdfPageViewState extends State<PdfPageView> {
 typedef LayoutPagesFunc = List<Rect> Function(Size contentViewSize, List<Size> pageSizes);
 typedef BuildPageContentFunc = Widget Function(BuildContext context, int pageNumber, Rect pageRect);
 
+/// Specifies where to anchor to.
+enum PdfViewerAnchor {
+  topLeft,
+  top,
+  topRight,
+  left,
+  center,
+  right,
+  bottomLeft,
+  bottom,
+  bottomRight,
+}
+
 /// Controller for [PdfViewer].
 /// It is derived from [TransformationController] and basically compatible to [ValueNotifier<Matrix4>].
 /// So you can pass it to [ValueListenableBuilder<Matrix4>] or such to receive any view status changes.
@@ -443,6 +457,7 @@ class PdfViewerController extends TransformationController {
   PdfViewerController();
 
   /// Associated [_PdfViewerState].
+  ///
   /// FIXME: I don't think this is a good structure for our purpose...
   _PdfViewerState? _state;
 
@@ -453,12 +468,14 @@ class PdfViewerController extends TransformationController {
   }
 
   /// Whether the controller is ready or not.
+  ///
   /// If the controller is not ready, almost all methods on [PdfViewerController] won't work (throw some exception).
   /// For certain operations, it may be easier to use [ready] method to get [PdfViewerController?] not to execute
   /// methods unless it is ready.
   bool get isReady => _state?._pages != null;
 
   /// Helper method to return null when the controller is not ready([isReady]).
+  ///
   /// It is useful if you want ot call methods like [goTo] with the property like the following fragment:
   /// ```dart
   /// controller.ready?.goToPage(pageNumber: 1);
@@ -466,57 +483,157 @@ class PdfViewerController extends TransformationController {
   PdfViewerController? get ready => isReady ? this : null;
 
   /// Get total page count in the PDF document.
+  ///
   /// If the controller is not ready([isReady]), the property throws an exception.
   int get pageCount => _state!._pages!.length;
 
-  /// Get page location. If the page is out of view, it returns null.
+  /// Get page location. If the page does not exist in the layout, it returns null.
+  ///
   /// If the controller is not ready([isReady]), the property throws an exception.
   Rect? getPageRect(int pageNumber) => _state!._pages![pageNumber - 1].rect;
 
+  /// Calculate maximum X that can be acceptable as a horizontal scroll position.
+  double _getScrollableMaxX(double zoomRatio) => _state!._docSize!.width * zoomRatio - _state!._lastViewSize!.width;
+
+  /// Calculate maximum Y that can be acceptable as a vertical scroll position.
+  double _getScrollableMaxY(double zoomRatio) => _state!._docSize!.height * zoomRatio - _state!._lastViewSize!.height;
+
+  /// Clip horizontal scroll position.
+  double _clipX(double x, double zoomRatio) => max(0.0, min(x, _getScrollableMaxX(zoomRatio)));
+
+  /// Clip vertical scroll position.
+  double _clipY(double y, double zoomRatio) => max(0.0, min(y, _getScrollableMaxY(zoomRatio)));
+
   /// Calculate the matrix that corresponding to the page position.
-  /// If the page is out of view, it returns null.
-  /// /// If the controller is not ready([isReady]), the property throws an exception.
-  Matrix4? calculatePageFitMatrix({required int pageNumber, double? padding}) {
+  ///
+  /// If the page does not exist in the layout, it returns null.
+  /// If the controller is not ready([isReady]), the method throws an exception.
+  Matrix4? calculatePageFitMatrix({required int pageNumber, double? padding}) =>
+      calculatePageMatrix(pageNumber: pageNumber, padding: padding, x: 0, y: 0, anchor: PdfViewerAnchor.topLeft);
+
+  /// Calculate the matrix that corresponding to the page of specified offset ([x], [y]) and specified [zoomRatio].
+  ///
+  /// [x],[y] should be in [0 1] range and they indicate relative position in the page:
+  /// - 0 for top/left
+  /// - 1 for bottom/right
+  /// - 0.5 for center (the default)
+  ///
+  /// [anchor] specifies which view corner, edge, or center the point specified by ([x],[y]) is anchored to.
+  ///
+  /// [zoomRatio] specifies the zoom ratio. The default is to use the zoom ratio that fit the page into the view.
+  /// If you want to keep the current zoom ratio, use [PdfViewerController.zoomRatio] for the value.
+  ///
+  /// If the page does not exist in the layout, it returns null.
+  /// If the controller is not ready([isReady]), the method throws an exception.
+  Matrix4? calculatePageMatrix({
+    required int pageNumber,
+    double? padding,
+    double x = 0.5,
+    double y = 0.5,
+    PdfViewerAnchor anchor = PdfViewerAnchor.center,
+    double? zoomRatio,
+  }) {
     final rect = getPageRect(pageNumber)?.inflate(padding ?? _state!._padding);
     if (rect == null) return null;
-    final scale = _state!._lastViewSize!.width / rect.width;
-    final left = max(0.0, min(rect.left, _state!._docSize!.width - _state!._lastViewSize!.width));
-    final top = max(0.0, min(rect.top, _state!._docSize!.height - _state!._lastViewSize!.height));
+    final zoom1 = _state!._lastViewSize!.width / rect.width;
+    final destZoom = zoomRatio ?? zoom1;
+    final ratio = destZoom / zoom1;
+    final viewWidth = _state!._lastViewSize!.width;
+    final viewHeight = _state!._lastViewSize!.height;
+    final left = _clipX((rect.left + rect.width * x) * ratio - viewWidth * (anchor.index % 3) / 2, destZoom);
+    final top = _clipY((rect.top + rect.height * y) * ratio - viewHeight * (anchor.index ~/ 3) / 2, destZoom);
+
     return Matrix4.compose(
       math64.Vector3(-left, -top, 0),
       math64.Quaternion.identity(),
-      math64.Vector3(scale, scale, 1),
+      math64.Vector3(destZoom, destZoom, 1),
     );
   }
 
   /// Go to the destination specified by the matrix.
+  ///
   /// To go to a specific page, use [goToPage] method or use [calculatePageFitMatrix] method to calculate the page
   /// location matrix.
   /// If [destination] is null, the method does nothing.
-  Future<void> goTo({Matrix4? destination, Duration duration = const Duration(milliseconds: 200)}) =>
-      _state!._goTo(destination: destination, duration: duration);
+  Future<void> goTo({
+    Matrix4? destination,
+    Duration duration = const Duration(milliseconds: 200),
+  }) =>
+      _state!._goTo(
+        destination: destination,
+        duration: duration,
+      );
 
   /// Go to the specified page.
-  Future<void> goToPage(
-          {required int pageNumber, double? padding, Duration duration = const Duration(milliseconds: 500)}) =>
-      goTo(destination: calculatePageFitMatrix(pageNumber: pageNumber, padding: padding), duration: duration);
+  Future<void> goToPage({
+    required int pageNumber,
+    double? padding,
+    Duration duration = const Duration(milliseconds: 500),
+  }) =>
+      goTo(
+        destination: calculatePageFitMatrix(pageNumber: pageNumber, padding: padding),
+        duration: duration,
+      );
+
+  /// Pan to the specified page point.
+  ///
+  /// [x],[y] should be in [0 1] range and they indicate relative position in the page:
+  /// - 0 for top/left
+  /// - 1 for bottom/right
+  /// - 0.5 for center (the default)
+  ///
+  /// [anchor] specifies which view corner, edge, or center the point specified by ([x],[y]) is anchored to.
+  ///
+  /// [zoomRatio] specifies the zoom ratio. The default is to use the zoom ratio that fit the page into the view.
+  /// If you want to keep the current zoom ratio, use [PdfViewerController.zoomRatio] for the value.
+  ///
+  /// If the page does not exist in the layout, it returns null.
+  /// If the controller is not ready([isReady]), the method throws an exception.
+  Future<void> panTo({
+    required int pageNumber,
+    double? padding,
+    double x = 0.5,
+    double y = 0.5,
+    PdfViewerAnchor anchor = PdfViewerAnchor.center,
+    double? zoomRatio,
+    Duration duration = const Duration(milliseconds: 500),
+  }) =>
+      goTo(
+        destination: calculatePageMatrix(
+          pageNumber: pageNumber,
+          padding: padding,
+          x: x,
+          y: y,
+          zoomRatio: zoomRatio,
+          anchor: anchor,
+        ),
+        duration: duration,
+      );
+
+  /// Current view offset (top-left corner coordinates).
+  Offset get offset => Offset(-value.row0[3], -value.row1[3]);
 
   /// Current view rectangle.
+  ///
   /// If the controller is not ready([isReady]), the property throws an exception.
   Rect get viewRect =>
       Rect.fromLTWH(-value.row0[3], -value.row1[3], _state!._lastViewSize!.width, _state!._lastViewSize!.height);
 
   /// Current view zoom ratio.
+  ///
   /// If the controller is not ready([isReady]), the property throws an exception.
   double get zoomRatio => value.row0[0];
 
   /// Get list of the page numbers of the pages visible inside the viewport.
+  ///
   /// The map keys are the page numbers.
+  ///
   /// And each page number is associated to the page area (width x height) exposed to the viewport;
   /// If the controller is not ready([isReady]), the property throws an exception.
   Map<int, double> get visiblePages => _state!._visiblePages;
 
   /// Get the current page number by obtaining the page that has the largest area from [visiblePages].
+  ///
   /// If no pages are visible, it returns 1.
   /// If the controller is not ready([isReady]), the property throws an exception.
   int get currentPageNumber {
@@ -547,6 +664,7 @@ class PdfViewerParams {
   final BuildPageContentFunc? buildPagePlaceholder;
 
   /// Custom overlay that is shown on page.
+  ///
   /// For example, drawings, annotations on pages.
   final BuildPageContentFunc? buildPageOverlay;
 
@@ -584,6 +702,7 @@ class PdfViewerParams {
   final GestureScaleUpdateCallback? onInteractionUpdate;
 
   /// Callback that is called on viewer initialization.
+  ///
   /// It is called on every document load.
   final OnPdfViewerControllerInitialized? onViewerControllerInitialized;
 
@@ -1368,6 +1487,7 @@ class _PdfPageState {
   }
 
   /// Release allocated textures.
+  ///
   /// It's always safe to call the method. If all the textures were already released, the method does nothing.
   /// Returns true if textures are really released; otherwise if the method does nothing and returns false.
   bool releaseTextures() => _releaseTextures(_PdfPageLoadingStatus.initialized);
