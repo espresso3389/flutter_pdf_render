@@ -518,7 +518,7 @@ class PdfViewerController extends TransformationController {
   /// - 1 for bottom/right
   /// - 0.5 for center (the default)
   ///
-  /// [anchor] specifies which view corner, edge, or center the point specified by ([x],[y]) is anchored to.
+  /// [anchor] specifies which widget corner, edge, or center the point specified by ([x],[y]) is anchored to.
   ///
   /// [zoomRatio] specifies the zoom ratio. The default is to use the zoom ratio that fit the page into the view.
   /// If you want to keep the current zoom ratio, use [PdfViewerController.zoomRatio] for the value.
@@ -552,7 +552,7 @@ class PdfViewerController extends TransformationController {
 
   /// Go to the destination specified by the matrix.
   ///
-  /// To go to a specific page, use [goToPage] method or use [calculatePageFitMatrix] method to calculate the page
+  /// To go to a specific page, use [goToPage] method or use [calculatePageFitMatrix]/[calculatePageMatrix] method to calculate the page
   /// location matrix.
   /// If [destination] is null, the method does nothing.
   Future<void> goTo({
@@ -575,21 +575,21 @@ class PdfViewerController extends TransformationController {
         duration: duration,
       );
 
-  /// Pan to the specified page point.
+  /// Go to specific point in page.
   ///
   /// [x],[y] should be in [0 1] range and they indicate relative position in the page:
   /// - 0 for top/left
   /// - 1 for bottom/right
   /// - 0.5 for center (the default)
   ///
-  /// [anchor] specifies which view corner, edge, or center the point specified by ([x],[y]) is anchored to.
+  /// [anchor] specifies which widget corner, edge, or center the point specified by ([x],[y]) is anchored to.
   ///
   /// [zoomRatio] specifies the zoom ratio. The default is to use the zoom ratio that fit the page into the view.
   /// If you want to keep the current zoom ratio, use [PdfViewerController.zoomRatio] for the value.
   ///
   /// If the page does not exist in the layout, it returns null.
   /// If the controller is not ready([isReady]), the method throws an exception.
-  Future<void> panTo({
+  Future<void> goToPointInPage({
     required int pageNumber,
     double? padding,
     double x = 0.5,
@@ -607,6 +607,37 @@ class PdfViewerController extends TransformationController {
           zoomRatio: zoomRatio,
           anchor: anchor,
         ),
+        duration: duration,
+      );
+
+  /// Calculate the matrix that changes zoom ratio.
+  ///
+  /// [center] specifies the center of the zoom operation in widget's "local" coordinates. e.g. [TapDownDetails.localPosition]
+  Matrix4 zoomMatrix(double zoomRatio, {Offset? center}) {
+    final ratio = zoomRatio / this.zoomRatio;
+    final offset = this.offset;
+    final dx = center?.dx ?? _state!._lastViewSize!.width * 0.5;
+    final dy = center?.dy ?? _state!._lastViewSize!.height * 0.5;
+    final left = _clipX((offset.dx + dx) * ratio - dx, zoomRatio);
+    final top = _clipY((offset.dy + dy) * ratio - dy, zoomRatio);
+    return Matrix4.compose(
+      math64.Vector3(-left, -top, 0),
+      math64.Quaternion.identity(),
+      math64.Vector3(zoomRatio, zoomRatio, 1),
+    );
+  }
+
+  /// Set zoom ratio.
+  ///
+  /// [center] specifies the center of the zoom operation in widget's local coordinates.
+  /// e.g. tap-position in the widget; most likely to [ScaleStartDetails.localFocalPoint].
+  Future<void> setZoomRatio({
+    required double zoomRatio,
+    Offset? center,
+    Duration duration = const Duration(milliseconds: 200),
+  }) =>
+      _state!._goTo(
+        destination: zoomMatrix(zoomRatio, center: center),
         duration: duration,
       );
 
@@ -1074,23 +1105,24 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         _relayout(viewSize);
         final docSize = _docSize ?? const Size(10, 10); // dummy size
         return InteractiveViewer(
-            transformationController: widget.viewerController ?? _controller,
-            constrained: false,
-            alignPanAxis: widget.params?.alignPanAxis ?? false,
-            boundaryMargin: widget.params?.boundaryMargin ?? EdgeInsets.zero,
-            minScale: widget.params?.minScale ?? 0.8,
-            maxScale: widget.params?.maxScale ?? 2.5,
-            onInteractionEnd: widget.params?.onInteractionEnd,
-            onInteractionStart: widget.params?.onInteractionStart,
-            onInteractionUpdate: widget.params?.onInteractionUpdate,
-            panEnabled: widget.params?.panEnabled ?? true,
-            scaleEnabled: widget.params?.scaleEnabled ?? true,
-            child: Stack(
-              children: <Widget>[
-                SizedBox(width: docSize.width, height: docSize.height),
-                ...iterateLaidOutPages(viewSize)
-              ],
-            ));
+          transformationController: _controller,
+          constrained: false,
+          alignPanAxis: widget.params?.alignPanAxis ?? false,
+          boundaryMargin: widget.params?.boundaryMargin ?? EdgeInsets.zero,
+          minScale: widget.params?.minScale ?? 0.8,
+          maxScale: widget.params?.maxScale ?? 2.5,
+          onInteractionEnd: widget.params?.onInteractionEnd,
+          onInteractionStart: widget.params?.onInteractionStart,
+          onInteractionUpdate: widget.params?.onInteractionUpdate,
+          panEnabled: widget.params?.panEnabled ?? true,
+          scaleEnabled: widget.params?.scaleEnabled ?? true,
+          child: Stack(
+            children: <Widget>[
+              SizedBox(width: docSize.width, height: docSize.height),
+              ...iterateLaidOutPages(viewSize)
+            ],
+          ),
+        );
       },
     );
   }

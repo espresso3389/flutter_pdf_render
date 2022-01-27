@@ -16,6 +16,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final controller = PdfViewerController();
+  TapDownDetails? _doubleTapDetails;
 
   @override
   void dispose() {
@@ -35,31 +36,39 @@ class _MyAppState extends State<MyApp> {
                   Text(controller.isReady ? 'Page #${controller.currentPageNumber}' : 'Page -')),
         ),
         backgroundColor: Colors.grey,
-        body: !kIsWeb && Platform.isMacOS
-            // Networking sample using flutter_cache_manager
-            ? PdfViewer.openFutureFile(
-                // Accepting function that returns Future<String> of PDF file path
-                () async => (await DefaultCacheManager().getSingleFile(
-                        'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'))
-                    .path,
-                viewerController: controller,
-                onError: (err) => print(err),
-                params: const PdfViewerParams(
-                  padding: 10,
-                  minScale: 1.0,
-                  // scrollDirection: Axis.horizontal,
+        body: GestureDetector(
+          // Supporting double-tap gesture on the viewer.
+          onDoubleTapDown: (details) => _doubleTapDetails = details,
+          onDoubleTap: () => controller.ready?.setZoomRatio(
+            zoomRatio: controller.zoomRatio * 1.5,
+            center: _doubleTapDetails!.localPosition,
+          ),
+          child: !kIsWeb && Platform.isMacOS
+              // Networking sample using flutter_cache_manager
+              ? PdfViewer.openFutureFile(
+                  // Accepting function that returns Future<String> of PDF file path
+                  () async => (await DefaultCacheManager().getSingleFile(
+                          'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'))
+                      .path,
+                  viewerController: controller,
+                  onError: (err) => print(err),
+                  params: const PdfViewerParams(
+                    padding: 10,
+                    minScale: 1.0,
+                    // scrollDirection: Axis.horizontal,
+                  ),
+                )
+              : PdfViewer.openAsset(
+                  'assets/hello.pdf',
+                  viewerController: controller,
+                  onError: (err) => print(err),
+                  params: const PdfViewerParams(
+                    padding: 10,
+                    minScale: 1.0,
+                    // scrollDirection: Axis.horizontal,
+                  ),
                 ),
-              )
-            : PdfViewer.openAsset(
-                'assets/hello.pdf',
-                viewerController: controller,
-                onError: (err) => print(err),
-                params: const PdfViewerParams(
-                  padding: 10,
-                  minScale: 1.0,
-                  // scrollDirection: Axis.horizontal,
-                ),
-              ),
+        ),
         floatingActionButton: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[

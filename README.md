@@ -173,6 +173,9 @@ It also equips the parameters that are inherited from [InteractiveViewer](https:
 ### PdfViewerController
 
 [PdfViewerController](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController-class.html) can be used to obtain number of pages in the PDF document.
+
+#### goTo/goToPage/goToPointInPage
+
 It also provide [goTo](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goTo.html) and [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) methods
 that you can scroll the viewer to make certain page/area of the document visible:
 
@@ -214,6 +217,61 @@ that you can scroll the viewer to make certain page/area of the document visible
     );
   }
 ```
+
+[goToPointInPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) is just another version of [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html), which also accepts inner-page point and where the point is anchored to.
+
+The following fragment shows page 1's center on the widget's center with the zoom ratio 300%:
+
+```dart
+controller.goToPointInPage(
+  pageNumber: 1,
+  x: 0.5,
+  y: 0.5,
+  anchor: PdfViewerAnchor.center,
+  zoomRatio: 3.0,
+);
+```
+
+And, if you set `x: 0, y: 0, anchor: PdfViewerAnchor.topLeft`, the behavior is identical to [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html).
+
+#### setZoomRatio
+
+[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) is a method to change zoom ratio without scrolling the view (***it's not exactly the true but almost).
+
+The following fragment changes zoom ratio to 2.0:
+
+```dart
+controller.setZoomRatio(2.0);
+```
+
+During the zoom changing operation, it keeps the center point in the widget being centered.
+
+The following fragment illustrates another use case, zoom-on-double-tap:
+
+```dart
+final controller = PdfViewerController();
+TapDownDetails? doubleTapDetails;
+
+...
+
+GestureDetector(
+  // Supporting double-tap gesture on the viewer.
+  onDoubleTapDown: (details) => doubleTapDetails = details,
+  onDoubleTap: () => controller.ready?.setZoomRatio(
+    zoomRatio: controller.zoomRatio * 1.5,
+    center: doubleTapDetails!.localPosition,
+  ),
+  child: PdfViewer.openAsset(
+    'assets/hello.pdf',
+    viewerController: controller,
+    ...
+```
+
+Using [GestureDetector](https://api.flutter.dev/flutter/widgets/GestureDetector-class.html), it firstly captures the double-tap location on [onDoubleTapDown](https://api.flutter.dev/flutter/widgets/GestureDetector/onDoubleTapDown.html). And then, [onDoubleTap](https://api.flutter.dev/flutter/widgets/GestureDetector/onDoubleTap.html) uses the location as the zoom center.
+
+### Managing gestures
+
+[PdfViewer](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer-class.html) does not support any gestures except panning and pinch-zooming.
 
 ### Page decoration
 
