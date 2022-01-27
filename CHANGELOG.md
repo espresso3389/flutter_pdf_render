@@ -1,4 +1,4 @@
-## 1.0.22
+## 1.0.22/1.0.23
 
 * Add PdfViewerController.goToPointInPage/setZoomRatio (#71/#72)
 * Document updates

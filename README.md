@@ -29,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.0.22
+  pdf_render: ^1.0.23
 ```
 
 ## Web
@@ -218,7 +218,7 @@ that you can scroll the viewer to make certain page/area of the document visible
   }
 ```
 
-[goToPointInPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) is just another version of [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html), which also accepts inner-page point and where the point is anchored to.
+[goToPointInPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPointInPage.html) is just another version of [goToPage](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html), which also accepts inner-page point and where the point is anchored to.
 
 The following fragment shows page 1's center on the widget's center with the zoom ratio 300%:
 
@@ -236,7 +236,7 @@ And, if you set `x: 0, y: 0, anchor: PdfViewerAnchor.topLeft`, the behavior is i
 
 #### setZoomRatio
 
-[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/goToPage.html) is a method to change zoom ratio without scrolling the view (***it's not exactly the true but almost).
+[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/setZoomRatio.html) is a method to change zoom ratio without scrolling the view (***it's not exactly the true but almost).
 
 The following fragment changes zoom ratio to 2.0:
 
@@ -271,7 +271,7 @@ Using [GestureDetector](https://api.flutter.dev/flutter/widgets/GestureDetector-
 
 ### Managing gestures
 
-[PdfViewer](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer-class.html) does not support any gestures except panning and pinch-zooming.
+[PdfViewer](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewer-class.html) does not support any gestures except panning and pinch-zooming. To support other gestures, you can wrap the widget with [GestureDetector](https://api.flutter.dev/flutter/widgets/GestureDetector-class.html) as explained above.
 
 ### Page decoration
 
