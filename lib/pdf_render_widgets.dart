@@ -678,7 +678,7 @@ class PdfViewerController extends TransformationController {
   }
 }
 
-typedef OnPdfViewerControllerInitialized = void Function(PdfViewerController?);
+typedef OnPdfViewerControllerInitialized = void Function(PdfViewerController);
 
 @immutable
 class PdfViewerParams {
@@ -1035,7 +1035,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
     if ((await widget._doc) != (await oldWidget._doc)) {
       _init();
     } else {
-      widget.params?.onViewerControllerInitialized?.call(_controller);
+      widget.params?.onViewerControllerInitialized?.call(_controller!);
       _moveToInitialPositionIfSpecified(oldPageNumber: oldWidget.params?.pageNumber);
     }
   }
@@ -1155,7 +1155,7 @@ class _PdfViewerState extends State<PdfViewer> with SingleTickerProviderStateMix
         // NOTE: controller should be associated after first layout calculation finished.
         _controller!.addListener(_determinePagesToShow);
         _controller!._setViewerState(this);
-        widget.params?.onViewerControllerInitialized?.call(_controller);
+        widget.params?.onViewerControllerInitialized?.call(_controller!);
 
         if (mounted) {
           _moveToInitialPositionIfSpecified();

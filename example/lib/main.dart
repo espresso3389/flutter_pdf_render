@@ -29,7 +29,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: ValueListenableBuilder<Object>(
+          title: ValueListenableBuilder<Matrix4>(
               // The controller is compatible with ValueListenable<Matrix4> and you can receive notifications on scrolling and zooming of the view.
               valueListenable: controller,
               builder: (context, _, child) =>
