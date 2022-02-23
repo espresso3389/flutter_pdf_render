@@ -1,117 +1,92 @@
 package jp.espresso3389.pdf_render
 
-import android.graphics.*
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Matrix
+import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
+//import android.util.Log
 import android.util.SparseArray
 import android.view.Surface
+import androidx.annotation.NonNull
+import androidx.collection.LongSparseArray
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.PluginRegistry.Registrar
 import io.flutter.view.TextureRegistry
 import java.io.File
 import java.io.OutputStream
+import java.nio.Buffer
 import java.nio.ByteBuffer
 
-class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
-  companion object {
-    @JvmStatic
-    fun registerWith(registrar: Registrar): Unit {
-      val channel = MethodChannel(registrar.messenger(), "pdf_render")
-      channel.setMethodCallHandler(PdfRenderPlugin(registrar))
-    }
-  }
+/** PdfRenderPlugin */
+class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
+  private lateinit var channel : MethodChannel
+  private lateinit var flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
 
-  private val registrar: Registrar = registrar
   private val documents: SparseArray<PdfRenderer> = SparseArray()
   private var lastDocId: Int = 0
   private val textures: SparseArray<TextureRegistry.SurfaceTextureEntry> = SparseArray()
 
-  override fun onMethodCall(call: MethodCall, result: Result): Unit {
+  override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    this.flutterPluginBinding = flutterPluginBinding
+    channel = MethodChannel(flutterPluginBinding.binaryMessenger, "pdf_render")
+    channel.setMethodCallHandler(this)
+  }
+
+  override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    channel.setMethodCallHandler(null)
+  }
+
+  override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
     try {
       when {
         call.method == "file" -> {
-          val pdfFilePath = call.arguments as? String
-          if (pdfFilePath == null) {
-            result.success(null)
-            return
-          }
-          result.success(registerNewDoc(openFileDoc(pdfFilePath)))
+          val pdfFilePath = call.arguments as String
+          result.success(registerNewDoc(openFileDoc(call.arguments as String)))
         }
         call.method == "asset" -> {
-          val pdfAssetName = call.arguments as? String
-          if (pdfAssetName == null) {
-            result.success(null)
-            return
-          }
-          result.success(registerNewDoc(openAssetDoc(pdfAssetName)))
+          result.success(registerNewDoc(openAssetDoc(call.arguments as String)))
         }
         call.method == "data" -> {
-          val data = call.arguments as? ByteArray
-          if (data == null) {
-            result.success(null)
-            return
-          }
-          result.success(registerNewDoc(openDataDoc(data)))
+          result.success(registerNewDoc(openDataDoc(call.arguments as ByteArray)))
         }
         call.method == "close" -> {
-          val id = call.arguments as? Int
-          if (id != null)
-            close(id)
+          close(call.arguments as Int)
           result.success(0)
         }
         call.method == "info" -> {
           val (renderer, id) = getDoc(call)
-          if (renderer == null) {
-            result.success(-1)
-            return
-          }
           result.success(getInfo(renderer, id))
         }
         call.method == "page" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(null)
-            return
-          }
-          result.success(openPage(args))
+          result.success(openPage(call.arguments as HashMap<String, Any>))
         }
         call.method == "render" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(-1)
-            return
-          }
-          render(args, result)
+          render(call.arguments as HashMap<String, Any>, result)
+        }
+        call.method == "releaseBuffer" -> {
+          releaseBuffer(call.arguments as Long)
+          result.success(0)
         }
         call.method == "allocTex" -> {
           result.success(allocTex())
         }
         call.method == "releaseTex" -> {
-          val id = call.arguments as? Int
-          if (id != null)
-            releaseTex(id)
+          releaseTex(call.arguments as Int)
           result.success(0)
         }
         call.method == "resizeTex" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(-1)
-            return
-          }
-          result.success(resizeTex(args))
+          result.success(resizeTex(call.arguments as HashMap<String, Any>))
         }
         call.method == "updateTex" -> {
-          val args = call.arguments as? HashMap<String, Any>
-          if (args == null) {
-            result.success(-1)
-            return
-          }
-          result.success(updateTex(args))
+          result.success(updateTex(call.arguments as HashMap<String, Any>))
         }
         else -> result.notImplemented()
       }
@@ -126,11 +101,9 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
     return getInfo(pdfRenderer, id)
   }
 
-  private fun getDoc(call: MethodCall): Pair<PdfRenderer?, Int> {
-    val id = call.arguments as? Int
-    if (id != null)
-      return Pair(documents[id], id)
-    return Pair(null, -1)
+  private fun getDoc(call: MethodCall): Pair<PdfRenderer, Int> {
+    val id = call.arguments as Int
+    return Pair(documents[id], id)
   }
 
   private fun getInfo(pdfRenderer: PdfRenderer, id: Int): HashMap<String, Any> {
@@ -141,7 +114,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       "verMinor" to 7,
       "isEncrypted" to false,
       "allowsCopying" to false,
-      "allowPrinting" to false)
+      "allowsPrinting" to false)
   }
 
   private fun close(id: Int) {
@@ -172,10 +145,10 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   }
 
   private fun openAssetDoc(pdfAssetName: String): PdfRenderer {
-    val key = registrar.lookupKeyForAsset(pdfAssetName)
+    val key = flutterPluginBinding.flutterAssets.getAssetFilePathByName(pdfAssetName)
     // NOTE: the input stream obtained from asset may not be
     // a file stream and we should convert it to file
-    registrar.context().assets.open(key).use { input ->
+    flutterPluginBinding.applicationContext.assets.open(key).use { input ->
       return copyToTempFileAndOpenDoc { input.copyTo(it) }
     }
   }
@@ -193,22 +166,16 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       return hashMapOf(
         "docId" to docId,
         "pageNumber" to pageNumber,
-        "rotationAngle" to 0, // FIXME: no rotation angle can be obtained
         "width" to it.width.toDouble(),
         "height" to it.height.toDouble()
       )
     }
   }
 
-  private fun render(args: HashMap<String, Any>, result: Result) {
-    val docId = args["docId"] as? Int
-    val renderer = if (docId != null) documents[docId] else null
-    val pageNumber = args["pageNumber"] as? Int
-    if (renderer == null || pageNumber == null || pageNumber < 1 || pageNumber > renderer.pageCount) {
-      result.success(-1)
-      return
-    }
-
+  private fun renderOnByteBuffer(args: HashMap<String, Any>, createBuffer: (Int) -> ByteBuffer): HashMap<String, Any?>? {
+    val docId = args["docId"] as Int
+    val renderer = documents[docId]
+    val pageNumber = args["pageNumber"] as Int
     renderer.openPage(pageNumber - 1).use {
       val x = args["x"] as? Int? ?: 0
       val y = args["y"] as? Int? ?: 0
@@ -222,7 +189,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       val fh = if (_fh > 0) _fh.toFloat() else h.toFloat()
       val backgroundFill = args["backgroundFill"] as? Boolean ?: true
 
-      val buf = ByteBuffer.allocate(w * h * 4)
+      val buf = createBuffer(w * h * 4)
 
       val mat = Matrix()
       mat.setValues(floatArrayOf(fw / it.width, 0f, -x.toFloat(), 0f, fh / it.height, -y.toFloat(), 0f, 0f, 1f))
@@ -238,7 +205,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
       bmp.copyPixelsToBuffer(buf)
       bmp.recycle()
 
-      result.success(hashMapOf(
+      return hashMapOf(
         "docId" to docId,
         "pageNumber" to pageNumber,
         "x" to x,
@@ -248,14 +215,41 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
         "fullWidth" to fw.toDouble(),
         "fullHeight" to fh.toDouble(),
         "pageWidth" to it.width.toDouble(),
-        "pageHeight" to it.height.toDouble(),
-        "data" to buf.array()
-      ))
+        "pageHeight" to it.height.toDouble()
+      )
     }
   }
 
+  private fun render(args: HashMap<String, Any>, result: Result) {
+    var buf: ByteBuffer? = null
+    var addr: Long = 0L
+    val m = renderOnByteBuffer(args) {
+      val (addr_, bbuf) = allocBuffer(it)
+      buf = bbuf
+      addr = addr_
+      return@renderOnByteBuffer bbuf
+    }
+    if (addr != 0L) {
+      m?.set("addr", addr)
+    } else {
+      m?.set("data", buf?.array())
+    }
+    m?.set("size", buf?.capacity())
+    result.success(m)
+  }
+
+  private fun allocBuffer(size: Int): Pair<Long, ByteBuffer> {
+    val addr = ByteBufferHelper.malloc(size.toLong())
+    val bb = ByteBufferHelper.newDirectBuffer(addr, size.toLong())
+    return addr to bb
+  }
+
+  private fun releaseBuffer(addr: Long) {
+    ByteBufferHelper.free(addr)
+  }
+
   private fun allocTex(): Int {
-    val surfaceTexture = registrar.textures().createSurfaceTexture()
+    val surfaceTexture = flutterPluginBinding.textureRegistry.createSurfaceTexture()
     val id = surfaceTexture.id().toInt()
     textures.put(id, surfaceTexture)
     return id
@@ -268,25 +262,22 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
   }
 
   private fun resizeTex(args: HashMap<String, Any>): Int {
-    val texId = args["texId"] as? Int
-    val width = args["width"] as? Int
-    val height = args["height"] as? Int
-    if (texId == null || width == null || height == null) {
-      return -1
-    }
+    val texId = args["texId"] as Int
+    val width = args["width"] as Int
+    val height = args["height"] as Int
     val tex = textures[texId]
     tex?.surfaceTexture()?.setDefaultBufferSize(width, height)
     return 0
   }
 
   private fun updateTex(args: HashMap<String, Any>): Int {
-    val texId = args["texId"] as? Int ?: return -1
-    val tex = textures[texId] ?: return -2
-    val docId = args["docId"] as? Int ?: return -3
-    val renderer = documents[docId] ?: return -4
-    val pageNumber = args["pageNumber"] as? Int ?: return -5
-    if (pageNumber < 1 || pageNumber > renderer.pageCount)
-      return -6
+    val texId = args["texId"] as Int
+    val docId = args["docId"] as Int
+    val pageNumber = args["pageNumber"] as Int
+    val tex = textures[texId]
+    if (tex == null) return -8
+
+    val renderer = documents[docId]
 
     renderer.openPage(pageNumber - 1). use {page ->
       val fullWidth = args["fullWidth"] as? Double ?: page.width.toDouble()
@@ -317,7 +308,7 @@ class PdfRenderPlugin(registrar: Registrar): MethodCallHandler {
         tex.surfaceTexture()?.setDefaultBufferSize(texWidth, texHeight)
 
       Surface(tex.surfaceTexture()).use {
-        val canvas = it.lockCanvas(Rect(destX, destY, width, height))
+        val canvas = it.lockCanvas(Rect(destX, destY, width, height));
 
         canvas.drawBitmap(bmp, destX.toFloat(), destY.toFloat(), null)
         bmp.recycle()

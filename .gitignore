@@ -41,6 +41,7 @@
 **/android/**/.settings/
 **/android/**/.classpath
 **/android/**/.project
+**/android/.cxx/
 
 # iOS/XCode related
 **/ios/**/*.mode1v3
@@ -76,4 +77,8 @@
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 
-.vscode/
+example/.flutter-plugins-dependencies
+example/ios/Flutter/Flutter.podspec
+example/ios/Flutter/.last_build_id
+example/build/
+

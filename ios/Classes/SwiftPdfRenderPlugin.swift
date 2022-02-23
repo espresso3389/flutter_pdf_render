@@ -1,5 +1,10 @@
+#if os(iOS)
 import Flutter
 import UIKit
+#elseif os(macOS)
+import Cocoa
+import FlutterMacOS
+#endif
 import CoreGraphics
 
 class Doc {
@@ -10,6 +15,27 @@ class Doc {
     self.doc = doc
     self.pages = Array<CGPDFPage?>(repeating: nil, count: doc.numberOfPages)
   }
+}
+
+extension CGPDFPage {
+  func getRotatedSize() -> CGSize {
+    let bbox = getBoxRect(.mediaBox)
+    let rot = rotationAngle
+    if rot == 90 || rot == 270 {
+        return CGSize(width: bbox.height, height: bbox.width)
+    }
+    return bbox.size
+  }
+  func getRotationTransform() -> CGAffineTransform {
+    let rect = CGRect(origin: CGPoint.zero, size: getRotatedSize())
+    return getDrawingTransform(.mediaBox, rect: rect, rotate: 0, preserveAspectRatio: true)
+  }
+}
+
+enum PdfRenderError : Error {
+  case operationFailed(String)
+  case invalidArgument(String)
+  case notSupported(String)
 }
 
 public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
@@ -25,112 +51,132 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
   }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
-    let channel = FlutterMethodChannel(
-      name: "pdf_render", binaryMessenger: registrar.messenger())
+#if os(iOS)
+    let channel = FlutterMethodChannel(name: "pdf_render", binaryMessenger: registrar.messenger())
+#elseif os(macOS)
+    let channel = FlutterMethodChannel(name: "pdf_render", binaryMessenger: registrar.messenger)
+#endif
     let instance = SwiftPdfRenderPlugin(registrar: registrar)
     registrar.addMethodCallDelegate(instance, channel: channel)
   }
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    if call.method == "file"
-    {
-      guard let pdfFilePath = call.arguments as! String? else {
-        result(nil)
-        return
+    do {
+      if call.method == "file"
+      {
+        guard let pdfFilePath = call.arguments as! String? else {
+          throw PdfRenderError.invalidArgument("Expect pdfFilePath as String")
+        }
+        result(try registerNewDoc(openFileDoc(pdfFilePath: pdfFilePath)))
       }
-      result(registerNewDoc(openFileDoc(pdfFilePath: pdfFilePath)))
-    }
-    else if call.method == "asset"
-    {
-      guard let name = call.arguments as! String? else {
-        result(nil)
-        return
+      else if call.method == "asset"
+      {
+        guard let name = call.arguments as! String? else {
+          throw PdfRenderError.invalidArgument("Expect assetName as String")
+        }
+        result(try registerNewDoc(openAssetDoc(name: name)))
       }
-      result(registerNewDoc(openAssetDoc(name: name)))
-    }
-    else if call.method == "data" {
-      guard let data = call.arguments as! FlutterStandardTypedData? else {
-        result(nil)
-        return
+      else if call.method == "data" {
+        guard let data = call.arguments as! FlutterStandardTypedData? else {
+          throw PdfRenderError.invalidArgument("Expect byte array")
+        }
+        result(try registerNewDoc(openDataDoc(data: data.data)))
       }
-      result(registerNewDoc(openDataDoc(data: data.data)))
-    }
-    else if call.method == "close"
-    {
-      if  let id = call.arguments as! NSNumber? {
-        close(docId: id.intValue)
+      else if call.method == "close"
+      {
+        if  let id = call.arguments as! NSNumber? {
+          close(docId: id.intValue)
+        }
+        result(NSNumber(value: 0))
       }
-      result(NSNumber(value: 0))
-    }
-    else if call.method == "info"
-    {
-      guard let docId = call.arguments as! NSNumber? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "info"
+      {
+        guard let docId = call.arguments as! NSNumber? else {
+          throw PdfRenderError.invalidArgument("Expect docId as NSNumber")
+        }
+        result(try getInfo(docId: docId.intValue))
       }
-      result(getInfo(docId: docId.intValue))
-    }
-    else if call.method == "page"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(nil)
-        return
+      else if call.method == "page"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        result(openPage(args: args))
       }
-      result(openPage(args: args))
-    }
-    else if call.method == "render"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "render"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        try render(args: args, result: result)
       }
-      render(args: args, result: result)
-    }
-    else if call.method == "allocTex"
-    {
-      result(allocTex())
-    }
-    else if call.method == "releaseTex"
-    {
-      guard let texId = call.arguments as! NSNumber? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "releaseBuffer"
+      {
+        guard let address = call.arguments as! NSNumber? else {
+          throw PdfRenderError.invalidArgument("Expect address as NSNumber")
+        }
+
+          releaseBuffer(address: address.intValue, result: result)
       }
-      releaseTex(texId: texId.int64Value, result: result)
-    }
-    else if call.method == "resizeTex"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "allocTex"
+      {
+        result(allocTex())
       }
-      resizeTex(args: args, result: result)
-    }
-    else if call.method == "updateTex"
-    {
-      guard let args = call.arguments as! NSDictionary? else {
-        result(SwiftPdfRenderPlugin.invalid)
-        return
+      else if call.method == "releaseTex"
+      {
+        guard let texId = call.arguments as! NSNumber? else {
+          throw PdfRenderError.invalidArgument("Expect textureId as NSNumber")
+        }
+        releaseTex(texId: texId.int64Value, result: result)
       }
-      updateTex(args: args, result: result)
-    }
-    else {
-      result(FlutterMethodNotImplemented)
+      else if call.method == "resizeTex"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        try resizeTex(args: args, result: result)
+      }
+      else if call.method == "updateTex"
+      {
+        guard let args = call.arguments as! NSDictionary? else {
+          throw PdfRenderError.invalidArgument("Expect NSDictionary")
+        }
+        try updateTex(args: args, result: result)
+      }
+      else {
+        result(FlutterMethodNotImplemented)
+      }
+    } catch {
+      result(FlutterError(code: "exception", message: "Internal error", details: "\(error)"))
     }
   }
 
-  func registerNewDoc(_ doc: CGPDFDocument?) -> NSDictionary? {
-    guard doc != nil else { return nil }
+#if os(iOS)
+  static func isMetalAvailable() -> Bool {
+    let device = MTLCreateSystemDefaultDevice()
+    return device != nil ? true : false
+  }
+#elseif os(macOS)
+  static func isMetalAvailable() -> Bool {
+    let devices = MTLCopyAllDevices()
+    return devices.count > 0
+  }
+#endif
+
+  func registerNewDoc(_ doc: CGPDFDocument?) throws -> NSDictionary? {
+    guard doc != nil else {
+      throw PdfRenderError.invalidArgument("CGPDFDocument is nil")
+    }
     let id = SwiftPdfRenderPlugin.newId
     SwiftPdfRenderPlugin.newId = SwiftPdfRenderPlugin.newId + 1
     if SwiftPdfRenderPlugin.newId == SwiftPdfRenderPlugin.invalid.intValue { SwiftPdfRenderPlugin.newId = 0 }
     docMap[id] = Doc(doc: doc!)
-    return getInfo(docId: id)
+    return try getInfo(docId: id)
   }
 
-  func getInfo(docId: Int) -> NSDictionary? {
+  func getInfo(docId: Int) throws -> NSDictionary? {
     guard let doc = docMap[docId]?.doc else {
-      return nil
+      throw PdfRenderError.invalidArgument("No PdfDocument for \(docId)")
     }
     var verMajor: Int32 = 0
     var verMinor: Int32 = 0
@@ -153,17 +199,25 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     docMap[docId] = nil
   }
 
-  func openDataDoc(data: Data) -> CGPDFDocument? {
-    guard let datProv = CGDataProvider(data: data as CFData) else { return nil }
+  func openDataDoc(data: Data) throws -> CGPDFDocument? {
+    guard let datProv = CGDataProvider(data: data as CFData) else {
+      throw PdfRenderError.invalidArgument("CGDataProvider initialization failed")
+    }
     return CGPDFDocument(datProv)
   }
 
-  func openAssetDoc(name: String) -> CGPDFDocument? {
+  func openAssetDoc(name: String) throws -> CGPDFDocument? {
+#if os(iOS)
     let key = registrar.lookupKey(forAsset: name)
     guard let path = Bundle.main.path(forResource: key, ofType: "") else {
-      return nil
+      throw PdfRenderError.invalidArgument("Bundle.main.path(forResource: \(key)) failed")
     }
     return openFileDoc(pdfFilePath: path)
+#else
+    // [macOS] add lookupKeyForAsset to FlutterPluginRegistrar
+    // https://github.com/flutter/flutter/issues/47681
+    throw PdfRenderError.notSupported("Flutter macos does not support loading asset from plugin")
+#endif
   }
 
   func openFileDoc(pdfFilePath: String) -> CGPDFDocument? {
@@ -182,13 +236,12 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       doc.pages[pageNumber - 1] = page
     }
 
-    let pdfBBox = page!.getBoxRect(.mediaBox)
+    let rotatedSize = page!.getRotatedSize()
     let dict: [String: Any] = [
       "docId": Int32(docId),
       "pageNumber": Int32(pageNumber),
-      "rotationAngle": Int32(page!.rotationAngle),
-      "width": NSNumber(value: Double(pdfBBox.width)),
-      "height": NSNumber(value: Double(pdfBBox.height))
+      "width": NSNumber(value: Double(rotatedSize.width)),
+      "height": NSNumber(value: Double(rotatedSize.height))
     ]
     return dict as NSDictionary
   }
@@ -197,20 +250,17 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     docMap[id] = nil
   }
 
-  func render(args: NSDictionary, result: @escaping FlutterResult) {
+  func render(args: NSDictionary, result: @escaping FlutterResult) throws {
     let docId = args["docId"] as! Int
     guard let doc = docMap[docId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No PdfDocument for \(docId)")
     }
     let pageNumber = args["pageNumber"] as! Int
     guard pageNumber >= 1 && pageNumber <= doc.pages.count else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page number (\(pageNumber)) out of range [1 \(doc.pages.count)]")
     }
     guard let page = doc.pages[pageNumber - 1] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page load failed: pageNumber=\(pageNumber)")
     }
 
     let x = args["x"] as? Int ?? 0
@@ -220,10 +270,11 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let fw = args["fullWidth"] as? Double ?? 0.0
     let fh = args["fullHeight"] as? Double ?? 0.0
     let backgroundFill = args["backgroundFill"] as? Bool ?? true
+    let allowAntialiasing = args["allowAntialiasingIOS"] as? Bool ?? true
 
     dispQueue.async {
-      var dict: [String: Any]? = nil
-      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill) {
+      var dict: [String: Any?]? = nil
+      if let data = renderPdfPageRgba(page: page, x: x, y: y, width: w, height: h, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill, allowAntialiasing: allowAntialiasing) {
         dict = [
           "docId": Int32(docId),
           "pageNumber": Int32(pageNumber),
@@ -235,60 +286,73 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
           "fullHeight": NSNumber(value: data.fullHeight),
           "pageWidth": NSNumber(value: data.pageWidth),
           "pageHeight": NSNumber(value: data.pageHeight),
-          "data": FlutterStandardTypedData(bytes: data.data)
+          "data": data.address == 0 ? FlutterStandardTypedData(bytes: data.data) : nil,
+          "addr": NSNumber(value: data.address),
+          "size": NSNumber(value: data.size)
         ]
+      }
+      if dict == nil {
+        result(FlutterError(code: "exception", message: "Internal error", details: "renderPdfPageRgba failed"))
       }
       DispatchQueue.main.async {
         // FIXME: Should we use FlutterBasicMessageChannel<ByteData>?
-        result(dict != nil ? (dict! as NSDictionary) : nil)
+        result(dict! as NSDictionary)
       }
     }
   }
 
+  func releaseBuffer(address: Int, result: @escaping FlutterResult) {
+    free(UnsafeMutableRawPointer(bitPattern: address))
+    result(nil)
+  }
+
   func allocTex() -> Int64 {
     let pageTex = PdfPageTexture(registrar: registrar)
+#if os(iOS)
     let texId = registrar.textures().register(pageTex)
+#elseif os(macOS)
+    let texId = registrar.textures.register(pageTex)
+#endif
     textures[texId] = pageTex
     pageTex.texId = texId
     return texId
   }
 
   func releaseTex(texId: Int64, result: @escaping FlutterResult) {
+#if os(iOS)
     registrar.textures().unregisterTexture(texId)
+#elseif os(macOS)
+    registrar.textures.unregisterTexture(texId)
+#endif
     textures[texId] = nil
     result(nil)
   }
 
-  func resizeTex(args: NSDictionary, result: @escaping FlutterResult) {
+  func resizeTex(args: NSDictionary, result: @escaping FlutterResult) throws {
     let texId = args["texId"] as! Int64
     guard let pageTex = textures[texId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No texture of texId=\(texId)")
     }
     let w = args["width"] as! Int
     let h = args["height"] as! Int
     pageTex.resize(width: w, height: h)
   }
 
-  func updateTex(args: NSDictionary, result: @escaping FlutterResult) {
+  func updateTex(args: NSDictionary, result: @escaping FlutterResult) throws {
     let texId = args["texId"] as! Int64
     guard let pageTex = textures[texId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No texture of texId=\(texId)")
     }
     let docId = args["docId"] as! Int
     guard let doc = docMap[docId] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("No document instance of docId=\(docId)")
     }
     let pageNumber = args["pageNumber"] as! Int
     guard pageNumber >= 1 && pageNumber <= doc.pages.count else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page number (\(pageNumber)) out of range [1 \(doc.pages.count)]")
     }
     guard let page = doc.pages[pageNumber - 1] else {
-      result(SwiftPdfRenderPlugin.invalid)
-      return
+      throw PdfRenderError.invalidArgument("Page load failed: pageNumber=\(pageNumber)")
     }
 
     let destX = args["destX"] as? Int ?? 0
@@ -300,6 +364,7 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let fw = args["fullWidth"] as? Double
     let fh = args["fullHeight"] as? Double
     let backgroundFill = args["backgroundFill"] as? Bool ?? true
+    let allowAntialiasing = args["allowAntialiasingIOS"] as? Bool ?? true
 
     let tw = args["texWidth"] as? Int
     let th = args["texHeight"] as? Int
@@ -307,8 +372,12 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       pageTex.resize(width: tw!, height: th!)
     }
 
-    pageTex.updateTex(page: page, destX: destX, destY: destY, width: width, height: height, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill)
-    result(nil)
+    if width == nil || height == nil {
+      throw PdfRenderError.invalidArgument("width/height nil")
+    }
+
+    try pageTex.updateTex(page: page, destX: destX, destY: destY, width: width!, height: height!, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill, allowAntialiasing: allowAntialiasing)
+    result(0)
   }
 }
 
@@ -322,7 +391,9 @@ class PageData {
   let pageWidth: Double
   let pageHeight: Double
   let data: Data
-  init(x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, pageWidth: Double, pageHeight: Double, data: Data) {
+  let address: Int64
+  let size: Int
+  init(x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, pageWidth: Double, pageHeight: Double, data: Data, address: Int64, size: Int) {
     self.x = x
     self.y = y
     self.width = width
@@ -332,33 +403,40 @@ class PageData {
     self.pageWidth = pageWidth
     self.pageHeight = pageHeight
     self.data = data
+    self.address = address
+    self.size = size
   }
 }
 
-func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, backgroundFill: Bool) -> PageData? {
+func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int, fullWidth: Double, fullHeight: Double, backgroundFill: Bool, allowAntialiasing: Bool) -> PageData? {
 
-  let pdfBBox = page.getBoxRect(.mediaBox)
+  let rotatedSize = page.getRotatedSize()
 
-  let w = width > 0 ? width : Int(pdfBBox.width)
-  let h = height > 0 ? height : Int(pdfBBox.height)
+  let w = width > 0 ? width : Int(rotatedSize.width)
+  let h = height > 0 ? height : Int(rotatedSize.height)
   let fw = fullWidth > 0.0 ? fullWidth : Double(w)
   let fh = fullHeight > 0.0 ? fullHeight : Double(h)
 
-  let sx = CGFloat(fw) / pdfBBox.width
-  let sy = CGFloat(fh) / pdfBBox.height
+  let sx = CGFloat(fw) / rotatedSize.width
+  let sy = CGFloat(fh) / rotatedSize.height
 
   let stride = w * 4
-  var data = Data(repeating: backgroundFill ? 0xff : 0, count: stride * h)
+  let bufSize = stride * h;
+    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
+    buffer.initialize(repeating: backgroundFill ? 0xff : 0, count: bufSize)
   var success = false
-  data.withUnsafeMutableBytes { (ptr: UnsafeMutablePointer<UInt8>) in
-    let rgb = CGColorSpaceCreateDeviceRGB()
-    let context = CGContext(data: ptr, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-    if context != nil {
-      context!.translateBy(x: CGFloat(-x), y: CGFloat(-y))
-      context!.scaleBy(x: sx, y: sy)
-      context!.drawPDFPage(page)
-      success = true
-    }
+
+  let rgb = CGColorSpaceCreateDeviceRGB()
+  let context = CGContext(data: buffer, width: w, height: h, bitsPerComponent: 8, bytesPerRow: stride, space: rgb, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+  if context != nil {
+    context!.setAllowsAntialiasing(allowAntialiasing);
+
+    context!.translateBy(x: CGFloat(-x), y: CGFloat(Double(y + h) - fh))
+    context!.scaleBy(x: sx, y: sy)
+    context!.concatenate(page.getRotationTransform())
+
+    context!.drawPDFPage(page)
+    success = true
   }
   return success ? PageData(
     x: x,
@@ -367,13 +445,15 @@ func renderPdfPageRgba(page: CGPDFPage, x: Int, y: Int, width: Int, height: Int,
     height: h,
     fullWidth: fw,
     fullHeight: fh,
-    pageWidth: Double(pdfBBox.width),
-    pageHeight: Double(pdfBBox.height),
-    data: data) : nil
+    pageWidth: Double(rotatedSize.width),
+    pageHeight: Double(rotatedSize.height),
+    data: Data(bytesNoCopy: buffer, count: bufSize, deallocator: .none),
+    address: Int64(Int(bitPattern: buffer)),
+    size: bufSize) : nil
 }
 
 class PdfPageTexture : NSObject {
-  let pixBuf = AtomicReference<CVPixelBuffer?>(initialValue: nil)
+  var pixBuf : CVPixelBuffer?
   weak var registrar: FlutterPluginRegistrar?
   var texId: Int64 = 0
   var texWidth: Int = 0
@@ -391,16 +471,13 @@ class PdfPageTexture : NSObject {
     self.texHeight = height
   }
 
-  func updateTex(page: CGPDFPage, destX: Int, destY: Int, width: Int?, height: Int?, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false) {
+  func updateTex(page: CGPDFPage, destX: Int, destY: Int, width: Int, height: Int, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false, allowAntialiasing: Bool = true) throws {
 
-    guard let w = width else { return }
-    guard let h = height else { return }
-
-    let pdfBBox = page.getBoxRect(.mediaBox)
-    let fw = fullWidth ?? Double(pdfBBox.width)
-    let fh = fullHeight ?? Double(pdfBBox.height)
-    let sx = CGFloat(fw) / pdfBBox.width
-    let sy = CGFloat(fh) / pdfBBox.height
+    let rotatedSize = page.getRotatedSize()
+    let fw = fullWidth ?? Double(rotatedSize.width)
+    let fh = fullHeight ?? Double(rotatedSize.height)
+    let sx = CGFloat(fw) / rotatedSize.width
+    let sy = CGFloat(fh) / rotatedSize.height
 
     var pixBuf: CVPixelBuffer?
     let options = [
@@ -408,7 +485,10 @@ class PdfPageTexture : NSObject {
       kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
       kCVPixelBufferIOSurfacePropertiesKey as String: [:]
       ] as [String : Any]
-    CVPixelBufferCreate(kCFAllocatorDefault, texWidth, texHeight, kCVPixelFormatType_32BGRA, options as CFDictionary?, &pixBuf)
+    let cvRet = CVPixelBufferCreate(kCFAllocatorDefault, texWidth, texHeight, kCVPixelFormatType_32BGRA, options as CFDictionary?, &pixBuf)
+    if pixBuf == nil {
+      throw PdfRenderError.operationFailed("CVPixelBufferCreate failed: result code=\(cvRet)")
+    }
 
     let lockFlags = CVPixelBufferLockFlags(rawValue: 0)
     let _ = CVPixelBufferLockBaseAddress(pixBuf!, lockFlags)
@@ -420,31 +500,41 @@ class PdfPageTexture : NSObject {
     let bytesPerRow = CVPixelBufferGetBytesPerRow(pixBuf!)
     let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
     let context = CGContext(data: bufferAddress?.advanced(by: destX * 4 + destY * bytesPerRow),
-                            width: w,
-                            height: h,
+                            width: width,
+                            height: height,
                             bitsPerComponent: 8,
                             bytesPerRow: bytesPerRow,
                             space: rgbColorSpace,
                             bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
 
     if backgroundFill {
+#if os(iOS)
       context?.setFillColor(UIColor.white.cgColor)
-      context?.fill(CGRect(x: 0, y: 0, width: w, height: h))
+#elseif os(macOS)
+      context?.setFillColor(CGColor.white)
+#endif
+      context?.fill(CGRect(x: 0, y: 0, width: width, height: height))
     }
 
-    context?.translateBy(x: CGFloat(-srcX), y: CGFloat(-srcY))
+    context?.setAllowsAntialiasing(allowAntialiasing)
+
+    context?.translateBy(x: CGFloat(-srcX), y: CGFloat(Double(srcY + height) - fh))
     context?.scaleBy(x: sx, y: sy)
+    context?.concatenate(page.getRotationTransform())
     context?.drawPDFPage(page)
     context?.flush()
 
-    let _ = self.pixBuf.getAndSet(newValue: pixBuf)
+    self.pixBuf = pixBuf
+#if os(iOS)
     registrar?.textures().textureFrameAvailable(texId)
+#elseif os(macOS)
+    registrar?.textures.textureFrameAvailable(texId)
+#endif
   }
 }
 
 extension PdfPageTexture : FlutterTexture {
   func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
-    let val = pixBuf.getAndSet(newValue: nil)
-    return val != nil ? Unmanaged<CVPixelBuffer>.passRetained(val!) : nil
+    return pixBuf != nil ? Unmanaged<CVPixelBuffer>.passRetained(pixBuf!) : nil
   }
 }
