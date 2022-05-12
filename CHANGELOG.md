@@ -1,3 +1,9 @@
+
+## 1.1.0
+
+* I noticed broken semantic versioning on the 1.0.x versions... But the version numbers are consistent enough to get back to correct versioning.
+* FIXED: #56 Null check operator used on a null value
+
 ## 1.0.22/1.0.23
 
 * Add PdfViewerController.goToPointInPage/setZoomRatio (#71/#72)
