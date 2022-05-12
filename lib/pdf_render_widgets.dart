@@ -1290,6 +1290,15 @@ class _PdfViewerState extends State<PdfViewer>
           child: Container(
             width: page.rect!.width,
             height: page.rect!.height,
+            decoration: widget.params?.pageDecoration ??
+                const BoxDecoration(
+                    color: Color.fromARGB(255, 250, 250, 250),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black45,
+                          blurRadius: 4,
+                          offset: Offset(2, 2))
+                    ]),
             child: Stack(children: [
               ValueListenableBuilder<int>(
                   valueListenable: page._previewNotifier,
@@ -1316,15 +1325,6 @@ class _PdfViewerState extends State<PdfViewer>
                 widget.params!.buildPageOverlay!(
                     context, page.pageNumber, page.rect!),
             ]),
-            decoration: widget.params?.pageDecoration ??
-                const BoxDecoration(
-                    color: Color.fromARGB(255, 250, 250, 250),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black45,
-                          blurRadius: 4,
-                          offset: Offset(2, 2))
-                    ]),
           ),
         );
       }

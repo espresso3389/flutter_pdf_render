@@ -21,7 +21,7 @@ The following fragment illustrates the easiest way to show a PDF file in assets:
   }
 ```
 
-![](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
+![web-preview](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
 
 # Install
 
@@ -104,10 +104,10 @@ Anyway, the example code for the plugin illustrates how to download and preview 
 
 ```xml
 <dict>
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
-	<key>com.apple.security.network.client</key>
-	<true/>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+  <key>com.apple.security.network.client</key>
+  <true/>
 </dict>
 ```
 
