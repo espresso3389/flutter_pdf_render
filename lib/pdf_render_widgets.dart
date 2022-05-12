@@ -70,7 +70,7 @@ class _PdfDocumentAwaiter {
   final OnError? onError;
   PdfDocument? _cached;
 
-  Future<PdfDocument> getValue() async {
+  Future<PdfDocument?> getValue() async {
     if (_cached == null) {
       try {
         _cached = await _docFuture;
@@ -78,7 +78,7 @@ class _PdfDocumentAwaiter {
         onError?.call(e);
       }
     }
-    return _cached!;
+    return _cached;
   }
 }
 
