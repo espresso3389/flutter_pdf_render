@@ -57,28 +57,11 @@ To use the Flutter Web support, you should add the following code just before `<
     // any other options for pdfjsLib.getDocument.
     // params: {}
   };
-  // To workaround the recent breaking change on Flutter Web, you can set workaround_for_flutter_93615 to true:
-  //window.workaround_for_flutter_93615 = true;
 </script>
 ```
 
 You can use any URL that specify `PDF.js` distribution URL.
 `cMapUrl` indicates cmap files base URL and `cMapPacked` determines whether the cmap files are compressed or not.
-
-### Rendering breakage on recent Flutter Web
-
-Recently, Flutter Web changes [ImageDescriptor.raw](https://api.flutter.dev/flutter/dart-ui/ImageDescriptor/ImageDescriptor.raw.html)'s behavior. And it results in PDF rendering breakage.
-
-To workaround the issue, you should uncomment the following line on `index.html` (that is already shown above):
-
-```js
-window.workaround_for_flutter_93615 = true;
-```
-
-For more info, see the following issues:
-
-- [espresso3389/flutter_pdf_render: Web: PDF rendering distorted since Flutter Master 2.6.0-12.0.pre.674 #60](https://github.com/espresso3389/flutter_pdf_render/issues/60)
-- [flutter/flutter: [Web] Regression in Master - PDF display distorted due to change in BMP Encoder #93615](https://github.com/flutter/flutter/issues/93615)
 
 ## iOS/Android
 

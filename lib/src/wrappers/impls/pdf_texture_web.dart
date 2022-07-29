@@ -13,13 +13,9 @@ class PdfTexture extends StatefulWidget {
   @override
   _PdfTextureState createState() => _PdfTextureState();
 
-  RgbaData? get data => js_util.getProperty(html.window, 'pdf_render_texture_$textureId') as RgbaData?;
-
-  /// Flutter Web changes [ImageDescriptor.raw](https://api.flutter.dev/flutter/dart-ui/ImageDescriptor/ImageDescriptor.raw.html)'s behavior. For more info, see the following issues:
-  /// - [espresso3389/flutter_pdf_render: Web: PDF rendering distorted since Flutter Master 2.6.0-12.0.pre.674 #60](https://github.com/espresso3389/flutter_pdf_render/issues/60)
-  /// - [flutter/flutter: [Web] Regression in Master - PDF display distorted due to change in BMP Encoder #93615](https://github.com/flutter/flutter/issues/93615)
-  static bool get shouldEnableNewBehavior =>
-      js_util.getProperty(html.window, 'workaround_for_flutter_93615') as bool? ?? false;
+  RgbaData? get data =>
+      js_util.getProperty(html.window, 'pdf_render_texture_$textureId')
+          as RgbaData?;
 }
 
 class _PdfTextureState extends State<PdfTexture> {
@@ -69,7 +65,7 @@ class _PdfTextureState extends State<PdfTexture> {
         await ui.ImmutableBuffer.fromUint8List(data.data),
         width: data.width,
         height: data.height,
-        pixelFormat: PdfTexture.shouldEnableNewBehavior ? ui.PixelFormat.rgba8888 : ui.PixelFormat.bgra8888,
+        pixelFormat: ui.PixelFormat.rgba8888,
       );
       final codec = await descriptor.instantiateCodec();
       final frame = await codec.getNextFrame();
@@ -86,7 +82,8 @@ class _WebTextureManager {
   static final instance = _WebTextureManager._();
 
   final _id2states = <int, List<_PdfTextureState>>{};
-  final _events = const EventChannel('jp.espresso3389.pdf_render/web_texture_events');
+  final _events =
+      const EventChannel('jp.espresso3389.pdf_render/web_texture_events');
 
   _WebTextureManager._() {
     _events.receiveBroadcastStream().listen((event) {
@@ -96,7 +93,8 @@ class _WebTextureManager {
     });
   }
 
-  void register(int id, _PdfTextureState state) => _id2states.putIfAbsent(id, () => []).add(state);
+  void register(int id, _PdfTextureState state) =>
+      _id2states.putIfAbsent(id, () => []).add(state);
 
   void unregister(int id, _PdfTextureState state) {
     final states = _id2states[id];
