@@ -1,3 +1,6 @@
+## 1.2.0
+
+* Fix Rendering breakage on recent Flutter (#84)
 
 ## 1.1.0
 
