@@ -1,9 +1,10 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
+import 'package:js/js.dart';
 
 import '../utils/web_pointer.dart';
 import '../wrappers/html.dart' as html;
@@ -123,6 +124,7 @@ class PdfRenderWebPlugin {
   }
 
   void _releaseTex(int id) {
+    _textures[id]?.dispose();
     _textures.remove(id);
     js_util.setProperty(html.window, 'pdf_render_texture_$id', null);
   }
@@ -144,6 +146,7 @@ class PdfRenderWebPlugin {
     if (oldData != null && oldData.width == width && oldData.height == height) {
       return oldData;
     }
+    _textures[id]?.dispose();
     final data =
         _textures[id] = RgbaData.alloc(id: id, width: width, height: height);
     js_util.setProperty(html.window, 'pdf_render_texture_$id', data);
@@ -237,7 +240,7 @@ class PdfRenderWebPlugin {
     return await _renderRaw(
       args,
       dontFlip: false,
-      handleRawData: (src, width, height) {
+      handleRawData: (src, width, height) async {
         final id = args['texId'] as int;
         final destX = args['destX'] as int? ?? 0;
         final destY = args['destY'] as int? ?? 0;
@@ -256,6 +259,8 @@ class PdfRenderWebPlugin {
           sp += srcStride;
         }
 
+        await data.updateTexture();
+
         _eventStreamController.sink.add(id);
         return 0;
       },
@@ -263,17 +268,17 @@ class PdfRenderWebPlugin {
   }
 }
 
-@immutable
 class RgbaData {
   final int id;
   final int width;
   final int height;
   final Uint8List data;
+  ui.Image? texture;
 
   int get stride => width * 4;
   int getOffset(int x, int y) => (x + y * width) * 4;
 
-  const RgbaData(this.id, this.width, this.height, this.data);
+  RgbaData(this.id, this.width, this.height, this.data);
 
   factory RgbaData.alloc({
     required int id,
@@ -286,6 +291,25 @@ class RgbaData {
         height,
         Uint8List(width * 4 * height),
       );
+
+  Future<void> updateTexture() async {
+    final descriptor = ui.ImageDescriptor.raw(
+      await ui.ImmutableBuffer.fromUint8List(data),
+      width: width,
+      height: height,
+      pixelFormat: ui.PixelFormat.rgba8888,
+    );
+    final codec = await descriptor.instantiateCodec();
+    final frame = await codec.getNextFrame();
+    final last = texture;
+    texture = frame.image;
+    last?.dispose();
+  }
+
+  void dispose() {
+    texture?.dispose();
+    texture = null;
+  }
 
   @override
   String toString() => 'RgbaData(id=$id, $width x $height)';
