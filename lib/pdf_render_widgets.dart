@@ -176,13 +176,13 @@ class PdfDocumentLoader extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _PdfDocumentLoaderState createState() => _PdfDocumentLoaderState();
+  PdfDocumentLoaderState createState() => PdfDocumentLoaderState();
 
   /// Error-safe wrapper on [doc].
   late final _docCache = _PdfDocumentAwaiter(doc, onError: onError);
 }
 
-class _PdfDocumentLoaderState extends State<PdfDocumentLoader> {
+class PdfDocumentLoaderState extends State<PdfDocumentLoader> {
   PdfDocument? _doc;
 
   /// _lastPageSize is important to keep consistency on uniform page size on
@@ -289,10 +289,10 @@ class PdfPageView extends StatefulWidget {
       : super(key: key);
 
   @override
-  _PdfPageViewState createState() => _PdfPageViewState();
+  PdfPageViewState createState() => PdfPageViewState();
 }
 
-class _PdfPageViewState extends State<PdfPageView> {
+class PdfPageViewState extends State<PdfPageView> {
   /// The default size; A4 595x842 px.
   static const defaultSize = Size(595, 842);
 
@@ -351,8 +351,8 @@ class _PdfPageViewState extends State<PdfPageView> {
     }
   }
 
-  _PdfDocumentLoaderState? _getPdfDocumentLoaderState() =>
-      context.findAncestorStateOfType<_PdfDocumentLoaderState>();
+  PdfDocumentLoaderState? _getPdfDocumentLoaderState() =>
+      context.findAncestorStateOfType<PdfDocumentLoaderState>();
 
   void _release() {
     _doc = null;
@@ -481,13 +481,13 @@ enum PdfViewerAnchor {
 class PdfViewerController extends TransformationController {
   PdfViewerController();
 
-  /// Associated [_PdfViewerState].
+  /// Associated [PdfViewerState].
   ///
   /// FIXME: I don't think this is a good structure for our purpose...
-  _PdfViewerState? _state;
+  PdfViewerState? _state;
 
-  /// Associate a [_PdfViewerState] to the controller.
-  void _setViewerState(_PdfViewerState? state) {
+  /// Associate a [PdfViewerState] to the controller.
+  void _setViewerState(PdfViewerState? state) {
     _state = state;
     if (_state != null) notifyListeners();
   }
@@ -1039,10 +1039,10 @@ class PdfViewer extends StatefulWidget {
       );
 
   @override
-  _PdfViewerState createState() => _PdfViewerState();
+  PdfViewerState createState() => PdfViewerState();
 }
 
-class _PdfViewerState extends State<PdfViewer>
+class PdfViewerState extends State<PdfViewer>
     with SingleTickerProviderStateMixin {
   PdfDocument? _doc;
   List<_PdfPageState>? _pages;
@@ -1309,18 +1309,16 @@ class _PdfViewerState extends State<PdfViewer>
                           ? widget.params!.buildPagePlaceholder!(
                               context, page.pageNumber, page.rect!)
                           : Container()),
-              ValueListenableBuilder<int>(
-                  valueListenable: page._realSizeNotifier,
-                  builder: (context, value, child) =>
-                      page.realSizeOverlayRect != null && page.realSize != null
-                          ? Positioned(
-                              left: page.realSizeOverlayRect!.left,
-                              top: page.realSizeOverlayRect!.top,
-                              width: page.realSizeOverlayRect!.width,
-                              height: page.realSizeOverlayRect!.height,
-                              child:
-                                  PdfTexture(textureId: page.realSize!.texId))
-                          : Container()),
+              ValueListenableBuilder<_RealSize?>(
+                  valueListenable: page.realSize,
+                  builder: (context, realSize, child) => realSize != null
+                      ? Positioned(
+                          left: realSize.rect.left,
+                          top: realSize.rect.top,
+                          width: realSize.rect.width,
+                          height: realSize.rect.height,
+                          child: PdfTexture(textureId: realSize.texture.texId))
+                      : Container()),
               if (widget.params?.buildPageOverlay != null)
                 widget.params!.buildPageOverlay!(
                     context, page.pageNumber, page.rect!),
@@ -1490,17 +1488,20 @@ class _PdfViewerState extends State<PdfViewer>
           fw <= page.preview!.texWidth! &&
           fh <= page.preview!.texHeight!) {
         // no real-size overlay needed; use preview
-        page.realSizeOverlayRect = null;
+        page.realSize.value = null;
       } else {
         // render real-size overlay
         final offset = part.topLeft - pageRectZoomed.topLeft;
-        page.realSizeOverlayRect = Rect.fromLTWH(
+        final rect = Rect.fromLTWH(
             offset.dx / r, offset.dy / r, part.width / r, part.height / r);
-        page.realSize ??= await PdfPageImageTexture.create(
-            pdfDocument: page.pdfPage.document, pageNumber: page.pageNumber);
+
+        final tex = page._textures[page._textureId++ & 1] ??=
+            await PdfPageImageTexture.create(
+                pdfDocument: page.pdfPage.document,
+                pageNumber: page.pageNumber);
         final w = (part.width * dpr).toInt();
         final h = (part.height * dpr).toInt();
-        await page.realSize!.updateRect(
+        await tex.updateRect(
             width: w,
             height: h,
             srcX: (offset.dx * dpr).toInt(),
@@ -1509,7 +1510,7 @@ class _PdfViewerState extends State<PdfViewer>
             texHeight: h,
             fullWidth: fw,
             fullHeight: fh);
-        page._updateRealSizeOverlay();
+        page._updateRealSizeOverlay(_RealSize(rect, tex));
       }
     }
   }
@@ -1547,6 +1548,19 @@ enum _PdfPageLoadingStatus {
   disposed,
 }
 
+/// RealSize overlay.
+@immutable
+class _RealSize {
+  /// Relative position of the realSize overlay.
+  final Rect rect;
+
+  final PdfPageImageTexture texture;
+
+  const _RealSize(this.rect, this.texture);
+
+  Future<void> dispose() => texture.dispose();
+}
+
 /// Internal page control structure.
 class _PdfPageState {
   /// Page number (started at 1).
@@ -1564,11 +1578,12 @@ class _PdfPageState {
   /// Preview image of the page rendered at low resolution.
   PdfPageImageTexture? preview;
 
-  /// Relative position of the realSize overlay. null to not show realSize overlay.
-  Rect? realSizeOverlayRect;
+  final _textures = <PdfPageImageTexture?>[null, null];
+
+  int _textureId = 0;
 
   /// realSize overlay.
-  PdfPageImageTexture? realSize;
+  final realSize = ValueNotifier<_RealSize?>(null);
 
   /// Whether the page is visible within the view or not.
   bool isVisibleInsideView = false;
@@ -1576,7 +1591,6 @@ class _PdfPageState {
   _PdfPageLoadingStatus status = _PdfPageLoadingStatus.notInitialized;
 
   final _previewNotifier = ValueNotifier<int>(0);
-  final _realSizeNotifier = ValueNotifier<int>(0);
 
   _PdfPageState._({required this.pageNumber, required this.pageSize});
 
@@ -1584,13 +1598,16 @@ class _PdfPageState {
     if (status != _PdfPageLoadingStatus.disposed) _previewNotifier.value++;
   }
 
-  void _updateRealSizeOverlay() {
-    if (status != _PdfPageLoadingStatus.disposed) _realSizeNotifier.value++;
+  void _updateRealSizeOverlay(_RealSize tex) {
+    if (status != _PdfPageLoadingStatus.disposed) realSize.value = tex;
   }
 
   bool releaseRealSize() {
-    realSize?.dispose();
-    realSize = null;
+    realSize.value = null;
+    _textures[0]?.dispose();
+    _textures[0] = null;
+    _textures[1]?.dispose();
+    _textures[1] = null;
     return true;
   }
 
@@ -1611,6 +1628,6 @@ class _PdfPageState {
   void dispose() {
     _releaseTextures(_PdfPageLoadingStatus.disposed);
     _previewNotifier.dispose();
-    _realSizeNotifier.dispose();
+    realSize.dispose();
   }
 }

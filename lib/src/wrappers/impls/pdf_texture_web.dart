@@ -19,9 +19,6 @@ class PdfTexture extends StatefulWidget {
 }
 
 class _PdfTextureState extends State<PdfTexture> {
-  ui.Image? _image;
-  bool _firstBuild = true;
-
   @override
   void initState() {
     super.initState();
@@ -39,7 +36,6 @@ class _PdfTextureState extends State<PdfTexture> {
     if (oldWidget.textureId != widget.textureId) {
       _WebTextureManager.instance.unregister(oldWidget.textureId, this);
       _WebTextureManager.instance.register(widget.textureId, this);
-      _image = null;
       _requestUpdate();
     }
     super.didUpdateWidget(oldWidget);
@@ -47,32 +43,14 @@ class _PdfTextureState extends State<PdfTexture> {
 
   @override
   Widget build(BuildContext context) {
-    if (_firstBuild) {
-      _firstBuild = false;
-      Future.delayed(Duration.zero, () => _requestUpdate());
-    }
     return RawImage(
-      image: _image,
+      image: widget.data?.texture,
       alignment: Alignment.topLeft,
       fit: BoxFit.fill,
     );
   }
 
-  Future<void> _requestUpdate() async {
-    final data = widget.data;
-    if (data != null) {
-      final descriptor = ui.ImageDescriptor.raw(
-        await ui.ImmutableBuffer.fromUint8List(data.data),
-        width: data.width,
-        height: data.height,
-        pixelFormat: ui.PixelFormat.rgba8888,
-      );
-      final codec = await descriptor.instantiateCodec();
-      final frame = await codec.getNextFrame();
-      _image = frame.image;
-    } else {
-      _image = null;
-    }
+  void _requestUpdate() {
     if (mounted) setState(() {});
   }
 }
