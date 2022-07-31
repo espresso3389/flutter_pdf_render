@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:js/js.dart';
 
 import '../utils/web_pointer.dart';
 import '../wrappers/html.dart' as html;
 import '../wrappers/js_util.dart' as js_util;
-import '../wrappers/impls/pdf_texture_web.dart';
 import 'pdf.js.dart';
 
 class PdfRenderWebPlugin {
