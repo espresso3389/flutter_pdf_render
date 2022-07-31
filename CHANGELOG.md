@@ -1,3 +1,7 @@
+## 1.2.1
+
+* Certain Flutter version shows "Error: Type 'Uint8List' not found" though another version does not.
+
 ## 1.2.0
 
 * Fix Rendering breakage on recent Flutter (#84)
