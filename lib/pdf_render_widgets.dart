@@ -444,11 +444,9 @@ class PdfPageViewState extends State<PdfPageView> {
       _texture = await PdfPageImageTexture.create(
           pdfDocument: _doc!, pageNumber: widget.pageNumber!);
     }
-    await _texture!.updateRect(
+    await _texture!.extractSubrect(
         width: pixelSize.width.toInt(),
         height: pixelSize.height.toInt(),
-        texWidth: pixelSize.width.toInt(),
-        texHeight: pixelSize.height.toInt(),
         fullWidth: pixelSize.width,
         fullHeight: pixelSize.height,
         backgroundFill: backgroundFill);
@@ -1417,11 +1415,9 @@ class PdfViewerState extends State<PdfViewer>
           final w = page.pdfPage.width; // * 2;
           final h = page.pdfPage.height; // * 2;
 
-          await page.preview!.updateRect(
+          await page.preview!.extractSubrect(
             width: w.toInt(),
             height: h.toInt(),
-            texWidth: w.toInt(),
-            texHeight: h.toInt(),
             fullWidth: w,
             fullHeight: h,
           );
@@ -1501,13 +1497,11 @@ class PdfViewerState extends State<PdfViewer>
                 pageNumber: page.pageNumber);
         final w = (part.width * dpr).toInt();
         final h = (part.height * dpr).toInt();
-        await tex.updateRect(
+        await tex.extractSubrect(
+            x: (offset.dx * dpr).toInt(),
+            y: (offset.dy * dpr).toInt(),
             width: w,
             height: h,
-            srcX: (offset.dx * dpr).toInt(),
-            srcY: (offset.dy * dpr).toInt(),
-            texWidth: w,
-            texHeight: h,
             fullWidth: fw,
             fullHeight: fh);
         page._updateRealSizeOverlay(_RealSize(rect, tex));

@@ -129,13 +129,6 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
         }
         releaseTex(texId: texId.int64Value, result: result)
       }
-      else if call.method == "resizeTex"
-      {
-        guard let args = call.arguments as! NSDictionary? else {
-          throw PdfRenderError.invalidArgument("Expect NSDictionary")
-        }
-        try resizeTex(args: args, result: result)
-      }
       else if call.method == "updateTex"
       {
         guard let args = call.arguments as! NSDictionary? else {
@@ -328,16 +321,6 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     result(nil)
   }
 
-  func resizeTex(args: NSDictionary, result: @escaping FlutterResult) throws {
-    let texId = args["texId"] as! Int64
-    guard let pageTex = textures[texId] else {
-      throw PdfRenderError.invalidArgument("No texture of texId=\(texId)")
-    }
-    let w = args["width"] as! Int
-    let h = args["height"] as! Int
-    pageTex.resize(width: w, height: h)
-  }
-
   func updateTex(args: NSDictionary, result: @escaping FlutterResult) throws {
     let texId = args["texId"] as! Int64
     guard let pageTex = textures[texId] else {
@@ -355,8 +338,6 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
       throw PdfRenderError.invalidArgument("Page load failed: pageNumber=\(pageNumber)")
     }
 
-    let destX = args["destX"] as? Int ?? 0
-    let destY = args["destY"] as? Int ?? 0
     let width = args["width"] as? Int
     let height = args["height"] as? Int
     let srcX = args["srcX"] as? Int ?? 0
@@ -366,17 +347,11 @@ public class SwiftPdfRenderPlugin: NSObject, FlutterPlugin {
     let backgroundFill = args["backgroundFill"] as? Bool ?? true
     let allowAntialiasing = args["allowAntialiasingIOS"] as? Bool ?? true
 
-    let tw = args["texWidth"] as? Int
-    let th = args["texHeight"] as? Int
-    if tw != nil && th != nil {
-      pageTex.resize(width: tw!, height: th!)
-    }
-
     if width == nil || height == nil {
       throw PdfRenderError.invalidArgument("width/height nil")
     }
 
-    try pageTex.updateTex(page: page, destX: destX, destY: destY, width: width!, height: height!, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill, allowAntialiasing: allowAntialiasing)
+    try pageTex.updateTex(page: page, width: width!, height: height!, srcX: srcX, srcY: srcY, fullWidth: fw, fullHeight: fh, backgroundFill: backgroundFill, allowAntialiasing: allowAntialiasing)
     result(0)
   }
 }
@@ -456,22 +431,12 @@ class PdfPageTexture : NSObject {
   var pixBuf : CVPixelBuffer?
   weak var registrar: FlutterPluginRegistrar?
   var texId: Int64 = 0
-  var texWidth: Int = 0
-  var texHeight: Int = 0
 
   init(registrar: FlutterPluginRegistrar?) {
     self.registrar = registrar
   }
 
-  func resize(width: Int, height: Int) {
-    if self.texWidth == width && self.texHeight == height {
-      return
-    }
-    self.texWidth = width
-    self.texHeight = height
-  }
-
-  func updateTex(page: CGPDFPage, destX: Int, destY: Int, width: Int, height: Int, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false, allowAntialiasing: Bool = true) throws {
+  func updateTex(page: CGPDFPage, width: Int, height: Int, srcX: Int, srcY: Int, fullWidth: Double?, fullHeight: Double?, backgroundFill: Bool = false, allowAntialiasing: Bool = true) throws {
 
     let rotatedSize = page.getRotatedSize()
     let fw = fullWidth ?? Double(rotatedSize.width)
@@ -485,7 +450,7 @@ class PdfPageTexture : NSObject {
       kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
       kCVPixelBufferIOSurfacePropertiesKey as String: [:]
       ] as [String : Any]
-    let cvRet = CVPixelBufferCreate(kCFAllocatorDefault, texWidth, texHeight, kCVPixelFormatType_32BGRA, options as CFDictionary?, &pixBuf)
+    let cvRet = CVPixelBufferCreate(kCFAllocatorDefault, width, height, kCVPixelFormatType_32BGRA, options as CFDictionary?, &pixBuf)
     if pixBuf == nil {
       throw PdfRenderError.operationFailed("CVPixelBufferCreate failed: result code=\(cvRet)")
     }
@@ -499,7 +464,7 @@ class PdfPageTexture : NSObject {
     let bufferAddress = CVPixelBufferGetBaseAddress(pixBuf!)
     let bytesPerRow = CVPixelBufferGetBytesPerRow(pixBuf!)
     let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
-    let context = CGContext(data: bufferAddress?.advanced(by: destX * 4 + destY * bytesPerRow),
+    let context = CGContext(data: bufferAddress,
                             width: width,
                             height: height,
                             bitsPerComponent: 8,

@@ -42,13 +42,16 @@ abstract class PdfDocument {
 
   /// Opening the specified file.
   /// For Web, [filePath] can be relative path from `index.html` or any arbitrary URL but it may be restricted by CORS.
-  static Future<PdfDocument> openFile(String filePath) => PdfRenderPlatform.instance.openFile(filePath);
+  static Future<PdfDocument> openFile(String filePath) =>
+      PdfRenderPlatform.instance.openFile(filePath);
 
   /// Opening the specified asset.
-  static Future<PdfDocument> openAsset(String name) => PdfRenderPlatform.instance.openAsset(name);
+  static Future<PdfDocument> openAsset(String name) =>
+      PdfRenderPlatform.instance.openAsset(name);
 
   /// Opening the PDF on memory.
-  static Future<PdfDocument> openData(Uint8List data) => PdfRenderPlatform.instance.openData(data);
+  static Future<PdfDocument> openData(Uint8List data) =>
+      PdfRenderPlatform.instance.openData(data);
 
   /// Get page object. The first page is 1.
   Future<PdfPage> getPage(int pageNumber);
@@ -102,7 +105,10 @@ abstract class PdfPage {
   });
 
   @override
-  bool operator ==(dynamic other) => other is PdfPage && other.document == document && other.pageNumber == pageNumber;
+  bool operator ==(dynamic other) =>
+      other is PdfPage &&
+      other.document == document &&
+      other.pageNumber == pageNumber;
 
   @override
   int get hashCode => document.hashCode ^ pageNumber;
@@ -186,28 +192,29 @@ abstract class PdfPageImageTexture {
   @override
   int get hashCode;
 
-  PdfPageImageTexture({required this.pdfDocument, required this.pageNumber, required this.texId});
+  PdfPageImageTexture(
+      {required this.pdfDocument,
+      required this.pageNumber,
+      required this.texId});
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
-  static Future<PdfPageImageTexture> create({required FutureOr<PdfDocument> pdfDocument, required int pageNumber}) =>
-      PdfRenderPlatform.instance.createTexture(pdfDocument: pdfDocument, pageNumber: pageNumber);
+  static Future<PdfPageImageTexture> create(
+          {required FutureOr<PdfDocument> pdfDocument,
+          required int pageNumber}) =>
+      PdfRenderPlatform.instance
+          .createTexture(pdfDocument: pdfDocument, pageNumber: pageNumber);
 
   /// Release the object.
   Future<void> dispose();
 
-  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// Extract sub-rectangle ([x],[y],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
-  /// The method can also resize the texture if you specify [texWidth] and [texHeight].
   /// Returns true if succeeded.
-  Future<bool> updateRect({
-    int destX = 0,
-    int destY = 0,
-    int? width,
-    int? height,
-    int srcX = 0,
-    int srcY = 0,
-    int? texWidth,
-    int? texHeight,
+  Future<bool> extractSubrect({
+    int x = 0,
+    int y = 0,
+    required int width,
+    required int height,
     double? fullWidth,
     double? fullHeight,
     bool backgroundFill = true,

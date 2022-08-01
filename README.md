@@ -29,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.2.1
+  pdf_render: ^1.3.0
 ```
 
 ## Web
@@ -613,8 +613,6 @@ class PdfPageImageTexture {
   final int pageNumber;
   final int texId;
 
-  int? get texWidth;
-  int? get texHeight;
   bool get hasUpdatedTexture;
 
   PdfPageImageTexture({required this.pdfDocument, required this.pageNumber, required this.texId});
@@ -625,18 +623,13 @@ class PdfPageImageTexture {
   /// Release the object.
   Future<void> dispose();
 
-  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// Extract sub-rectangle ([x],[y],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
-  /// The method can also resize the texture if you specify [texWidth] and [texHeight].
-  Future<bool> updateRect({
-    int destX = 0,
-    int destY = 0,
-    int? width,
-    int? height,
-    int srcX = 0,
-    int srcY = 0,
-    int? texWidth,
-    int? texHeight,
+  Future<bool> extractSubrect({
+    int x = 0,
+    int y = 0,
+    required int width,
+    required int height,
     double? fullWidth,
     double? fullHeight,
     bool backgroundFill = true,
