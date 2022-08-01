@@ -1,3 +1,7 @@
+## 1.3.0
+
+* BREAKING CHANGE: Simpler PdfPageImageTexture structure to improve rendering performance especially on Flutter Web.
+
 ## 1.2.1
 
 * Certain Flutter version shows "Error: Type 'Uint8List' not found" though another version does not.

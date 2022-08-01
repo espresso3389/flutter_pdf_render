@@ -32,7 +32,7 @@ class PdfRenderWebPlugin {
       const PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
   final _docs = <int, PdfjsDocument>{};
   int _lastDocId = -1;
-  final _textures = <int, RgbaData>{};
+  final _textures = <int, ui.Image>{};
   int _texId = -1;
 
   Future<dynamic> handleMethodCall(MethodCall call) async {
@@ -70,8 +70,6 @@ class PdfRenderWebPlugin {
         return _allocTex();
       case 'releaseTex':
         return _releaseTex(call.arguments as int);
-      case 'resizeTex':
-        return _resizeTex(call.arguments);
       case 'updateTex':
         return await _updateTex(call.arguments);
       default:
@@ -125,30 +123,6 @@ class PdfRenderWebPlugin {
     _textures[id]?.dispose();
     _textures.remove(id);
     js_util.setProperty(html.window, 'pdf_render_texture_$id', null);
-  }
-
-  int _resizeTex(dynamic args) {
-    final id = args['texId'] as int;
-    final canvas = _textures[id];
-    if (canvas == null) return -1;
-    final width = args['width'] as int;
-    final height = args['height'] as int;
-    _updateTexSize(id, width, height);
-
-    _eventStreamController.sink.add(id);
-    return 0;
-  }
-
-  RgbaData _updateTexSize(int id, int width, int height) {
-    final oldData = _textures[id];
-    if (oldData != null && oldData.width == width && oldData.height == height) {
-      return oldData;
-    }
-    _textures[id]?.dispose();
-    final data =
-        _textures[id] = RgbaData.alloc(id: id, width: width, height: height);
-    js_util.setProperty(html.window, 'pdf_render_texture_$id', data);
-    return data;
   }
 
   Future<dynamic> _render(dynamic args) async {
@@ -240,57 +214,19 @@ class PdfRenderWebPlugin {
       dontFlip: false,
       handleRawData: (src, width, height) async {
         final id = args['texId'] as int;
-        final destX = args['destX'] as int? ?? 0;
-        final destY = args['destY'] as int? ?? 0;
-        final data = _updateTexSize(
-            id, args['texWidth'] as int, args['texHeight'] as int);
-        final destStride = data.stride;
-        final srcStride = width * 4;
-        int dp = data.getOffset(destX, destY);
+        final image = await create(src, width, height);
 
-        int sp = 0;
-        for (int y = 0; y < height; y++) {
-          for (int i = 0; i < srcStride; i++) {
-            data.data[dp + i] = src[sp + i];
-          }
-          dp += destStride;
-          sp += srcStride;
-        }
-
-        await data.updateTexture();
+        _textures[id]?.dispose();
+        _textures[id] = image;
+        js_util.setProperty(html.window, 'pdf_render_texture_$id', image);
 
         _eventStreamController.sink.add(id);
         return 0;
       },
     );
   }
-}
 
-class RgbaData {
-  final int id;
-  final int width;
-  final int height;
-  final Uint8List data;
-  ui.Image? texture;
-
-  int get stride => width * 4;
-  int getOffset(int x, int y) => (x + y * width) * 4;
-
-  RgbaData(this.id, this.width, this.height, this.data);
-
-  factory RgbaData.alloc({
-    required int id,
-    required int width,
-    required int height,
-  }) =>
-      RgbaData(
-        id,
-        width,
-        height,
-        Uint8List(width * 4 * height),
-      );
-
-  Future<void> updateTexture() async {
+  static Future<ui.Image> create(Uint8List data, int width, int height) async {
     final descriptor = ui.ImageDescriptor.raw(
       await ui.ImmutableBuffer.fromUint8List(data),
       width: width,
@@ -299,16 +235,6 @@ class RgbaData {
     );
     final codec = await descriptor.instantiateCodec();
     final frame = await codec.getNextFrame();
-    final last = texture;
-    texture = frame.image;
-    last?.dispose();
+    return frame.image;
   }
-
-  void dispose() {
-    texture?.dispose();
-    texture = null;
-  }
-
-  @override
-  String toString() => 'RgbaData(id=$id, $width x $height)';
 }

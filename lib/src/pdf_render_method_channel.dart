@@ -328,21 +328,16 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
   @override
   Future<void> dispose() => _channel.invokeMethod('releaseTex', texId);
 
-  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle
-  /// ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// Extract sub-rectangle ([x],[y],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
-  /// The method can also resize the texture if you specify [texWidth] and [texHeight].
+  /// Returns true if succeeded.
   /// Returns true if succeeded.
   @override
-  Future<bool> updateRect(
-      {int destX = 0,
-      int destY = 0,
-      int? width,
-      int? height,
-      int srcX = 0,
-      int srcY = 0,
-      int? texWidth,
-      int? texHeight,
+  Future<bool> extractSubrect(
+      {int x = 0,
+      int y = 0,
+      required int width,
+      required int height,
       double? fullWidth,
       double? fullHeight,
       bool backgroundFill = true,
@@ -351,22 +346,18 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
       'docId': _doc.docId,
       'pageNumber': pageNumber,
       'texId': texId,
-      'destX': destX,
-      'destY': destY,
       'width': width,
       'height': height,
-      'srcX': srcX,
-      'srcY': srcY,
-      'texWidth': texWidth,
-      'texHeight': texHeight,
+      'srcX': x,
+      'srcY': y,
       'fullWidth': fullWidth,
       'fullHeight': fullHeight,
       'backgroundFill': backgroundFill,
       'allowAntialiasingIOS': allowAntialiasingIOS,
     }))!;
     if (result >= 0) {
-      _texWidth = texWidth ?? _texWidth;
-      _texHeight = texHeight ?? _texHeight;
+      _texWidth = width ?? _texWidth;
+      _texHeight = height ?? _texHeight;
     }
     return result >= 0;
   }

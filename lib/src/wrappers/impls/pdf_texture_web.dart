@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,9 +13,9 @@ class PdfTexture extends StatefulWidget {
   @override
   PdfTextureState createState() => PdfTextureState();
 
-  RgbaData? get data =>
+  ui.Image? get texture =>
       js_util.getProperty(html.window, 'pdf_render_texture_$textureId')
-          as RgbaData?;
+          as ui.Image?;
 }
 
 class PdfTextureState extends State<PdfTexture> {
@@ -42,7 +44,7 @@ class PdfTextureState extends State<PdfTexture> {
   @override
   Widget build(BuildContext context) {
     return RawImage(
-      image: widget.data?.texture,
+      image: widget.texture,
       alignment: Alignment.topLeft,
       fit: BoxFit.fill,
     );
