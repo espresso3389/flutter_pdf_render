@@ -356,8 +356,8 @@ class PdfPageImageTextureMethodChannel extends PdfPageImageTexture {
       'allowAntialiasingIOS': allowAntialiasingIOS,
     }))!;
     if (result >= 0) {
-      _texWidth = width ?? _texWidth;
-      _texHeight = height ?? _texHeight;
+      _texWidth = width;
+      _texHeight = height;
     }
     return result >= 0;
   }

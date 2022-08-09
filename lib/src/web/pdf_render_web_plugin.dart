@@ -126,13 +126,28 @@ class PdfRenderWebPlugin {
   }
 
   Future<dynamic> _render(dynamic args) async {
-    return await _renderRaw(args, dontFlip: true,
-        handleRawData: (src, width, height) {
+    return await _renderRaw(args, dontFlip: true, handleRawData: (
+      src,
+      x,
+      y,
+      width,
+      height,
+      fullWidth,
+      fullHeight,
+      pageWidth,
+      pageHeight,
+    ) {
       return {
         'addr': pinBufferByFakeAddress(src),
         'size': src.length,
+        'x': x,
+        'y': y,
         'width': width,
         'height': height,
+        'fullWidth': fullWidth,
+        'fullHeight': fullHeight,
+        'pageWidth': pageWidth,
+        'pageHeight': pageHeight,
       };
     });
   }
@@ -143,7 +158,17 @@ class PdfRenderWebPlugin {
   Future<T> _renderRaw<T>(
     dynamic args, {
     required bool dontFlip,
-    required FutureOr<T> Function(Uint8List src, int width, int height)
+    required FutureOr<T> Function(
+      Uint8List src,
+      int x,
+      int y,
+      int width,
+      int height,
+      double fullWidth,
+      double fullHeight,
+      double pageWidth,
+      double pageHeight,
+    )
         handleRawData,
   }) async {
     final docId = args['docId'] as int;
@@ -159,10 +184,10 @@ class PdfRenderWebPlugin {
         await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
 
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
-    final pw = vp1.width;
-    //final ph = vp1.height;
-    final fullWidth = args['fullWidth'] as double? ?? pw;
-    //final fullHeight = args['fullHeight'] as double? ?? ph;
+    final pageWidth = vp1.width;
+    final pageHeight = vp1.height;
+    final fullWidth = args['fullWidth'] as double? ?? pageWidth;
+    final fullHeight = args['fullHeight'] as double? ?? pageHeight;
     final width = args['width'] as int?;
     final height = args['height'] as int?;
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
@@ -171,15 +196,13 @@ class PdfRenderWebPlugin {
           'Invalid PDF page rendering rectangle ($width x $height)');
     }
 
-    final offsetX =
-        -(args['srcX'] as int? ?? args['x'] as int? ?? 0).toDouble();
-    final offsetY =
-        -(args['srcY'] as int? ?? args['y'] as int? ?? 0).toDouble();
+    final x = args['srcX'] as int? ?? args['x'] as int? ?? 0;
+    final y = args['srcY'] as int? ?? args['y'] as int? ?? 0;
 
     final vp = page.getViewport(PdfjsViewportParams(
-        scale: fullWidth / pw,
-        offsetX: offsetX,
-        offsetY: offsetY,
+        scale: fullWidth / pageWidth,
+        offsetX: -x.toDouble(),
+        offsetY: -y.toDouble(),
         dontFlip: dontFlip));
 
     final canvas = html.document.createElement('canvas') as html.CanvasElement;
@@ -205,14 +228,34 @@ class PdfRenderWebPlugin {
         .data
         .buffer
         .asUint8List();
-    return await handleRawData(src, width, height);
+    return await handleRawData(
+      src,
+      x,
+      y,
+      width,
+      height,
+      fullWidth,
+      fullHeight,
+      pageWidth,
+      pageHeight,
+    );
   }
 
   Future<int> _updateTex(dynamic args) async {
     return await _renderRaw(
       args,
       dontFlip: false,
-      handleRawData: (src, width, height) async {
+      handleRawData: (
+        src,
+        x,
+        y,
+        width,
+        height,
+        fullWidth,
+        fullHeight,
+        pageWidth,
+        pageHeight,
+      ) async {
         final id = args['texId'] as int;
         final image = await create(src, width, height);
 
