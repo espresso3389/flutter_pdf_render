@@ -1,3 +1,7 @@
+## 1.3.1
+
+* Fix [#66](https://github.com/espresso3389/flutter_pdf_render/issues/66) await page.render() crashed on web
+
 ## 1.3.0
 
 * BREAKING CHANGE: Simpler PdfPageImageTexture structure to improve rendering performance especially on Flutter Web.
@@ -8,16 +12,16 @@
 
 ## 1.2.0
 
-* Fix Rendering breakage on recent Flutter (#84)
+* Fix Rendering breakage on recent Flutter ([#84](https://github.com/espresso3389/flutter_pdf_render/issues/84))
 
 ## 1.1.0
 
 * I noticed broken semantic versioning on the 1.0.x versions... But the version numbers are consistent enough to get back to correct versioning.
-* FIXED: #56 Null check operator used on a null value
+* FIXED: [#56](https://github.com/espresso3389/flutter_pdf_render/issues/56) Null check operator used on a null value
 
 ## 1.0.22/1.0.23
 
-* Add PdfViewerController.goToPointInPage/setZoomRatio (#71/#72)
+* Add PdfViewerController.goToPointInPage/setZoomRatio ([#71](https://github.com/espresso3389/flutter_pdf_render/issues/71)/[#72](https://github.com/espresso3389/flutter_pdf_render/issues/72))
 * Document updates
 
 ## 1.0.21
@@ -26,7 +30,7 @@
 
 ## 1.0.20
 
-* PdfViewerParams introduces scrollDirection to support horizontal scroll (#69).
+* PdfViewerParams introduces scrollDirection to support horizontal scroll ([#69](https://github.com/espresso3389/flutter_pdf_render/issues/69)).
 * targetSdkVersion 31 for example code
 * Gradle/Kotlin version updates
 
@@ -36,11 +40,11 @@
 
 ## 1.0.18
 
-* Add workaround for recent Flutter Web breaking change (#60).
+* Add workaround for recent Flutter Web breaking change ([#60](https://github.com/espresso3389/flutter_pdf_render/issues/60)).
 
 ## 1.0.17
 
-* Additional null check on updateTex (Android); possible fix for #59 and #61.
+* Additional null check on updateTex (Android); possible fix for [#59](https://github.com/espresso3389/flutter_pdf_render/issues/59) and [#61](https://github.com/espresso3389/flutter_pdf_render/issues/61).
 
 ## 1.0.16
 
@@ -48,7 +52,7 @@
 
 ## 1.0.15
 
-* Merge PR #55 Add flutter_lints
+* Merge PR [#55](https://github.com/espresso3389/flutter_pdf_render/issues/55) Add flutter_lints
 
 ## 1.0.14
 
@@ -56,21 +60,21 @@
 
 ## 1.0.13
 
-* Merged PR #54 "device_info replace by device_info_plus" by lsaudon
+* Merged PR [#54](https://github.com/espresso3389/flutter_pdf_render/issues/54) "device_info replace by device_info_plus" by lsaudon
 
 ## 1.0.12
 
-* Fix #50 Hot Reload throws error on Change Notifier
+* Fix [#50](https://github.com/espresso3389/flutter_pdf_render/issues/50) Hot Reload throws error on Change Notifier
 
 ## 1.0.11
 
-* Implements page memory purging (#44)
+* Implements page memory purging ([#44](https://github.com/espresso3389/flutter_pdf_render/issues/44))
 * Unified code for iOS/macOS
-* Better error handling code for iOS/macOS (#44)
+* Better error handling code for iOS/macOS ([#44](https://github.com/espresso3389/flutter_pdf_render/issues/44))
 
 ## 1.0.10
 
-* More null-check codes for possible runtime exceptions on dispose (#42).
+* More null-check codes for possible runtime exceptions on dispose ([#42](https://github.com/espresso3389/flutter_pdf_render/issues/42)).
 
 ## 1.0.9
 
@@ -86,11 +90,11 @@
 
 ## 1.0.6
 
-* Additional fix for #35 web - renders blank, with no console error
+* Additional fix for [#35](https://github.com/espresso3389/flutter_pdf_render/issues/35) web - renders blank, with no console error
 
 ## 1.0.5
 
-* Fix #35 web - renders blank, with no console error
+* Fix [#35](https://github.com/espresso3389/flutter_pdf_render/issues/35) web - renders blank, with no console error
 
 ## 1.0.4
 
@@ -136,12 +140,12 @@
 
 ## 0.66.0
 
-* Introducing PdfViewer that supports interactive pinch-zoom (#5); not yet complete but things just work well.
+* Introducing PdfViewer that supports interactive pinch-zoom ([#5](https://github.com/espresso3389/flutter_pdf_render/issues/5)); not yet complete but things just work well.
 
 ## 0.65.0
 
-* Fixes PDF page rotation issue on iOS (#18)
-* Fixes Y-axis flipping issue on iOS (#9)
+* Fixes PDF page rotation issue on iOS ([#18](https://github.com/espresso3389/flutter_pdf_render/issues/18))
+* Fixes Y-axis flipping issue on iOS ([#9](https://github.com/espresso3389/flutter_pdf_render/issues/9))
 
 ## 0.64.1
 
@@ -156,7 +160,7 @@
 
 ## 0.63.0
 
-* Introducing PdfDocumentLoader.onError to handle document open error (#17 by Sp4Rx).
+* Introducing PdfDocumentLoader.onError to handle document open error ([#17](https://github.com/espresso3389/flutter_pdf_render/issues/17) by Sp4Rx).
 
 ## 0.62.0
 
@@ -168,11 +172,11 @@
 
 ## 0.57.2
 
-* Update pubspec.yaml not to be shown as WEB compatible on pub.dev (#11).
+* Update pubspec.yaml not to be shown as WEB compatible on pub.dev ([#11](https://github.com/espresso3389/flutter_pdf_render/issues/11)).
 
 ## 0.57.1
 
-* Update comments (#6).
+* Update comments ([#6](https://github.com/espresso3389/flutter_pdf_render/issues/6)).
 
 ## 0.57.0
 
