@@ -638,7 +638,7 @@ class PdfPageImageTexture {
 ```
 ## Custom Page Layout
 
-PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) has a property [layoutPages](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/layoutPages.html) to customize page layout.
+[PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) has a property [layoutPages](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/layoutPages.html) to customize page layout.
 
 Sometimes, when you're using **Landscape** mode on your Phone or Tablet and you need to show pdf fit to the center of the screen then you can use this code to customize the pdf layout.
 
