@@ -636,3 +636,43 @@ class PdfPageImageTexture {
   });
 }
 ```
+## Custom Page Layout
+
+[PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) has a property [layoutPages](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/layoutPages.html) to customize page layout.
+
+Sometimes, when you're using **Landscape** mode on your Phone or Tablet and you need to show pdf fit to the center of the screen then you can use this code to customize the pdf layout.
+
+```dart
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      backgroundColor: Colors.white70,
+      body: PdfViewer.openAsset(
+        'assets/hello.pdf',
+        params: PdfViewerParams(
+          layoutPages: (viewSize, pages) {
+            List<Rect> rect = [];
+            final viewWidth = viewSize.width;
+            final viewHeight = viewSize.height;
+            final maxHeight = pages.fold<double>(0.0, (maxHeight, page) => max(maxHeight, page.height));
+            final ratio = viewHeight / maxHeight;
+            var top = 0.0;
+            for (var page in pages) {
+              final width = page.width * ratio;
+              final height = page.height * ratio;
+              final left = viewWidth > viewHeight ? (viewWidth / 2) - (width / 2) : 0.0;
+              rect.add(Rect.fromLTWH(left, top, width, height));
+              top += height + 8 /* padding */;
+            }
+            return rect;
+          },
+        ),
+      ),
+    );
+  }
+```
+#### Preview
+<img src="https://raw.githubusercontent.com/chayanforyou/flutter_pdf_render/update_readme/images/layoutPages.gif" width="50%" height="50%">
