@@ -1,3 +1,8 @@
+
+## 1.3.2
+
+- Minor dependency update on example code.
+
 ## 1.3.1
 
 * Fix [#66](https://github.com/espresso3389/flutter_pdf_render/issues/66) await page.render() crashed on web

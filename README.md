@@ -29,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.3.1
+  pdf_render: ^1.3.2
 ```
 
 ## Web
