@@ -1,3 +1,6 @@
+## 1.3.3
+
+- Minor, but PDF rendering result change (for Android/iOS) due to consistency issue described on #88
 
 ## 1.3.2
 
