@@ -5,7 +5,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
-import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
+import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 //import android.util.Log
@@ -197,7 +197,7 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
         bmp.eraseColor(Color.WHITE)
       }
 
-      it.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
+      it.render(bmp, null, mat, RENDER_MODE_FOR_PRINT)
 
       bmp.copyPixelsToBuffer(buf)
       bmp.recycle()
@@ -286,7 +286,7 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
       if (backgroundFill) {
         bmp.eraseColor(Color.WHITE)
       }
-      page.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
+      page.render(bmp, null, mat, RENDER_MODE_FOR_PRINT)
 
       tex.surfaceTexture()?.setDefaultBufferSize(width, height)
 
