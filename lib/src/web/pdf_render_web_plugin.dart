@@ -138,6 +138,7 @@ class PdfRenderWebPlugin {
       pageHeight,
     ) {
       return {
+        'pageNumber': args['pageNumber'],
         'addr': pinBufferByFakeAddress(src),
         'size': src.length,
         'x': x,
@@ -188,10 +189,10 @@ class PdfRenderWebPlugin {
     final pageHeight = vp1.height;
     final fullWidth = args['fullWidth'] as double? ?? pageWidth;
     final fullHeight = args['fullHeight'] as double? ?? pageHeight;
-    final width = args['width'] as int?;
-    final height = args['height'] as int?;
+    final width = args['width'] as int? ?? fullWidth.toInt();
+    final height = args['height'] as int? ?? fullHeight.toInt();
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
-    if (width == null || height == null || width <= 0 || height <= 0) {
+    if (width <= 0 || height <= 0) {
       throw Exception(
           'Invalid PDF page rendering rectangle ($width x $height)');
     }
