@@ -1,3 +1,7 @@
+## 1.3.4
+
+- FIXED: await page.render() crashed on web #66 (and add a button to test rendering API on example)
+
 ## 1.3.3
 
 - Minor, but PDF rendering result change (for Android/iOS) due to consistency issue described on #88
