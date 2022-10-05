@@ -31,7 +31,7 @@
 * I noticed broken semantic versioning on the 1.0.x versions... But the version numbers are consistent enough to get back to correct versioning.
 * FIXED: [#56](https://github.com/espresso3389/flutter_pdf_render/issues/56) Null check operator used on a null value
 
-## 1.0.22/1.0.23
+## 1.0.23
 
 * Add PdfViewerController.goToPointInPage/setZoomRatio ([#71](https://github.com/espresso3389/flutter_pdf_render/issues/71)/[#72](https://github.com/espresso3389/flutter_pdf_render/issues/72))
 * Document updates

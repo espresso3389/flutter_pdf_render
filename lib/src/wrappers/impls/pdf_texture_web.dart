@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 
 import '../html.dart' as html;
 import '../js_util.dart' as js_util;
-import '../../web/pdf_render_web_plugin.dart';
 
 class PdfTexture extends StatefulWidget {
   final int textureId;

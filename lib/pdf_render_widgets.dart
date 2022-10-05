@@ -1015,9 +1015,10 @@ class PdfViewer extends StatefulWidget {
         key: key,
         future: getFuture(),
         builder: (context, snapshot) {
-          if (snapshot.hasData) {
+          final data = snapshot.data;
+          if (data != null) {
             return PdfViewer(
-              doc: futureToDocument(snapshot.data!),
+              doc: futureToDocument(data),
               viewerController: viewerController,
               params: params,
               onError: onError,
@@ -1114,7 +1115,7 @@ class PdfViewerState extends State<PdfViewer>
         for (int i = 0; i < _doc!.pageCount; i++) {
           pages.add(_PdfPageState._(pageNumber: i + 1, pageSize: pageSize1));
         }
-      } catch (e) {}
+      } catch (e) {/* ignore errors anyway */}
       _firstControllerAttach = true;
       _pages = pages;
     }
@@ -1427,7 +1428,7 @@ class PdfViewerState extends State<PdfViewer>
       }
 
       _needRealSizeOverlayUpdate();
-    } catch (e) {}
+    } catch (e) {/* ignore errors */}
   }
 
   void _cancelLastRealSizeUpdate() {
