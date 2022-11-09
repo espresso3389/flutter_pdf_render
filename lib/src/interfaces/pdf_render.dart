@@ -218,5 +218,6 @@ abstract class PdfPageImageTexture {
     double? fullWidth,
     double? fullHeight,
     bool backgroundFill = true,
+    bool allowAntialiasingIOS = true,
   });
 }
