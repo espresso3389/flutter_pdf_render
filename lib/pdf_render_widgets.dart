@@ -37,6 +37,7 @@ typedef PdfPageBuilder = Widget Function(
 /// [backgroundFill] specifies whether to fill background before rendering actual page content or not.
 /// The page content may not have background fill and if the flag is false, it may be rendered with transparent
 /// background.
+/// [allowAntialiasingIOS] specifies whether to allow use of antialiasing on iOS Quartz PDF rendering
 /// [renderingPixelRatio] specifies pixel density for rendering page image. If it is null, the value is obtained by
 /// calling `MediaQuery.of(context).devicePixelRatio`.
 /// Please note that on iOS Simulator, it always use non-[Texture] rendering pass.

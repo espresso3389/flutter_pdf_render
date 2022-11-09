@@ -209,6 +209,7 @@ abstract class PdfPageImageTexture {
 
   /// Extract sub-rectangle ([x],[y],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
+  /// [allowAntialiasingIOS] specifies whether to allow use of antialiasing on iOS Quartz PDF rendering
   /// Returns true if succeeded.
   Future<bool> extractSubrect({
     int x = 0,
