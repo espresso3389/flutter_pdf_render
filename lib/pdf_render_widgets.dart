@@ -37,6 +37,7 @@ typedef PdfPageBuilder = Widget Function(
 /// [backgroundFill] specifies whether to fill background before rendering actual page content or not.
 /// The page content may not have background fill and if the flag is false, it may be rendered with transparent
 /// background.
+/// [allowAntialiasingIOS] specifies whether to allow use of antialiasing on iOS Quartz PDF rendering
 /// [renderingPixelRatio] specifies pixel density for rendering page image. If it is null, the value is obtained by
 /// calling `MediaQuery.of(context).devicePixelRatio`.
 /// Please note that on iOS Simulator, it always use non-[Texture] rendering pass.
@@ -44,6 +45,7 @@ typedef PdfPageTextureBuilder = Widget Function(
     {Size? size,
     PdfPagePlaceholderBuilder? placeholderBuilder,
     bool backgroundFill,
+    bool allowAntialiasingIOS,
     double? renderingPixelRatio});
 
 /// Creates page placeholder that is shown on page loading or even page load failure.
@@ -385,6 +387,7 @@ class PdfPageViewState extends State<PdfPageView> {
     Size? size,
     PdfPagePlaceholderBuilder? placeholderBuilder,
     bool backgroundFill = true,
+    bool allowAntialiasingIOS = true,
     double? renderingPixelRatio,
   }) {
     return LayoutBuilder(builder: (context, constraints) {
@@ -398,6 +401,7 @@ class PdfPageViewState extends State<PdfPageView> {
           future: _buildTexture(
             size: finalSize,
             backgroundFill: backgroundFill,
+            allowAntialiasingIOS: allowAntialiasingIOS,
             renderingPixelRatio: renderingPixelRatio,
           ),
           initialData: false,
@@ -422,10 +426,12 @@ class PdfPageViewState extends State<PdfPageView> {
     });
   }
 
-  Future<bool> _buildTexture(
-      {required Size size,
-      bool backgroundFill = true,
-      double? renderingPixelRatio}) async {
+  Future<bool> _buildTexture({
+    required Size size,
+    bool backgroundFill = true,
+    bool allowAntialiasingIOS = true,
+    double? renderingPixelRatio,
+  }) async {
     if (_doc == null ||
         widget.pageNumber == null ||
         widget.pageNumber! < 1 ||
@@ -445,11 +451,13 @@ class PdfPageViewState extends State<PdfPageView> {
           pdfDocument: _doc!, pageNumber: widget.pageNumber!);
     }
     await _texture!.extractSubrect(
-        width: pixelSize.width.toInt(),
-        height: pixelSize.height.toInt(),
-        fullWidth: pixelSize.width,
-        fullHeight: pixelSize.height,
-        backgroundFill: backgroundFill);
+      width: pixelSize.width.toInt(),
+      height: pixelSize.height.toInt(),
+      fullWidth: pixelSize.width,
+      fullHeight: pixelSize.height,
+      backgroundFill: backgroundFill,
+      allowAntialiasingIOS: allowAntialiasingIOS,
+    );
 
     return true;
   }
@@ -762,6 +770,9 @@ class PdfViewerParams {
   /// See [InteractiveViewer] for more info.
   final double minScale;
 
+  /// Whether to allow use of antialiasing on iOS Quartz PDF rendering.
+  final bool allowAntialiasingIOS;
+
   /// See [InteractiveViewer] for more info.
   final GestureScaleEndCallback? onInteractionEnd;
 
@@ -789,6 +800,7 @@ class PdfViewerParams {
     this.boundaryMargin = EdgeInsets.zero,
     this.maxScale = 20,
     this.minScale = 0.1,
+    this.allowAntialiasingIOS = true,
     this.onInteractionEnd,
     this.onInteractionStart,
     this.onInteractionUpdate,
@@ -1421,6 +1433,7 @@ class PdfViewerState extends State<PdfViewer>
             height: h.toInt(),
             fullWidth: w,
             fullHeight: h,
+            allowAntialiasingIOS: widget.params?.allowAntialiasingIOS ?? true,
           );
           page.status = _PdfPageLoadingStatus.pageLoaded;
           page.updatePreview();
@@ -1499,12 +1512,14 @@ class PdfViewerState extends State<PdfViewer>
         final w = (part.width * dpr).toInt();
         final h = (part.height * dpr).toInt();
         await tex.extractSubrect(
-            x: (offset.dx * dpr).toInt(),
-            y: (offset.dy * dpr).toInt(),
-            width: w,
-            height: h,
-            fullWidth: fw,
-            fullHeight: fh);
+          x: (offset.dx * dpr).toInt(),
+          y: (offset.dy * dpr).toInt(),
+          width: w,
+          height: h,
+          fullWidth: fw,
+          fullHeight: fh,
+          allowAntialiasingIOS: widget.params?.allowAntialiasingIOS ?? true,
+        );
         page._updateRealSizeOverlay(_RealSize(rect, tex));
       }
     }
