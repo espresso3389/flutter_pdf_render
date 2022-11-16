@@ -230,7 +230,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.3.4"
+    version: "1.3.6"
   pedantic:
     dependency: transitive
     description:
@@ -267,10 +267,10 @@ packages:
     dependency: transitive
     description:
       name: rxdart
-      sha256: "5d22055fd443806c03ef24a02000637cf51eae49c2a0168d38a43fc166b0209c"
+      sha256: "46383ce212dd813c712219a23a07492be01459d446e6db408b83b326ed1952bf"
       url: "https://pub.dev"
     source: hosted
-    version: "0.27.5"
+    version: "0.27.6"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -360,10 +360,10 @@ packages:
     dependency: transitive
     description:
       name: uuid
-      sha256: "2469694ad079893e3b434a627970c33f2fa5adc46dfe03c9617546969a9a8afc"
+      sha256: "648e103079f7c64a36dc7d39369cabb358d377078a051d6ae2ad3aa539519313"
       url: "https://pub.dev"
     source: hosted
-    version: "3.0.6"
+    version: "3.0.7"
   vector_math:
     dependency: transitive
     description:

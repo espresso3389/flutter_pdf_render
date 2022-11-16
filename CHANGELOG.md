@@ -1,3 +1,11 @@
+## 1.3.6
+
+- Fixes dependencies to work on stable channel
+
+## 1.3.5
+
+- Merging PR: Fix allowAntialiasingIOS #98
+
 ## 1.3.4
 
 - FIXED: await page.render() crashed on web #66 (and add a button to test rendering API on example)
