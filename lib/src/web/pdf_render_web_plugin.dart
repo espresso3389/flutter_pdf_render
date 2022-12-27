@@ -1,19 +1,18 @@
 import 'dart:async';
-import 'dart:typed_data';
+import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 import '../utils/web_pointer.dart';
 import '../wrappers/html.dart' as html;
 import '../wrappers/js_util.dart' as js_util;
-import '../wrappers/impls/pdf_texture_web.dart';
 import 'pdf.js.dart';
 
 class PdfRenderWebPlugin {
   static void registerWith(Registrar registrar) {
-    final channel = MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
+    final channel =
+        MethodChannel('pdf_render', const StandardMethodCodec(), registrar);
     final plugin = PdfRenderWebPlugin._();
     channel.setMethodCallHandler(plugin.handleMethodCall);
   }
@@ -28,10 +27,11 @@ class PdfRenderWebPlugin {
   }
 
   final _eventStreamController = StreamController<int>();
-  final _eventChannel = const PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
+  final _eventChannel =
+      const PluginEventChannel('jp.espresso3389.pdf_render/web_texture_events');
   final _docs = <int, PdfjsDocument>{};
   int _lastDocId = -1;
-  final _textures = <int, RgbaData>{};
+  final _textures = <int, ui.Image>{};
   int _texId = -1;
 
   Future<dynamic> handleMethodCall(MethodCall call) async {
@@ -50,7 +50,8 @@ class PdfRenderWebPlugin {
         }
       case 'data':
         {
-          final doc = await pdfjsGetDocumentFromData((call.arguments as Uint8List).buffer);
+          final doc = await pdfjsGetDocumentFromData(
+              (call.arguments as Uint8List).buffer);
           return _setDoc(doc);
         }
       case 'close':
@@ -68,8 +69,6 @@ class PdfRenderWebPlugin {
         return _allocTex();
       case 'releaseTex':
         return _releaseTex(call.arguments as int);
-      case 'resizeTex':
-        return _resizeTex(call.arguments);
       case 'updateTex':
         return await _updateTex(call.arguments);
       default:
@@ -101,7 +100,8 @@ class PdfRenderWebPlugin {
       final doc = _docs[docId]!;
       final pageNumber = args['pageNumber'] as int;
       if (pageNumber < 1 || pageNumber > doc.numPages) return null;
-      final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
+      final page =
+          await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
       final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
       return {
         'docId': docId,
@@ -119,49 +119,57 @@ class PdfRenderWebPlugin {
   }
 
   void _releaseTex(int id) {
+    _textures[id]?.dispose();
     _textures.remove(id);
     js_util.setProperty(html.window, 'pdf_render_texture_$id', null);
   }
 
-  int _resizeTex(dynamic args) {
-    final id = args['texId'] as int;
-    final canvas = _textures[id];
-    if (canvas == null) return -1;
-    final width = args['width'] as int;
-    final height = args['height'] as int;
-    _updateTexSize(id, width, height);
-
-    _eventStreamController.sink.add(id);
-    return 0;
-  }
-
-  RgbaData _updateTexSize(int id, int width, int height) {
-    final oldData = _textures[id];
-    if (oldData != null && oldData.width == width && oldData.height == height) {
-      return oldData;
-    }
-    final data = _textures[id] = RgbaData.alloc(id: id, width: width, height: height);
-    js_util.setProperty(html.window, 'pdf_render_texture_$id', data);
-    return data;
-  }
-
   Future<dynamic> _render(dynamic args) async {
-    return await _renderRaw(args, dontFlip: true, handleRawData: (src, width, height) {
+    return await _renderRaw(args, dontFlip: true, handleRawData: (
+      src,
+      x,
+      y,
+      width,
+      height,
+      fullWidth,
+      fullHeight,
+      pageWidth,
+      pageHeight,
+    ) {
       return {
+        'pageNumber': args['pageNumber'],
         'addr': pinBufferByFakeAddress(src),
         'size': src.length,
+        'x': x,
+        'y': y,
         'width': width,
         'height': height,
+        'fullWidth': fullWidth,
+        'fullHeight': fullHeight,
+        'pageWidth': pageWidth,
+        'pageHeight': pageHeight,
       };
     });
   }
 
-  Future<void> _releaseBuffer(dynamic args) async => unpinBufferByFakeAddress(args as int);
+  Future<void> _releaseBuffer(dynamic args) async =>
+      unpinBufferByFakeAddress(args as int);
 
   Future<T> _renderRaw<T>(
     dynamic args, {
     required bool dontFlip,
-    required FutureOr<T> Function(Uint8List src, int width, int height) handleRawData,
+    required FutureOr<T> Function(
+      Uint8List src,
+      int x,
+      int y,
+      int width,
+      int height,
+      double fullWidth,
+      double fullHeight,
+      double pageWidth,
+      double pageHeight,
+    )
+        handleRawData,
   }) async {
     final docId = args['docId'] as int;
     final doc = _docs[docId];
@@ -172,25 +180,30 @@ class PdfRenderWebPlugin {
     if (pageNumber < 1 || pageNumber > doc.numPages) {
       throw RangeError.range(pageNumber, 1, doc.numPages, 'pageNumber');
     }
-    final page = await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
+    final page =
+        await js_util.promiseToFuture<PdfjsPage>(doc.getPage(pageNumber));
 
     final vp1 = page.getViewport(PdfjsViewportParams(scale: 1));
-    final pw = vp1.width;
-    //final ph = vp1.height;
-    final fullWidth = args['fullWidth'] as double? ?? pw;
-    //final fullHeight = args['fullHeight'] as double? ?? ph;
-    final width = args['width'] as int?;
-    final height = args['height'] as int?;
+    final pageWidth = vp1.width;
+    final pageHeight = vp1.height;
+    final fullWidth = args['fullWidth'] as double? ?? pageWidth;
+    final fullHeight = args['fullHeight'] as double? ?? pageHeight;
+    final width = args['width'] as int? ?? fullWidth.toInt();
+    final height = args['height'] as int? ?? fullHeight.toInt();
     final backgroundFill = args['backgroundFill'] as bool? ?? true;
-    if (width == null || height == null || width <= 0 || height <= 0) {
-      throw Exception('Invalid PDF page rendering rectangle ($width x $height)');
+    if (width <= 0 || height <= 0) {
+      throw Exception(
+          'Invalid PDF page rendering rectangle ($width x $height)');
     }
 
-    final offsetX = -(args['srcX'] as int? ?? args['x'] as int? ?? 0).toDouble();
-    final offsetY = -(args['srcY'] as int? ?? args['y'] as int? ?? 0).toDouble();
+    final x = args['srcX'] as int? ?? args['x'] as int? ?? 0;
+    final y = args['srcY'] as int? ?? args['y'] as int? ?? 0;
 
-    final vp = page.getViewport(
-        PdfjsViewportParams(scale: fullWidth / pw, offsetX: offsetX, offsetY: offsetY, dontFlip: dontFlip));
+    final vp = page.getViewport(PdfjsViewportParams(
+        scale: fullWidth / pageWidth,
+        offsetX: -x.toDouble(),
+        offsetY: -y.toDouble(),
+        dontFlip: dontFlip));
 
     final canvas = html.document.createElement('canvas') as html.CanvasElement;
     canvas.width = width;
@@ -210,66 +223,61 @@ class PdfRenderWebPlugin {
         )
         .promise);
 
-    final src = canvas.context2D.getImageData(0, 0, width, height).data.buffer.asUint8List();
-    return await handleRawData(src, width, height);
+    final src = canvas.context2D
+        .getImageData(0, 0, width, height)
+        .data
+        .buffer
+        .asUint8List();
+    return await handleRawData(
+      src,
+      x,
+      y,
+      width,
+      height,
+      fullWidth,
+      fullHeight,
+      pageWidth,
+      pageHeight,
+    );
   }
 
   Future<int> _updateTex(dynamic args) async {
     return await _renderRaw(
       args,
       dontFlip: false,
-      handleRawData: (src, width, height) {
+      handleRawData: (
+        src,
+        x,
+        y,
+        width,
+        height,
+        fullWidth,
+        fullHeight,
+        pageWidth,
+        pageHeight,
+      ) async {
         final id = args['texId'] as int;
-        final destX = args['destX'] as int? ?? 0;
-        final destY = args['destY'] as int? ?? 0;
-        final data = _updateTexSize(id, args['texWidth'] as int, args['texHeight'] as int);
-        final destStride = data.stride;
-        final bpl = width * 4;
-        int dp = data.getOffset(destX, destY);
+        final image = await create(src, width, height);
 
-        final shouldEnableNewBehavior = PdfTexture.shouldEnableNewBehavior;
-        int sp = shouldEnableNewBehavior ? 0 : bpl * (height - 1);
-        final srcStride = shouldEnableNewBehavior ? bpl : -bpl;
-
-        for (int y = 0; y < height; y++) {
-          for (int i = 0; i < bpl; i++) {
-            data.data[dp + i] = src[sp + i];
-          }
-          dp += destStride;
-          sp += srcStride;
-        }
+        _textures[id]?.dispose();
+        _textures[id] = image;
+        js_util.setProperty(html.window, 'pdf_render_texture_$id', image);
 
         _eventStreamController.sink.add(id);
         return 0;
       },
     );
   }
-}
 
-@immutable
-class RgbaData {
-  final int id;
-  final int width;
-  final int height;
-  final Uint8List data;
-
-  int get stride => width * 4;
-  int getOffset(int x, int y) => (x + y * width) * 4;
-
-  const RgbaData(this.id, this.width, this.height, this.data);
-
-  factory RgbaData.alloc({
-    required int id,
-    required int width,
-    required int height,
-  }) =>
-      RgbaData(
-        id,
-        width,
-        height,
-        Uint8List(width * 4 * height),
-      );
-
-  @override
-  String toString() => 'RgbaData(id=$id, $width x $height)';
+  static Future<ui.Image> create(Uint8List data, int width, int height) async {
+    final descriptor = ui.ImageDescriptor.raw(
+      await ui.ImmutableBuffer.fromUint8List(data),
+      width: width,
+      height: height,
+      pixelFormat: ui.PixelFormat.rgba8888,
+    );
+    final codec = await descriptor.instantiateCodec();
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
 }

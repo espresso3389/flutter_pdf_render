@@ -5,7 +5,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.graphics.pdf.PdfRenderer
-import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY
+import android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_PRINT
 import android.os.ParcelFileDescriptor
 import android.os.ParcelFileDescriptor.MODE_READ_ONLY
 //import android.util.Log
@@ -81,9 +81,6 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
         call.method == "releaseTex" -> {
           releaseTex(call.arguments as Int)
           result.success(0)
-        }
-        call.method == "resizeTex" -> {
-          result.success(resizeTex(call.arguments as HashMap<String, Any>))
         }
         call.method == "updateTex" -> {
           result.success(updateTex(call.arguments as HashMap<String, Any>))
@@ -200,7 +197,7 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
         bmp.eraseColor(Color.WHITE)
       }
 
-      it.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
+      it.render(bmp, null, mat, RENDER_MODE_FOR_PRINT)
 
       bmp.copyPixelsToBuffer(buf)
       bmp.recycle()
@@ -261,15 +258,6 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
     textures.remove(texId)
   }
 
-  private fun resizeTex(args: HashMap<String, Any>): Int {
-    val texId = args["texId"] as Int
-    val width = args["width"] as Int
-    val height = args["height"] as Int
-    val tex = textures[texId]
-    tex?.surfaceTexture()?.setDefaultBufferSize(width, height)
-    return 0
-  }
-
   private fun updateTex(args: HashMap<String, Any>): Int {
     val texId = args["texId"] as Int
     val docId = args["docId"] as Int
@@ -282,8 +270,6 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
     renderer.openPage(pageNumber - 1). use {page ->
       val fullWidth = args["fullWidth"] as? Double ?: page.width.toDouble()
       val fullHeight = args["fullHeight"] as? Double ?: page.height.toDouble()
-      val destX = args["destX"] as? Int ?: 0
-      val destY = args["destY"] as? Int ?: 0
       val width = args["width"] as? Int ?: 0
       val height = args["height"] as? Int ?: 0
       val srcX = args["srcX"] as? Int ?: 0
@@ -300,17 +286,14 @@ class PdfRenderPlugin: FlutterPlugin, MethodCallHandler {
       if (backgroundFill) {
         bmp.eraseColor(Color.WHITE)
       }
-      page.render(bmp, null, mat, RENDER_MODE_FOR_DISPLAY)
+      page.render(bmp, null, mat, RENDER_MODE_FOR_PRINT)
 
-      val texWidth = args["texWidth"] as? Int
-      val texHeight = args["texHeight"] as? Int
-      if (texWidth != null && texHeight != null)
-        tex.surfaceTexture()?.setDefaultBufferSize(texWidth, texHeight)
+      tex.surfaceTexture()?.setDefaultBufferSize(width, height)
 
       Surface(tex.surfaceTexture()).use {
-        val canvas = it.lockCanvas(Rect(destX, destY, width, height));
+        val canvas = it.lockCanvas(Rect(0, 0, width, height));
 
-        canvas.drawBitmap(bmp, destX.toFloat(), destY.toFloat(), null)
+        canvas.drawBitmap(bmp, 0f, 0f, null)
         bmp.recycle()
 
         it.unlockCanvasAndPost(canvas)

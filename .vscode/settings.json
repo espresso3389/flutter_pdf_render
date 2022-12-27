@@ -16,6 +16,7 @@
     "JNIEXPORT",
     "jobject",
     "jsify",
+    "lerp",
     "listenables",
     "LTRB",
     "LTWH",
@@ -29,6 +30,7 @@
     "Schyler",
     "scrollable",
     "sqlite",
+    "Subrect",
     "unawaited",
     "unregister",
     "vsync"

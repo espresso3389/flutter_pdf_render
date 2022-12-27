@@ -21,7 +21,7 @@ The following fragment illustrates the easiest way to show a PDF file in assets:
   }
 ```
 
-![](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
+![web-preview](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
 
 # Install
 
@@ -29,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.0.23
+  pdf_render: ^1.3.6
 ```
 
 ## Web
@@ -57,28 +57,11 @@ To use the Flutter Web support, you should add the following code just before `<
     // any other options for pdfjsLib.getDocument.
     // params: {}
   };
-  // To workaround the recent breaking change on Flutter Web, you can set workaround_for_flutter_93615 to true:
-  //window.workaround_for_flutter_93615 = true;
 </script>
 ```
 
 You can use any URL that specify `PDF.js` distribution URL.
 `cMapUrl` indicates cmap files base URL and `cMapPacked` determines whether the cmap files are compressed or not.
-
-### Rendering breakage on recent Flutter Web
-
-Recently, Flutter Web changes [ImageDescriptor.raw](https://api.flutter.dev/flutter/dart-ui/ImageDescriptor/ImageDescriptor.raw.html)'s behavior. And it results in PDF rendering breakage.
-
-To workaround the issue, you should uncomment the following line on `index.html` (that is already shown above):
-
-```js
-window.workaround_for_flutter_93615 = true;
-```
-
-For more info, see the following issues:
-
-- [espresso3389/flutter_pdf_render: Web: PDF rendering distorted since Flutter Master 2.6.0-12.0.pre.674 #60](https://github.com/espresso3389/flutter_pdf_render/issues/60)
-- [flutter/flutter: [Web] Regression in Master - PDF display distorted due to change in BMP Encoder #93615](https://github.com/flutter/flutter/issues/93615)
 
 ## iOS/Android
 
@@ -104,10 +87,10 @@ Anyway, the example code for the plugin illustrates how to download and preview 
 
 ```xml
 <dict>
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
-	<key>com.apple.security.network.client</key>
-	<true/>
+  <key>com.apple.security.app-sandbox</key>
+  <true/>
+  <key>com.apple.security.network.client</key>
+  <true/>
 </dict>
 ```
 
@@ -630,8 +613,6 @@ class PdfPageImageTexture {
   final int pageNumber;
   final int texId;
 
-  int? get texWidth;
-  int? get texHeight;
   bool get hasUpdatedTexture;
 
   PdfPageImageTexture({required this.pdfDocument, required this.pageNumber, required this.texId});
@@ -642,21 +623,56 @@ class PdfPageImageTexture {
   /// Release the object.
   Future<void> dispose();
 
-  /// Update texture's sub-rectangle ([destX],[destY],[width],[height]) with the sub-rectangle ([srcX],[srcY],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
+  /// Extract sub-rectangle ([x],[y],[width],[height]) of the PDF page scaled to [fullWidth] x [fullHeight] size.
   /// If [backgroundFill] is true, the sub-rectangle is filled with white before rendering the page content.
-  /// The method can also resize the texture if you specify [texWidth] and [texHeight].
-  Future<bool> updateRect({
-    int destX = 0,
-    int destY = 0,
-    int? width,
-    int? height,
-    int srcX = 0,
-    int srcY = 0,
-    int? texWidth,
-    int? texHeight,
+  Future<bool> extractSubrect({
+    int x = 0,
+    int y = 0,
+    required int width,
+    required int height,
     double? fullWidth,
     double? fullHeight,
     bool backgroundFill = true,
   });
 }
 ```
+## Custom Page Layout
+
+[PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) has a property [layoutPages](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/layoutPages.html) to customize page layout.
+
+Sometimes, when you're using **Landscape** mode on your Phone or Tablet and you need to show pdf fit to the center of the screen then you can use this code to customize the pdf layout.
+
+```dart
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title),
+      ),
+      backgroundColor: Colors.white70,
+      body: PdfViewer.openAsset(
+        'assets/hello.pdf',
+        params: PdfViewerParams(
+          layoutPages: (viewSize, pages) {
+            List<Rect> rect = [];
+            final viewWidth = viewSize.width;
+            final viewHeight = viewSize.height;
+            final maxHeight = pages.fold<double>(0.0, (maxHeight, page) => max(maxHeight, page.height));
+            final ratio = viewHeight / maxHeight;
+            var top = 0.0;
+            for (var page in pages) {
+              final width = page.width * ratio;
+              final height = page.height * ratio;
+              final left = viewWidth > viewHeight ? (viewWidth / 2) - (width / 2) : 0.0;
+              rect.add(Rect.fromLTWH(left, top, width, height));
+              top += height + 8 /* padding */;
+            }
+            return rect;
+          },
+        ),
+      ),
+    );
+  }
+```
+#### Preview
+<img src="https://raw.githubusercontent.com/chayanforyou/flutter_pdf_render/update_readme/images/layoutPages.gif" width="50%" height="50%">

@@ -1,21 +1,22 @@
 {
-  "env": {
-    "ndkVersion": "21.1.6352462"
-  },
-  "configurations": [
-    {
-      "name": "Win32",
-      "includePath": [
-        "${workspaceFolder}/android/c++/*",
-        "${env:LOCALAPPDATA}/Android/Sdk/ndk/${ndkVersion}/sysroot/usr/include/*"
-      ],
-      "defines": [],
-      "windowsSdkVersion": "10.0.19041.0",
-      "compilerPath": "${env:LOCALAPPDATA}/Android/Sdk/ndk/${ndkVersion}/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe",
-      "cStandard": "c17",
-      "cppStandard": "c++17",
-      "intelliSenseMode": "linux-clang-arm64"
-    }
-  ],
-  "version": 4
+    "env": {
+        "ndkVersion": "21.1.6352462"
+    },
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/android/c++/*",
+                "${env:LOCALAPPDATA}/Android/Sdk/ndk/${ndkVersion}/sysroot/usr/include/*"
+            ],
+            "defines": [],
+            "windowsSdkVersion": "10.0.19041.0",
+            "compilerPath": "${env:LOCALAPPDATA}/Android/Sdk/ndk/${ndkVersion}/toolchains/llvm/prebuilt/windows-x86_64/bin/clang.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-arm64",
+            "configurationProvider": "go2sh.cmake-integration"
+        }
+    ],
+    "version": 4
 }
