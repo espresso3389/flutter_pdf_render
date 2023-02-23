@@ -751,6 +751,9 @@ class PdfViewerParams {
 
   /// Scrolling direction.
   final Axis scrollDirection;
+  
+  // See [InteractiveViewer] for more info.
+  final PanAxis panAxis;
 
   /// See [InteractiveViewer] for more info.
   final bool alignPanAxis;
@@ -796,6 +799,7 @@ class PdfViewerParams {
     this.buildPageOverlay,
     this.pageDecoration,
     this.scrollDirection = Axis.vertical,
+    this.panAxis = PanAxis.free,
     this.alignPanAxis = false,
     this.boundaryMargin = EdgeInsets.zero,
     this.maxScale = 20,
@@ -817,6 +821,7 @@ class PdfViewerParams {
     BuildPageContentFunc? buildPageOverlay,
     BoxDecoration? pageDecoration,
     Axis? scrollDirection,
+    PanAxis? panAxis,
     bool? alignPanAxis,
     EdgeInsets? boundaryMargin,
     bool? panEnabled,
@@ -836,6 +841,7 @@ class PdfViewerParams {
         buildPageOverlay: buildPageOverlay ?? this.buildPageOverlay,
         pageDecoration: pageDecoration ?? this.pageDecoration,
         scrollDirection: scrollDirection ?? this.scrollDirection,
+        panAxis: panAxis ?? this.panAxis,
         alignPanAxis: alignPanAxis ?? this.alignPanAxis,
         boundaryMargin: boundaryMargin ?? this.boundaryMargin,
         panEnabled: panEnabled ?? this.panEnabled,
@@ -861,6 +867,7 @@ class PdfViewerParams {
         other.buildPageOverlay == buildPageOverlay &&
         other.pageDecoration == pageDecoration &&
         other.scrollDirection == scrollDirection &&
+        other.panAxis == panAxis &&
         other.alignPanAxis == alignPanAxis &&
         other.boundaryMargin == boundaryMargin &&
         other.panEnabled == panEnabled &&
@@ -881,6 +888,8 @@ class PdfViewerParams {
         buildPagePlaceholder.hashCode ^
         buildPageOverlay.hashCode ^
         pageDecoration.hashCode ^
+        scrollDirection.hashCode ^
+        panAxis.hashCode ^
         scrollDirection.hashCode ^
         alignPanAxis.hashCode ^
         boundaryMargin.hashCode ^
@@ -1164,6 +1173,7 @@ class PdfViewerState extends State<PdfViewer>
         return InteractiveViewer(
           transformationController: _controller,
           constrained: false,
+          panAxis: widget.params?.panAxis ?? PanAxis.free,
           alignPanAxis: widget.params?.alignPanAxis ?? false,
           boundaryMargin: widget.params?.boundaryMargin ?? EdgeInsets.zero,
           minScale: widget.params?.minScale ?? 0.8,
