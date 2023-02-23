@@ -29,7 +29,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.3.6
+  pdf_render: ^1.3.7
 ```
 
 ## Web
@@ -219,7 +219,7 @@ And, if you set `x: 0, y: 0, anchor: PdfViewerAnchor.topLeft`, the behavior is i
 
 #### setZoomRatio
 
-[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/setZoomRatio.html) is a method to change zoom ratio without scrolling the view (***it's not exactly the true but almost).
+[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/setZoomRatio.html) is a method to change zoom ratio without scrolling the view (\*\*\*it's not exactly the true but almost).
 
 The following fragment changes zoom ratio to 2.0:
 
@@ -636,6 +636,7 @@ class PdfPageImageTexture {
   });
 }
 ```
+
 ## Custom Page Layout
 
 [PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) has a property [layoutPages](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/layoutPages.html) to customize page layout.
@@ -674,5 +675,7 @@ Sometimes, when you're using **Landscape** mode on your Phone or Tablet and you 
     );
   }
 ```
+
 #### Preview
+
 <img src="https://raw.githubusercontent.com/chayanforyou/flutter_pdf_render/update_readme/images/layoutPages.gif" width="50%" height="50%">

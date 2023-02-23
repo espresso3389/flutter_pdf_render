@@ -751,11 +751,15 @@ class PdfViewerParams {
 
   /// Scrolling direction.
   final Axis scrollDirection;
-  
+
   // See [InteractiveViewer] for more info.
   final PanAxis panAxis;
 
   /// See [InteractiveViewer] for more info.
+  @Deprecated(
+    'Use panAxis instead. '
+    'This feature was deprecated after flutter sdk v3.3.0-0.5.pre.',
+  )
   final bool alignPanAxis;
 
   /// See [InteractiveViewer] for more info.
@@ -890,7 +894,6 @@ class PdfViewerParams {
         pageDecoration.hashCode ^
         scrollDirection.hashCode ^
         panAxis.hashCode ^
-        scrollDirection.hashCode ^
         alignPanAxis.hashCode ^
         boundaryMargin.hashCode ^
         panEnabled.hashCode ^
