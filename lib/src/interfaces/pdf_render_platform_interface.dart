@@ -37,5 +37,6 @@ abstract class PdfRenderPlatform extends PlatformInterface {
   Future<PdfDocument> openData(Uint8List data);
 
   /// Create a new Flutter [Texture]. The object should be released by calling [dispose] method after use it.
-  Future<PdfPageImageTexture> createTexture({required FutureOr<PdfDocument> pdfDocument, required int pageNumber});
+  Future<PdfPageImageTexture> createTexture(
+      {required FutureOr<PdfDocument> pdfDocument, required int pageNumber});
 }
