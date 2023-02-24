@@ -799,7 +799,7 @@ class PdfViewerParams {
   /// Defaults to 0.0000135.
   ///
   /// Cannot be null, and must be a finite number greater than zero.
-  final double? interactionEndFrictionCoefficient;
+  final double interactionEndFrictionCoefficient;
 
   /// Initializes the parameters.
   const PdfViewerParams({
@@ -822,7 +822,7 @@ class PdfViewerParams {
     this.panEnabled = true,
     this.scaleEnabled = true,
     this.onViewerControllerInitialized,
-    this.interactionEndFrictionCoefficient
+    this.interactionEndFrictionCoefficient = 0.0000135
   });
 
   PdfViewerParams copyWith({
