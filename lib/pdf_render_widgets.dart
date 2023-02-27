@@ -794,6 +794,13 @@ class PdfViewerParams {
   /// It is called on every document load.
   final OnPdfViewerControllerInitialized? onViewerControllerInitialized;
 
+  /// Changes the deceleration behavior after a gesture.
+  ///
+  /// Defaults to 0.0000135.
+  ///
+  /// Cannot be null, and must be a finite number greater than zero.
+  final double interactionEndFrictionCoefficient;
+
   /// Initializes the parameters.
   const PdfViewerParams({
     this.pageNumber,
@@ -815,6 +822,7 @@ class PdfViewerParams {
     this.panEnabled = true,
     this.scaleEnabled = true,
     this.onViewerControllerInitialized,
+    this.interactionEndFrictionCoefficient = 0.0000135
   });
 
   PdfViewerParams copyWith({
@@ -1186,6 +1194,7 @@ class PdfViewerState extends State<PdfViewer>
           onInteractionUpdate: widget.params?.onInteractionUpdate,
           panEnabled: widget.params?.panEnabled ?? true,
           scaleEnabled: widget.params?.scaleEnabled ?? true,
+          interactionEndFrictionCoefficient: widget.params?.interactionEndFrictionCoefficient ?? 0.0000135,
           child: Stack(
             children: <Widget>[
               SizedBox(width: docSize.width, height: docSize.height),
