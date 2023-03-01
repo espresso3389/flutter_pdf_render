@@ -1,3 +1,7 @@
+## 1.3.8
+
+- Add `PdfViewerController.getPage` to help rendering on `buildPageOverlay` (#110)
+
 ## 1.3.7
 
 - Add `PdfViewerParams.panAxis` (PR #105)

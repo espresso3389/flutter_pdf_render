@@ -523,6 +523,11 @@ class PdfViewerController extends TransformationController {
   /// If the controller is not ready([isReady]), the property throws an exception.
   Rect? getPageRect(int pageNumber) => _state!._pages![pageNumber - 1].rect;
 
+  /// Get the page.
+  ///
+  /// If the controller is not ready([isReady]), the property throws an exception.
+  PdfPage getPage(int pageNumber) => _state!._pages![pageNumber - 1].pdfPage;
+
   /// Calculate maximum X that can be acceptable as a horizontal scroll position.
   double _getScrollableMaxX(double zoomRatio) =>
       _state!._docSize!.width * zoomRatio - _state!._lastViewSize!.width;
@@ -802,28 +807,27 @@ class PdfViewerParams {
   final double interactionEndFrictionCoefficient;
 
   /// Initializes the parameters.
-  const PdfViewerParams({
-    this.pageNumber,
-    this.padding,
-    this.layoutPages,
-    this.buildPagePlaceholder,
-    this.buildPageOverlay,
-    this.pageDecoration,
-    this.scrollDirection = Axis.vertical,
-    this.panAxis = PanAxis.free,
-    this.alignPanAxis = false,
-    this.boundaryMargin = EdgeInsets.zero,
-    this.maxScale = 20,
-    this.minScale = 0.1,
-    this.allowAntialiasingIOS = true,
-    this.onInteractionEnd,
-    this.onInteractionStart,
-    this.onInteractionUpdate,
-    this.panEnabled = true,
-    this.scaleEnabled = true,
-    this.onViewerControllerInitialized,
-    this.interactionEndFrictionCoefficient = 0.0000135
-  });
+  const PdfViewerParams(
+      {this.pageNumber,
+      this.padding,
+      this.layoutPages,
+      this.buildPagePlaceholder,
+      this.buildPageOverlay,
+      this.pageDecoration,
+      this.scrollDirection = Axis.vertical,
+      this.panAxis = PanAxis.free,
+      this.alignPanAxis = false,
+      this.boundaryMargin = EdgeInsets.zero,
+      this.maxScale = 20,
+      this.minScale = 0.1,
+      this.allowAntialiasingIOS = true,
+      this.onInteractionEnd,
+      this.onInteractionStart,
+      this.onInteractionUpdate,
+      this.panEnabled = true,
+      this.scaleEnabled = true,
+      this.onViewerControllerInitialized,
+      this.interactionEndFrictionCoefficient = 0.0000135});
 
   PdfViewerParams copyWith({
     int? pageNumber,
@@ -1194,7 +1198,8 @@ class PdfViewerState extends State<PdfViewer>
           onInteractionUpdate: widget.params?.onInteractionUpdate,
           panEnabled: widget.params?.panEnabled ?? true,
           scaleEnabled: widget.params?.scaleEnabled ?? true,
-          interactionEndFrictionCoefficient: widget.params?.interactionEndFrictionCoefficient ?? 0.0000135,
+          interactionEndFrictionCoefficient:
+              widget.params?.interactionEndFrictionCoefficient ?? 0.0000135,
           child: Stack(
             children: <Widget>[
               SizedBox(width: docSize.width, height: docSize.height),
