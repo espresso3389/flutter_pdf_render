@@ -1270,10 +1270,9 @@ class PdfViewerState extends State<PdfViewer>
 
   /// Default page layout logic that layouts pages vertically or horizontally.
   void _relayoutDefault(Size viewSize) {
+    final maxWidth = _pages!.fold<double>(0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
+    final ratio = (viewSize.width - _padding * 2) / maxWidth;
     if (widget.params?.scrollDirection == Axis.horizontal) {
-      final maxHeight = _pages!.fold<double>(
-          0.0, (maxHeight, page) => max(maxHeight, page.pageSize.height));
-      final ratio = (viewSize.height - _padding * 2) / maxHeight;
       var left = _padding;
       for (int i = 0; i < _pages!.length; i++) {
         final page = _pages![i];
@@ -1282,11 +1281,8 @@ class PdfViewerState extends State<PdfViewer>
         page.rect = Rect.fromLTWH(left, _padding, w, h);
         left += w + _padding;
       }
-      _docSize = Size(left, viewSize.height);
+      _docSize = Size(left, _pages!.first.pageSize.height*ratio + 10);
     } else {
-      final maxWidth = _pages!.fold<double>(
-          0.0, (maxWidth, page) => max(maxWidth, page.pageSize.width));
-      final ratio = (viewSize.width - _padding * 2) / maxWidth;
       var top = _padding;
       for (int i = 0; i < _pages!.length; i++) {
         final page = _pages![i];
