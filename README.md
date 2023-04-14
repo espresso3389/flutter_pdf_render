@@ -1,6 +1,6 @@
 # Introduction
 
-[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21), and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS, Android, macOS, and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
 
 ## Easiest sample
 
@@ -23,7 +23,7 @@ The following fragment illustrates the easiest way to show a PDF file in assets:
 
 ![web-preview](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
 
-# Install
+## Install
 
 Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
