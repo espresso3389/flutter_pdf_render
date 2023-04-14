@@ -2,7 +2,7 @@
 
 [pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS, Android, macOS, and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
 
-## Easiest sample
+## Getting Started
 
 The following fragment illustrates the easiest way to show a PDF file in assets:
 
@@ -23,7 +23,7 @@ The following fragment illustrates the easiest way to show a PDF file in assets:
 
 ![web-preview](https://user-images.githubusercontent.com/1311400/110233932-cc8d3800-7f6a-11eb-90fd-f610c00688a7.gif)
 
-## Install
+# Install
 
 Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
@@ -43,15 +43,15 @@ To use the Flutter Web support, you should add the following code just before `<
 ```html
 <!-- IMPORTANT: load pdfjs files -->
 <script
-  src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js"
+  src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"
   type="text/javascript"
 ></script>
 <script type="text/javascript">
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.worker.min.js";
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js";
   pdfRenderOptions = {
     // where cmaps are downloaded from
-    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/cmaps/",
+    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/",
     // The cmaps are compressed in the case
     cMapPacked: true,
     // any other options for pdfjsLib.getDocument.
