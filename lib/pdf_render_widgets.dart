@@ -1374,7 +1374,9 @@ class PdfViewerState extends State<PdfViewer>
     final m = _controller!.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(
-        -m.row0[3], -m.row1[3], _lastViewSize!.width, _lastViewSize!.height);
+            -m.row0[3], -m.row1[3], _lastViewSize!.width, _lastViewSize!.height)
+        .inflate(_padding);
+
     var pagesToUpdate = 0;
     var changeCount = 0;
     _visiblePages.clear();
