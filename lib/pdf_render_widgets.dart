@@ -524,8 +524,6 @@ class PdfViewerController extends TransformationController {
   Rect? getPageRect(int pageNumber) => _state!._pages![pageNumber - 1].rect;
 
   /// Get the page.
-  ///
-  /// If the controller is not ready([isReady]), the property throws some exception.
   Future<PdfPage> getPage(int pageNumber) =>
       _state!._pages![pageNumber - 1].pdfPageCompleter.future;
 
