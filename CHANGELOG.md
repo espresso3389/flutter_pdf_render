@@ -1,3 +1,8 @@
+## 1.4.0
+
+- BREAKING CHANGE: `PdfViewerController.getPage` now returns `Future<PdfPage>` (#115)
+- Fix PdfViewer may leave pages unrendered when scolled down page by page (#121)
+
 ## 1.3.8
 
 - Add `PdfViewerController.getPage` to help rendering on `buildPageOverlay` (#110)
