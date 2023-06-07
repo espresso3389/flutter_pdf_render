@@ -168,8 +168,7 @@ class PdfRenderWebPlugin {
       double fullHeight,
       double pageWidth,
       double pageHeight,
-    )
-        handleRawData,
+    ) handleRawData,
   }) async {
     final docId = args['docId'] as int;
     final doc = _docs[docId];

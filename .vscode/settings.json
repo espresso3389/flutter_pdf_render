@@ -34,5 +34,8 @@
     "unawaited",
     "unregister",
     "vsync"
-  ]
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true
+  }
 }
