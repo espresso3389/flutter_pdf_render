@@ -1,3 +1,7 @@
+## 1.4.2
+
+- android/build.gradle update toward Gradle Plugin 8+ (PR #131)
+
 ## 1.4.1
 
 - Adding many scroll position related members on PdfViewerController to somehow implement scroll position indicator (#129)
