@@ -527,21 +527,34 @@ class PdfViewerController extends TransformationController {
   Future<PdfPage> getPage(int pageNumber) =>
       _state!._pages![pageNumber - 1].pdfPageCompleter.future;
 
+  /// Get the [PdfViewer]'s view size.
+  Size get viewSize => _state!._lastViewSize!;
+
+  /// Get the full PDF content size in the [PdfViewer].
+  Size get fullSize => _state!._docSize! * zoomRatio;
+
+  /// Get the maximum scrollable offset in the [PdfViewer].
+  Offset get scrollableMax =>
+      Offset(getScrollableMaxX(zoomRatio), getScrollableMaxY(zoomRatio));
+
+  /// Get the full PDF content size in the [PdfViewer] with the specified [zoomRatio].
+  Size getFullSize(double zoomRatio) => _state!._docSize! * zoomRatio;
+
   /// Calculate maximum X that can be acceptable as a horizontal scroll position.
-  double _getScrollableMaxX(double zoomRatio) =>
-      _state!._docSize!.width * zoomRatio - _state!._lastViewSize!.width;
+  double getScrollableMaxX(double zoomRatio) =>
+      getFullSize(zoomRatio).width - _state!._lastViewSize!.width;
 
   /// Calculate maximum Y that can be acceptable as a vertical scroll position.
-  double _getScrollableMaxY(double zoomRatio) =>
-      _state!._docSize!.height * zoomRatio - _state!._lastViewSize!.height;
+  double getScrollableMaxY(double zoomRatio) =>
+      getFullSize(zoomRatio).height - _state!._lastViewSize!.height;
 
-  /// Clip horizontal scroll position.
-  double _clipX(double x, double zoomRatio) =>
-      max(0.0, min(x, _getScrollableMaxX(zoomRatio)));
+  /// Clamp horizontal scroll position into valid range.
+  double clampX(double x, double zoomRatio) =>
+      x.clamp(0.0, getScrollableMaxX(zoomRatio));
 
-  /// Clip vertical scroll position.
-  double _clipY(double y, double zoomRatio) =>
-      max(0.0, min(y, _getScrollableMaxY(zoomRatio)));
+  /// Clamp vertical scroll position into valid range.
+  double clampY(double y, double zoomRatio) =>
+      y.clamp(0.0, getScrollableMaxY(zoomRatio));
 
   /// Calculate the matrix that corresponding to the page position.
   ///
@@ -584,11 +597,11 @@ class PdfViewerController extends TransformationController {
     final ratio = destZoom / zoom1;
     final viewWidth = _state!._lastViewSize!.width;
     final viewHeight = _state!._lastViewSize!.height;
-    final left = _clipX(
+    final left = clampX(
         (rect.left + rect.width * x) * ratio -
             viewWidth * (anchor.index % 3) / 2,
         destZoom);
-    final top = _clipY(
+    final top = clampY(
         (rect.top + rect.height * y) * ratio -
             viewHeight * (anchor.index ~/ 3) / 2,
         destZoom);
@@ -669,8 +682,8 @@ class PdfViewerController extends TransformationController {
     final offset = this.offset;
     final dx = center?.dx ?? _state!._lastViewSize!.width * 0.5;
     final dy = center?.dy ?? _state!._lastViewSize!.height * 0.5;
-    final left = _clipX((offset.dx + dx) * ratio - dx, zoomRatio);
-    final top = _clipY((offset.dy + dy) * ratio - dy, zoomRatio);
+    final left = clampX((offset.dx + dx) * ratio - dx, zoomRatio);
+    final top = clampY((offset.dy + dy) * ratio - dy, zoomRatio);
     return Matrix4.compose(
       math64.Vector3(-left, -top, 0),
       math64.Quaternion.identity(),
@@ -1093,7 +1106,7 @@ class PdfViewerState extends State<PdfViewer>
   bool _firstControllerAttach = true;
   bool _forceUpdatePagePreviews = true;
 
-  PdfViewerController? get _controller =>
+  PdfViewerController get _controller =>
       widget.viewerController ?? _myController;
 
   @override
@@ -1114,15 +1127,15 @@ class PdfViewerState extends State<PdfViewer>
     if ((await widget._doc) != (await oldWidget._doc)) {
       _init();
     } else {
-      widget.params?.onViewerControllerInitialized?.call(_controller!);
+      widget.params?.onViewerControllerInitialized?.call(_controller);
       _moveToInitialPositionIfSpecified(
           oldPageNumber: oldWidget.params?.pageNumber);
     }
   }
 
   void _init() {
-    _controller?.removeListener(_determinePagesToShow);
-    _controller?._setViewerState(null);
+    _controller.removeListener(_determinePagesToShow);
+    _controller._setViewerState(null);
     _load();
   }
 
@@ -1131,8 +1144,8 @@ class PdfViewerState extends State<PdfViewer>
     _cancelLastRealSizeUpdate();
     _releasePages();
     _handlePendedPageDisposes();
-    _controller?.removeListener(_determinePagesToShow);
-    _controller?._setViewerState(null);
+    _controller.removeListener(_determinePagesToShow);
+    _controller._setViewerState(null);
     _myController.dispose();
     _animController.dispose();
     super.dispose();
@@ -1238,9 +1251,9 @@ class PdfViewerState extends State<PdfViewer>
 
       Future.delayed(Duration.zero, () {
         // NOTE: controller should be associated after first layout calculation finished.
-        _controller!.addListener(_determinePagesToShow);
-        _controller!._setViewerState(this);
-        widget.params?.onViewerControllerInitialized?.call(_controller!);
+        _controller.addListener(_determinePagesToShow);
+        _controller._setViewerState(this);
+        widget.params?.onViewerControllerInitialized?.call(_controller);
 
         if (mounted) {
           _moveToInitialPositionIfSpecified();
@@ -1261,14 +1274,14 @@ class PdfViewerState extends State<PdfViewer>
     // move to that page.
     final newPageNumber = widget.params?.pageNumber;
     if (oldPageNumber != newPageNumber && newPageNumber != null) {
-      m = _controller!.calculatePageFitMatrix(
+      m = _controller.calculatePageFitMatrix(
         pageNumber: newPageNumber,
         padding: widget.params!.padding,
       );
     }
 
     if (m != null) {
-      _controller!.value = m;
+      _controller.value = m;
     }
   }
 
@@ -1301,7 +1314,7 @@ class PdfViewerState extends State<PdfViewer>
 
   Iterable<Widget> iterateLaidOutPages(Size viewSize) sync* {
     if (!_firstControllerAttach && _pages != null) {
-      final m = _controller!.value;
+      final m = _controller.value;
       final r = m.row0[0];
       final exposed =
           Rect.fromLTWH(-m.row0[3], -m.row1[3], viewSize.width, viewSize.height)
@@ -1367,7 +1380,7 @@ class PdfViewerState extends State<PdfViewer>
 
   void _determinePagesToShow() {
     if (_lastViewSize == null || _pages == null) return;
-    final m = _controller!.value;
+    final m = _controller.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(
             -m.row0[3], -m.row1[3], _lastViewSize!.width, _lastViewSize!.height)
@@ -1423,7 +1436,7 @@ class PdfViewerState extends State<PdfViewer>
       _forceUpdatePagePreviews = false;
       for (final page in _pages!) {
         if (page.rect == null) continue;
-        final m = _controller!.value;
+        final m = _controller.value;
         final r = m.row0[0];
         final exposed = Rect.fromLTWH(-m.row0[3], -m.row1[3],
                 _lastViewSize!.width, _lastViewSize!.height)
@@ -1496,7 +1509,7 @@ class PdfViewerState extends State<PdfViewer>
     const PARTIAL_REMOVAL_DIST_THRESHOLD = 8;
 
     final dpr = MediaQuery.of(context).devicePixelRatio;
-    final m = _controller!.value;
+    final m = _controller.value;
     final r = m.row0[0];
     final exposed = Rect.fromLTWH(
         -m.row0[3], -m.row1[3], _lastViewSize!.width, _lastViewSize!.height);
@@ -1559,7 +1572,7 @@ class PdfViewerState extends State<PdfViewer>
       if (destination == null) return; // do nothing
       _animGoTo?.removeListener(_updateControllerMatrix);
       _animController.reset();
-      _animGoTo = Matrix4Tween(begin: _controller!.value, end: destination)
+      _animGoTo = Matrix4Tween(begin: _controller.value, end: destination)
           .animate(_animController);
       _animGoTo!.addListener(_updateControllerMatrix);
       await _animController
@@ -1571,7 +1584,7 @@ class PdfViewerState extends State<PdfViewer>
   }
 
   void _updateControllerMatrix() {
-    _controller!.value = _animGoTo!.value;
+    _controller.value = _animGoTo!.value;
   }
 }
 

@@ -1,3 +1,7 @@
+## 1.4.1
+
+- Adding many scroll position related members on PdfViewerController to somehow implement scroll position indicator (#129)
+
 ## 1.4.0
 
 - BREAKING CHANGE: `PdfViewerController.getPage` now returns `Future<PdfPage>` (#115)
