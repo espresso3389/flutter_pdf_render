@@ -1,3 +1,17 @@
+## Notice (2023-12-05)
+
+New plugin, named [pdfrx](https://pub.dev/packages/pdfrx), is a better replacement for pdf_render. And pdf_render is now in maintenance mode. **No new features are added to pdf_render.**
+
+New features introduced by [pdfrx](https://pub.dev/packages/pdfrx):
+
+- Desktop platforms support (Windows, macOS, Linux)
+- Password protected PDF files support
+- Multithreaded PDF rendering
+- PdfDocument.openUri
+- [pdfium](https://pdfium.googlesource.com/pdfium/) based structure to support more... :)
+
+[pdfrx](https://pub.dev/packages/pdfrx) is not a full drop-in-replacement to pdf_render but I guess it takes less then a hour to change your code to adopt it.
+
 # Introduction
 
 [pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS, Android, macOS, and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
@@ -29,7 +43,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.4.1
+  pdf_render: ^1.4.5
 ```
 
 ## Web

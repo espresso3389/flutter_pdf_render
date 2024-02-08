@@ -1,3 +1,19 @@
+## 1.4.5
+
+- `README.md` updates.
+
+## 1.4.4
+
+- `README.md` updates.
+
+## 1.4.3
+
+- New plugin, named [pdfrx](https://pub.dev/packages/pdfrx), is a better replacement for pdf_render. And pdf_render is now in maintenance mode. **No new features are added to pdf_render.**
+
+## 1.4.2
+
+- android/build.gradle update toward Gradle Plugin 8+ (PR #131)
+
 ## 1.4.1
 
 - Adding many scroll position related members on PdfViewerController to somehow implement scroll position indicator (#129)
