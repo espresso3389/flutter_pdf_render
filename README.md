@@ -1,3 +1,7 @@
+## Notice (2024-01-22)
+
+If you want to move to [pdfrx](https://github.com/espresso3389/pdfrx) but you have some compatibility issues or any other problems or questions, please feel free to open new discussions on [Discussions on pdfrx](https://github.com/espresso3389/pdfrx/discussions/).
+
 ## Notice (2023-12-05)
 
 New plugin, named [pdfrx](https://pub.dev/packages/pdfrx), is a better replacement for pdf_render. And pdf_render is now in maintenance mode. **No new features are added to pdf_render.**
