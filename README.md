@@ -1,8 +1,26 @@
+## Notice (2024-01-22)
+
+If you want to move to [pdfrx](https://github.com/espresso3389/pdfrx) but you have some compatibility issues or any other problems or questions, please feel free to open new discussions on [Discussions on pdfrx](https://github.com/espresso3389/pdfrx/discussions/).
+
+## Notice (2023-12-05)
+
+New plugin, named [pdfrx](https://pub.dev/packages/pdfrx), is a better replacement for pdf_render. And pdf_render is now in maintenance mode. **No new features are added to pdf_render.**
+
+New features introduced by [pdfrx](https://pub.dev/packages/pdfrx):
+
+- Desktop platforms support (Windows, macOS, Linux)
+- Password protected PDF files support
+- Multithreaded PDF rendering
+- PdfDocument.openUri
+- [pdfium](https://pdfium.googlesource.com/pdfium/) based structure to support more... :)
+
+[pdfrx](https://pub.dev/packages/pdfrx) is not a full drop-in-replacement to pdf_render but I guess it takes less then a hour to change your code to adopt it.
+
 # Introduction
 
-[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS (>= 8.0), Android (>= API Level 21), and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
+[pdf_render](https://pub.dartlang.org/packages/pdf_render) is a PDF renderer implementation that supports iOS, Android, macOS, and Web. It provides you with [intermediate PDF rendering APIs](#pdf-rendering-apis) and also easy-to-use [Flutter Widgets](#widgets).
 
-## Easiest sample
+## Getting Started
 
 The following fragment illustrates the easiest way to show a PDF file in assets:
 
@@ -29,7 +47,7 @@ Add this to your package's `pubspec.yaml` file and execute `flutter pub get`:
 
 ```yaml
 dependencies:
-  pdf_render: ^1.3.6
+  pdf_render: ^1.4.5
 ```
 
 ## Web
@@ -43,15 +61,15 @@ To use the Flutter Web support, you should add the following code just before `<
 ```html
 <!-- IMPORTANT: load pdfjs files -->
 <script
-  src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.js"
+  src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"
   type="text/javascript"
 ></script>
 <script type="text/javascript">
   pdfjsLib.GlobalWorkerOptions.workerSrc =
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/build/pdf.worker.min.js";
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js";
   pdfRenderOptions = {
     // where cmaps are downloaded from
-    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@2.12.313/cmaps/",
+    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/cmaps/",
     // The cmaps are compressed in the case
     cMapPacked: true,
     // any other options for pdfjsLib.getDocument.
@@ -219,7 +237,7 @@ And, if you set `x: 0, y: 0, anchor: PdfViewerAnchor.topLeft`, the behavior is i
 
 #### setZoomRatio
 
-[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/setZoomRatio.html) is a method to change zoom ratio without scrolling the view (***it's not exactly the true but almost).
+[setZoomRatio](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerController/setZoomRatio.html) is a method to change zoom ratio without scrolling the view (\*\*\*it's not exactly the true but almost).
 
 The following fragment changes zoom ratio to 2.0:
 
@@ -636,6 +654,7 @@ class PdfPageImageTexture {
   });
 }
 ```
+
 ## Custom Page Layout
 
 [PdfViewerParams](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams-class.html) has a property [layoutPages](https://pub.dev/documentation/pdf_render/latest/pdf_render_widgets/PdfViewerParams/layoutPages.html) to customize page layout.
@@ -674,5 +693,7 @@ Sometimes, when you're using **Landscape** mode on your Phone or Tablet and you 
     );
   }
 ```
+
 #### Preview
+
 <img src="https://raw.githubusercontent.com/chayanforyou/flutter_pdf_render/update_readme/images/layoutPages.gif" width="50%" height="50%">

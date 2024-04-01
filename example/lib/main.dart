@@ -46,31 +46,53 @@ class _MyAppState extends State<MyApp> {
             zoomRatio: controller.zoomRatio * 1.5,
             center: _doubleTapDetails!.localPosition,
           ),
-          child: !kIsWeb && Platform.isMacOS
-              // Networking sample using flutter_cache_manager
-              ? PdfViewer.openFutureFile(
-                  // Accepting function that returns Future<String> of PDF file path
-                  () async => (await DefaultCacheManager().getSingleFile(
-                          'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'))
-                      .path,
-                  viewerController: controller,
-                  onError: (err) => print(err),
-                  params: const PdfViewerParams(
-                    padding: 10,
-                    minScale: 1.0,
-                    // scrollDirection: Axis.horizontal,
-                  ),
-                )
-              : PdfViewer.openAsset(
-                  'assets/hello.pdf',
-                  viewerController: controller,
-                  onError: (err) => print(err),
-                  params: const PdfViewerParams(
-                    padding: 10,
-                    minScale: 1.0,
-                    // scrollDirection: Axis.horizontal,
-                  ),
-                ),
+          child: Stack(
+            children: [
+              !kIsWeb && Platform.isMacOS
+                  // Networking sample using flutter_cache_manager
+                  ? PdfViewer.openFutureFile(
+                      // Accepting function that returns Future<String> of PDF file path
+                      () async => (await DefaultCacheManager().getSingleFile(
+                              'https://github.com/espresso3389/flutter_pdf_render/raw/master/example/assets/hello.pdf'))
+                          .path,
+                      viewerController: controller,
+                      onError: (err) => print(err),
+                      params: const PdfViewerParams(
+                        padding: 10,
+                        minScale: 1.0,
+                        // scrollDirection: Axis.horizontal,
+                      ),
+                    )
+                  : PdfViewer.openAsset(
+                      'assets/hello.pdf',
+                      viewerController: controller,
+                      onError: (err) => print(err),
+                      params: const PdfViewerParams(
+                        padding: 10,
+                        minScale: 1.0,
+                        // scrollDirection: Axis.horizontal,
+                      ),
+                    ),
+              // Simple scroll position indicator
+              ValueListenableBuilder(
+                valueListenable: controller,
+                builder: (context, m, child) {
+                  if (!controller.isReady) return Container();
+                  final v = controller.viewRect;
+                  final all = controller.fullSize;
+                  final top = v.top / all.height * v.height;
+                  final height = v.height / all.height * v.height;
+                  return Positioned(
+                    right: 0,
+                    top: top,
+                    height: height,
+                    width: 8,
+                    child: Container(color: Colors.red),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
         floatingActionButton: Column(
           mainAxisAlignment: MainAxisAlignment.end,

@@ -33,12 +33,15 @@ Map<String, dynamic> _getParams(Map<String, dynamic> jsParams) {
 }
 
 Future<PdfjsDocument> _pdfjsGetDocumentJsParams(Map<String, dynamic> jsParams) {
-  return promiseToFuture<PdfjsDocument>(_pdfjsGetDocument(jsify(_getParams(jsParams))).promise);
+  return promiseToFuture<PdfjsDocument>(
+      _pdfjsGetDocument(jsify(_getParams(jsParams))).promise);
 }
 
-Future<PdfjsDocument> pdfjsGetDocument(String url) => _pdfjsGetDocumentJsParams({'url': url});
+Future<PdfjsDocument> pdfjsGetDocument(String url) =>
+    _pdfjsGetDocumentJsParams({'url': url});
 
-Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) => _pdfjsGetDocumentJsParams({'data': data});
+Future<PdfjsDocument> pdfjsGetDocumentFromData(ByteBuffer data) =>
+    _pdfjsGetDocumentJsParams({'data': data});
 
 @JS()
 @anonymous

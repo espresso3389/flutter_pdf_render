@@ -30,7 +30,8 @@ int pinBufferByFakeAddress(Uint8List buffer) {
 
 /// Get the associated buffer for the address.
 Uint8List getBufferByFakeAddress(int address) {
-  return js_util.getProperty(html.window, 'pdf_render_buffer_$address') as Uint8List;
+  return js_util.getProperty(html.window, 'pdf_render_buffer_$address')
+      as Uint8List;
 }
 
 /// Release the associated buffer for the address.
