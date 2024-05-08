@@ -1201,7 +1201,7 @@ class PdfViewerState extends State<PdfViewer>
           transformationController: _controller,
           constrained: false,
           panAxis: widget.params?.panAxis ?? PanAxis.free,
-          alignPanAxis: widget.params?.alignPanAxis ?? false,
+         
           boundaryMargin: widget.params?.boundaryMargin ?? EdgeInsets.zero,
           minScale: widget.params?.minScale ?? 0.8,
           maxScale: widget.params?.maxScale ?? 2.5,
