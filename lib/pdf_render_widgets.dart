@@ -7,6 +7,7 @@ import 'package:vector_math/vector_math_64.dart' as math64;
 
 import 'pdf_render.dart';
 import 'src/wrappers/pdf_texture.dart';
+import 'src/interfaces/interactive_viewer.dart' as iv;
 
 /// Function definition to build widget tree for a PDF document.
 ///
@@ -811,6 +812,12 @@ class PdfViewerParams {
   /// It is called on every document load.
   final OnPdfViewerControllerInitialized? onViewerControllerInitialized;
 
+  /// Set the scroll amount ratio by mouse wheel. The default is 0.1.
+  ///
+  /// Negative value to scroll opposite direction.
+  /// null to disable scroll-by-mouse-wheel.
+  final double? scrollByMouseWheel;
+
   /// Changes the deceleration behavior after a gesture.
   ///
   /// Defaults to 0.0000135.
@@ -839,6 +846,7 @@ class PdfViewerParams {
       this.panEnabled = true,
       this.scaleEnabled = true,
       this.onViewerControllerInitialized,
+      this.scrollByMouseWheel = 0.1,
       this.interactionEndFrictionCoefficient = 0.0000135});
 
   PdfViewerParams copyWith({
@@ -860,6 +868,7 @@ class PdfViewerParams {
     GestureScaleStartCallback? onInteractionStart,
     GestureScaleUpdateCallback? onInteractionUpdate,
     OnPdfViewerControllerInitialized? onViewerControllerInitialized,
+    double? scrollByMouseWheel,
   }) =>
       PdfViewerParams(
         pageNumber: pageNumber ?? this.pageNumber,
@@ -881,6 +890,7 @@ class PdfViewerParams {
         onInteractionUpdate: onInteractionUpdate ?? this.onInteractionUpdate,
         onViewerControllerInitialized:
             onViewerControllerInitialized ?? this.onViewerControllerInitialized,
+        scrollByMouseWheel: scrollByMouseWheel ?? this.scrollByMouseWheel,
       );
 
   @override
@@ -905,7 +915,8 @@ class PdfViewerParams {
         other.onInteractionEnd == onInteractionEnd &&
         other.onInteractionStart == onInteractionStart &&
         other.onInteractionUpdate == onInteractionUpdate &&
-        other.onViewerControllerInitialized == onViewerControllerInitialized;
+        other.onViewerControllerInitialized == onViewerControllerInitialized &&
+        other.scrollByMouseWheel == scrollByMouseWheel;
   }
 
   @override
@@ -927,7 +938,8 @@ class PdfViewerParams {
         onInteractionEnd.hashCode ^
         onInteractionStart.hashCode ^
         onInteractionUpdate.hashCode ^
-        onViewerControllerInitialized.hashCode;
+        onViewerControllerInitialized.hashCode ^
+        scrollByMouseWheel.hashCode;
   }
 }
 
@@ -1197,11 +1209,13 @@ class PdfViewerState extends State<PdfViewer>
         final viewSize = Size(constraints.maxWidth, constraints.maxHeight);
         _relayout(viewSize);
         final docSize = _docSize ?? const Size(10, 10); // dummy size
-        return InteractiveViewer(
+        return iv.InteractiveViewer(
           transformationController: _controller,
           constrained: false,
           panAxis: widget.params?.panAxis ?? PanAxis.free,
-         
+          onWheelDelta: widget.params?.scrollByMouseWheel != null
+              ? _onWheelDelta
+              : null,
           boundaryMargin: widget.params?.boundaryMargin ?? EdgeInsets.zero,
           minScale: widget.params?.minScale ?? 0.8,
           maxScale: widget.params?.maxScale ?? 2.5,
@@ -1221,6 +1235,15 @@ class PdfViewerState extends State<PdfViewer>
         );
       },
     );
+  }
+
+  void _onWheelDelta(Offset delta) {
+    final m = _controller.value.clone();
+    m.translate(
+      -delta.dx * widget.params!.scrollByMouseWheel!,
+      -delta.dy * widget.params!.scrollByMouseWheel!,
+    );
+    _controller.value = m;
   }
 
   double get _padding => widget.params?.padding ?? 8.0;
