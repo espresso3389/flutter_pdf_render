@@ -1,3 +1,12 @@
+## 1.4.7
+
+- Forked InteractiveViewer code to support wheel-to-scroll (PR #144)
+- Flutter 3.21 build fix (PR #143)
+
+## 1.4.6
+
+- Minor fixes
+
 ## 1.4.5
 
 - `README.md` updates.
