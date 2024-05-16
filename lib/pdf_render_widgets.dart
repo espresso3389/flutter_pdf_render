@@ -1155,6 +1155,7 @@ class PdfViewerState extends State<PdfViewer>
   void dispose() {
     _cancelLastRealSizeUpdate();
     _releasePages();
+    _releaseDocument();
     _handlePendedPageDisposes();
     _controller.removeListener(_determinePagesToShow);
     _controller._setViewerState(null);
@@ -1192,6 +1193,11 @@ class PdfViewerState extends State<PdfViewer>
     }
     _pendedPageDisposes.addAll(_pages!);
     _pages = null;
+  }
+
+  void _releaseDocument() {
+    _doc?.dispose();
+    _doc = null;
   }
 
   void _handlePendedPageDisposes() {
