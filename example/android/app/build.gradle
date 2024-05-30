@@ -32,12 +32,6 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
-    lintOptions {
-        disable 'InvalidPackage'
-        // Execution failed for task ':app:lintVitalRelease'. Flutter
-        // https://stackoverflow.com/a/62603296/6482265
-        checkReleaseBuilds false
-    }
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
@@ -54,6 +48,11 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
         }
+    }
+    namespace 'jp.espresso3389.pdf_render_example'
+    lint {
+        checkReleaseBuilds false
+        disable 'InvalidPackage'
     }
 }
 
