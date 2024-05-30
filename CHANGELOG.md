@@ -1,3 +1,8 @@
+## 1.4.8
+
+- js plugin backed to 0.6.7
+- Fixes memory leak when closing PdfViewer (#147)
+
 ## 1.4.7
 
 - Forked InteractiveViewer code to support wheel-to-scroll (PR #144)
