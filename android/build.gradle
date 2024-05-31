@@ -40,7 +40,7 @@ android {
         }
     }
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 19
     }
     lintOptions {
         disable 'InvalidPackage'
