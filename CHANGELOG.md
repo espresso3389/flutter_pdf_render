@@ -1,3 +1,7 @@
+## 1.4.9
+
+- FIXED: App fails to compile for macOS (#80)
+
 ## 1.4.8
 
 - js plugin backed to 0.6.7
