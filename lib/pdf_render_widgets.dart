@@ -745,6 +745,8 @@ class PdfViewerController extends TransformationController {
 
 typedef OnPdfViewerControllerInitialized = void Function(PdfViewerController);
 
+typedef OnClickOutsidePageViewer = void Function();
+
 @immutable
 class PdfViewerParams {
   /// Page number to show on the first time.
@@ -825,6 +827,9 @@ class PdfViewerParams {
   /// Cannot be null, and must be a finite number greater than zero.
   final double interactionEndFrictionCoefficient;
 
+  /// Listen event click outside page document viewer
+  final OnClickOutsidePageViewer? onClickOutSidePageViewer;
+
   /// Initializes the parameters.
   const PdfViewerParams(
       {this.pageNumber,
@@ -847,7 +852,8 @@ class PdfViewerParams {
       this.scaleEnabled = true,
       this.onViewerControllerInitialized,
       this.scrollByMouseWheel = 0.1,
-      this.interactionEndFrictionCoefficient = 0.0000135});
+      this.interactionEndFrictionCoefficient = 0.0000135,
+      this.onClickOutSidePageViewer});
 
   PdfViewerParams copyWith({
     int? pageNumber,
@@ -869,6 +875,7 @@ class PdfViewerParams {
     GestureScaleUpdateCallback? onInteractionUpdate,
     OnPdfViewerControllerInitialized? onViewerControllerInitialized,
     double? scrollByMouseWheel,
+    OnClickOutsidePageViewer? onClickOutSidePageViewer,
   }) =>
       PdfViewerParams(
         pageNumber: pageNumber ?? this.pageNumber,
@@ -891,6 +898,7 @@ class PdfViewerParams {
         onViewerControllerInitialized:
             onViewerControllerInitialized ?? this.onViewerControllerInitialized,
         scrollByMouseWheel: scrollByMouseWheel ?? this.scrollByMouseWheel,
+        onClickOutSidePageViewer: onClickOutSidePageViewer ?? this.onClickOutSidePageViewer,
       );
 
   @override
@@ -916,7 +924,8 @@ class PdfViewerParams {
         other.onInteractionStart == onInteractionStart &&
         other.onInteractionUpdate == onInteractionUpdate &&
         other.onViewerControllerInitialized == onViewerControllerInitialized &&
-        other.scrollByMouseWheel == scrollByMouseWheel;
+        other.scrollByMouseWheel == scrollByMouseWheel &&
+        other.onClickOutSidePageViewer == onClickOutSidePageViewer;
   }
 
   @override
@@ -939,7 +948,8 @@ class PdfViewerParams {
         onInteractionStart.hashCode ^
         onInteractionUpdate.hashCode ^
         onViewerControllerInitialized.hashCode ^
-        scrollByMouseWheel.hashCode;
+        scrollByMouseWheel.hashCode ^
+        onClickOutSidePageViewer.hashCode;
   }
 }
 
@@ -1234,7 +1244,17 @@ class PdfViewerState extends State<PdfViewer>
               widget.params?.interactionEndFrictionCoefficient ?? 0.0000135,
           child: Stack(
             children: <Widget>[
-              SizedBox(width: docSize.width, height: docSize.height),
+              if (widget.params?.onClickOutSidePageViewer != null)
+                GestureDetector(
+                  onTap: widget.params?.onClickOutSidePageViewer,
+                  child: Container(
+                    width: docSize.width,
+                    height: docSize.height,
+                    color: Colors.transparent,
+                  ),
+                )
+              else
+                SizedBox(width: docSize.width, height: docSize.height),
               ...iterateLaidOutPages(viewSize)
             ],
           ),
