@@ -1,3 +1,7 @@
+## 1.4.10
+
+- FIXED: App fails to compile for macOS (#80)
+
 ## 1.4.9
 
 - FIXED: App fails to compile for macOS (#80)
