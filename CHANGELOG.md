@@ -1,3 +1,7 @@
+## 1.4.12
+
+- Merge PR #148 to handle click outside page view
+
 ## 1.4.11
 
 - Merge PR #152 to set jvmTarget 1.8
