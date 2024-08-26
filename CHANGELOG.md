@@ -1,8 +1,8 @@
-## 1.4.10
+## 1.4.11
 
-- FIXED: App fails to compile for macOS (#80)
+- Merge PR #152 to set jvmTarget 1.8
 
-## 1.4.9
+## 1.4.9/1.4.10
 
 - FIXED: App fails to compile for macOS (#80)
 
