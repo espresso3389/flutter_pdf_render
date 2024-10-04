@@ -32,10 +32,6 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
-    if (project.android.hasProperty('namespace')) {
-        namespace 'jp.espresso3389.pdf_render'
-    }
-
     lintOptions {
         disable 'InvalidPackage'
         // Execution failed for task ':app:lintVitalRelease'. Flutter
