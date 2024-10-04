@@ -33,7 +33,7 @@ android {
     }
 
     if (project.android.hasProperty('namespace')) {
-        namespace 'com.sayegh.move_to_background'
+        namespace 'jp.espresso3389.pdf_render'
     }
 
     lintOptions {
