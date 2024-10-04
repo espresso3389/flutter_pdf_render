@@ -28,6 +28,10 @@ apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 android {
     compileSdkVersion 33
 
+    if (project.android.hasProperty('namespace')) {
+        namespace 'jp.espresso3389.pdf_render'
+    }
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
