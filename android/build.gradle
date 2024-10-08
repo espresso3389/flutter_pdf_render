@@ -31,9 +31,19 @@ android {
         namespace 'jp.espresso3389.pdf_render'
     }
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
+
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"
