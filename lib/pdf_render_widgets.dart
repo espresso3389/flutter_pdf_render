@@ -1017,7 +1017,7 @@ class PdfViewer extends StatefulWidget {
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             return PdfViewer(
-              doc: futureToDocument(snapshot.data!),
+              doc: futureToDocument(snapshot.data as T),
               viewerController: viewerController,
               params: params,
               onError: onError,
@@ -1151,7 +1151,6 @@ class PdfViewerState extends State<PdfViewer>
         return InteractiveViewer(
           transformationController: _controller,
           constrained: false,
-          alignPanAxis: widget.params?.alignPanAxis ?? false,
           boundaryMargin: widget.params?.boundaryMargin ?? EdgeInsets.zero,
           minScale: widget.params?.minScale ?? 0.8,
           maxScale: widget.params?.maxScale ?? 2.5,
