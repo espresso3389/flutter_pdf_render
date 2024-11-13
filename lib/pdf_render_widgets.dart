@@ -201,6 +201,7 @@ class PdfDocumentLoaderState extends State<PdfDocumentLoader> {
 
   void _setPageSize(int pageNumber, Size? size) {
     _lastPageSize = size;
+    if (_doc == null) return;
     if (pageNumber > 0 && pageNumber <= _doc!.pageCount) {
       if (_cachedPageSizes == null ||
           _cachedPageSizes?.length != _doc!.pageCount) {
